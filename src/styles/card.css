@@ -1,0 +1,41 @@
+.card {
+  background: #ffffff;
+  padding: 30px 40px;
+  border-radius: 14px;
+  box-shadow: 0px 4px 25px rgba(0, 0, 0, 0.08);
+  max-width: 420px;
+  width: 100%;
+}
+
+.card h2 {
+  margin-bottom: 20px;
+  color: #222;
+  font-weight: 600;
+}
+
+.card button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  margin-top: 20px;
+  width: 100%;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.card button:hover {
+  background: #4338ca;
+}
+
+.card input,
+.card select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+}
