@@ -1,19 +1,19 @@
 import "../styles/card.css";
+import courses from "../data/ENG101-MAT110.json";
+import CoursePlanner from "./CoursePlanner";
+
 
 export default function Dashboard({ user, onLogout }) {
-  return (
-    <div className="center" style={{ height: "100vh" }}>
-      <div className="card">
+    return (
+      <div className="dashboard">
         <h2>Welcome, {user.studentId}</h2>
         <p>Stream: {user.stream}</p>
 
-        <button onClick={onLogout}>Logout</button>
-        
-            <p style={{ marginTop: "50px" }}>
-        Brain ekhono banai nai bhai, banabo
-        </p>
-
+        <CoursePlanner 
+          courses={courses} 
+          currentSemester={1} 
+        />
       </div>
-    </div>
-  );
+    );
+
 }

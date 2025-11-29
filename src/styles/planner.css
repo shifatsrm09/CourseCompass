@@ -1,0 +1,140 @@
+/* CONTAINER */
+.planner-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  font-family: "Inter", sans-serif;
+}
+
+.planner-title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  color: #222;
+}
+
+/* GRID */
+.planner-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ROW */
+.planner-row {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+/* SMOOTH DRAG EFFECT */
+.planner-row.dragging {
+  transform: scale(1.02);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  background: #f8fafc;
+}
+
+/* DRAG HANDLE */
+.drag-handle {
+  font-size: 20px;
+  cursor: grab;
+  user-select: none;
+  color: #777;
+  padding-top: 4px;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* RIGHT SIDE CONTENT */
+.row-main {
+  width: 100%;
+}
+
+/* HEADER AREA */
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.semester-col {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* BADGES */
+.row-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tarc-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e3fceb;
+  color: #1b8a47;
+  border: 1px solid #b6eac8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* STATUS COLORS */
+.status-col {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.status-completed {
+  background: #defadd;
+  color: #1b5e20;
+}
+
+.status-current {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-upcoming {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-locked {
+  background: #eee;
+  color: #666;
+}
+
+/* COURSE BOXES */
+.courses-col {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.course-box {
+  background: #f5f7fa;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  border: 1px solid #e0e6ed;
+  transition: all 0.2s ease;
+}
+
+.course-box:hover {
+  background: #eef2f7;
+}
