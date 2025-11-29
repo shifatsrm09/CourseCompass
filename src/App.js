@@ -4,39 +4,71 @@ import StreamSelect from "./components/StreamSelect";
 import Dashboard from "./components/Dashboard";
 
 function App() {
-  const [userData, setUserData] = useState(null);
+  const [user, setUser] = useState(null);
+  const [firstLogin, setFirstLogin] = useState(false);
+  const [tempStudentId, setTempStudentId] = useState("");
 
-  // Load from localStorage on page load
+  // Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("courseCompassUser");
     if (saved) {
-      setUserData(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      setUser(parsed.user);
+      setFirstLogin(false);
     }
   }, []);
 
-  // Save to localStorage whenever userData changes
+  // Save to storage
   useEffect(() => {
-    if (userData) {
-      localStorage.setItem("courseCompassUser", JSON.stringify(userData));
+    if (user) {
+      localStorage.setItem(
+        "courseCompassUser",
+        JSON.stringify({ user })
+      );
     }
-  }, [userData]);
+  }, [user]);
 
-  const handleLogin = (data) => {
-    setUserData(data);
+  // LOGIN
+  const handleLogin = (data, studentId) => {
+    if (data.firstLogin) {
+      setTempStudentId(studentId);
+      setFirstLogin(true);
+    } else {
+      setUser(data.user);
+      setFirstLogin(false);
+    }
   };
 
+  // STREAM SAVED
+  const handleStreamSaved = (savedUser) => {
+    setUser(savedUser);
+    setFirstLogin(false);
+    localStorage.setItem("courseCompassUser", JSON.stringify({ user: savedUser }));
+  };
+
+  // LOGOUT
   const handleLogout = () => {
     localStorage.removeItem("courseCompassUser");
-    setUserData(null);
+    setUser(null);
+    setFirstLogin(false);
+    setTempStudentId("");
   };
 
-  if (!userData) return <Login onLogin={handleLogin} />;
-
-  if (userData.firstLogin) {
-    return <StreamSelect user={userData.user} onUpdate={setUserData} />;
+  // RENDER LOGIC
+  if (!user && !firstLogin) {
+    return <Login onLogin={handleLogin} />;
   }
 
-  return <Dashboard user={userData.user} onLogout={handleLogout} />;
+  if (firstLogin) {
+    return (
+      <StreamSelect
+        studentId={tempStudentId}
+        onUpdate={handleStreamSaved}
+      />
+    );
+  }
+
+  return <Dashboard user={user} onLogout={handleLogout} />;
 }
 
 export default App;

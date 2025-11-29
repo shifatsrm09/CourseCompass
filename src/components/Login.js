@@ -18,7 +18,7 @@ export default function Login({ onLogin }) {
     );
 
     const data = await response.json();
-    onLogin(data);
+    onLogin(data, studentId);
   };
 
   return (

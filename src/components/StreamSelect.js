@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../styles/card.css";
 
-export default function StreamSelect({ user, onUpdate }) {
+export default function StreamSelect({ studentId, onUpdate }) {
   const [stream, setStream] = useState("");
 
   const saveStream = async () => {
@@ -11,19 +11,14 @@ export default function StreamSelect({ user, onUpdate }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: user.studentId,
+          studentId,
           stream,
         }),
       }
     );
 
     const data = await res.json();
-
-    // Update global state → goes directly to dashboard
-    onUpdate({
-      firstLogin: false,
-      user: data.user,
-    });
+    onUpdate(data.user);
   };
 
   return (

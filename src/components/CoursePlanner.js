@@ -23,8 +23,8 @@ export default function CoursePlanner({ courses, currentSemester }) {
 
     return rows.map((row) => ({
       id: `sem-${row}`,
-      originalRow: row,
       courses: byRow[row],
+      isTarc: byRow[row].some((c) => c.is_tarc),
     }));
   }, [courses]);
 
@@ -40,9 +40,20 @@ export default function CoursePlanner({ courses, currentSemester }) {
   const onDragEnd = (result) => {
     if (!result.destination) return;
 
+    const from = result.source.index;
+    const to = result.destination.index;
+
+    const tarcIndex = semesterSlots.findIndex((s) => s.isTarc);
+
+    // Only TARC semester can move
+    if (from !== tarcIndex) return;
+
+    // Prevent dropping TARC into semester 1 or 2
+    if (to < 2) return;
+
     const updated = [...semesterSlots];
-    const [moved] = updated.splice(result.source.index, 1);
-    updated.splice(result.destination.index, 0, moved);
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved);
 
     setSemesterSlots(updated);
   };
@@ -61,13 +72,14 @@ export default function CoursePlanner({ courses, currentSemester }) {
             >
               {semesterSlots.map((slot, index) => {
                 const status = getStatus(index);
-                const hasTarc = slot.courses.some((c) => c.is_tarc);
+                const isTarc = slot.isTarc;
 
                 return (
                   <Draggable
                     key={slot.id}
                     draggableId={slot.id}
                     index={index}
+                    isDragDisabled={!isTarc} // only tarc can drag
                   >
                     {(dragProvided, snapshot) => (
                       <div
@@ -78,10 +90,12 @@ export default function CoursePlanner({ courses, currentSemester }) {
                         {...dragProvided.draggableProps}
                       >
                         <div
-                          className="drag-handle"
-                          {...dragProvided.dragHandleProps}
+                          className={`drag-handle ${
+                            isTarc ? "" : "drag-disabled"
+                          }`}
+                          {...(isTarc ? dragProvided.dragHandleProps : {})}
                         >
-                          ☰
+                          {isTarc ? "☰" : ""}
                         </div>
 
                         <div className="row-main">
@@ -91,7 +105,7 @@ export default function CoursePlanner({ courses, currentSemester }) {
                             </div>
 
                             <div className="row-badges">
-                              {hasTarc && (
+                              {isTarc && (
                                 <span className="tarc-pill">TARC</span>
                               )}
                               <div className={`status-col status-${status}`}>

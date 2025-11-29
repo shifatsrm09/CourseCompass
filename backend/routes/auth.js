@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 
-// LOGIN (first login or returning)
+// LOGIN — check if user exists only
 router.post("/login", async (req, res) => {
   const { studentId } = req.body;
 
@@ -10,39 +10,50 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Student ID required" });
   }
 
-  // 1. Look for existing user
   let user = await User.findOne({ studentId });
 
-  // 2. If not found → first login → create new user
+  // User does NOT exist → first login → DO NOT CREATE USER YET
   if (!user) {
-    user = await User.create({ studentId });
+    return res.json({
+      firstLogin: true,
+      user: null
+    });
   }
 
-  // 3. Return user + firstLogin flag
+  // User exists → return user
   return res.json({
-    firstLogin: user.firstLogin,
+    firstLogin: false,
     user
   });
 });
 
-// SET STREAM (only for first login)
+// SET STREAM — create user OR update existing one
 router.post("/set-stream", async (req, res) => {
   const { studentId, stream } = req.body;
 
-  const user = await User.findOne({ studentId });
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" });
+  if (!studentId || !stream) {
+    return res.status(400).json({ error: "studentId and stream required" });
   }
 
-  // Save stream and disable firstLogin
-  user.stream = stream;
-  user.firstLogin = false;
+  let user = await User.findOne({ studentId });
+
+  if (!user) {
+    // Create new user on first-time stream selection
+    user = new User({
+      studentId,
+      stream,
+      firstLogin: false,
+    });
+  } else {
+    user.stream = stream;
+    user.firstLogin = false;
+  }
 
   await user.save();
 
   return res.json({
-    message: "Stream saved",
+    success: true,
+    message: "Stream saved successfully",
     user
   });
 });
