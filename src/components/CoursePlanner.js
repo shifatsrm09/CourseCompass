@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import "../styles/planner.css";
 import {
   DragDropContext,
@@ -6,29 +6,16 @@ import {
   Draggable,
 } from "@hello-pangea/dnd";
 
-export default function CoursePlanner({ courses, currentSemester }) {
-  // Build initial semester slots
-  const initialSlots = useMemo(() => {
-    const byRow = {};
-    courses.forEach((course) => {
-      if (!byRow[course.semester_row]) {
-        byRow[course.semester_row] = [];
-      }
-      byRow[course.semester_row].push(course);
-    });
+export default function CoursePlanner({ user, orderedCourses, currentSemester }) {
 
-    const rows = Object.keys(byRow)
-      .map((n) => parseInt(n, 10))
-      .sort((a, b) => a - b);
-
-    return rows.map((row) => ({
-      id: `sem-${row}`,
-      courses: byRow[row],
-      isTarc: byRow[row].some((c) => c.is_tarc),
-    }));
-  }, [courses]);
-
-  const [semesterSlots, setSemesterSlots] = useState(initialSlots);
+  const [semesterSlots, setSemesterSlots] = useState(
+    orderedCourses.map((row) => ({
+      id: `sem-${row.semester_row}`,
+      originalRow: row.semester_row,
+      courses: row.courses,
+      isTarc: row.courses.some((c) => c.is_tarc),
+    }))
+  );
 
   const getStatus = (index) => {
     if (index < currentSemester - 1) return "completed";
@@ -37,7 +24,7 @@ export default function CoursePlanner({ courses, currentSemester }) {
     return "locked";
   };
 
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     if (!result.destination) return;
 
     const from = result.source.index;
@@ -45,10 +32,7 @@ export default function CoursePlanner({ courses, currentSemester }) {
 
     const tarcIndex = semesterSlots.findIndex((s) => s.isTarc);
 
-    // Only TARC semester can move
     if (from !== tarcIndex) return;
-
-    // Prevent dropping TARC into semester 1 or 2
     if (to < 2) return;
 
     const updated = [...semesterSlots];
@@ -56,6 +40,18 @@ export default function CoursePlanner({ courses, currentSemester }) {
     updated.splice(to, 0, moved);
 
     setSemesterSlots(updated);
+
+    // SAVE TO BACKEND
+    const newOrder = updated.map((s) => s.originalRow);
+
+    await fetch(`${process.env.REACT_APP_API_URL}/planner/save-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId: user.studentId,
+        order: newOrder,
+      }),
+    });
   };
 
   return (
@@ -79,7 +75,7 @@ export default function CoursePlanner({ courses, currentSemester }) {
                     key={slot.id}
                     draggableId={slot.id}
                     index={index}
-                    isDragDisabled={!isTarc} // only tarc can drag
+                    isDragDisabled={!isTarc}
                   >
                     {(dragProvided, snapshot) => (
                       <div
@@ -105,9 +101,7 @@ export default function CoursePlanner({ courses, currentSemester }) {
                             </div>
 
                             <div className="row-badges">
-                              {isTarc && (
-                                <span className="tarc-pill">TARC</span>
-                              )}
+                              {isTarc && <span className="tarc-pill">TARC</span>}
                               <div className={`status-col status-${status}`}>
                                 {status.toUpperCase()}
                               </div>

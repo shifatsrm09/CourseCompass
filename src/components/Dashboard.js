@@ -5,6 +5,7 @@ import CoursePlanner from "./CoursePlanner";
 export default function Dashboard({ user, onLogout }) {
   const [courses, setCourses] = useState(null);
   const [error, setError] = useState(null);
+  const [orderedCourses, setOrderedCourses] = useState(null);
 
   useEffect(() => {
     loadStreamCourses(user.stream);
@@ -13,7 +14,6 @@ export default function Dashboard({ user, onLogout }) {
   function loadStreamCourses(stream) {
     let fileName = "";
 
-    // match the streams EXACTLY as stored in DB
     if (stream === "ENG101 + MAT110") fileName = "ENG101-MAT110.json";
     else if (stream === "ENG101 + MAT092") fileName = "ENG101-MAT092.json";
     else if (stream === "ENG102 + MAT110") fileName = "ENG102-MAT110.json";
@@ -36,6 +36,26 @@ export default function Dashboard({ user, onLogout }) {
       });
   }
 
+  // APPLY SAVED ORDER ONCE COURSES LOAD
+  useEffect(() => {
+    if (!courses) return;
+
+    const order = user.semesterOrder || [1, 2, 3, 4, 5, 6];
+
+    const grouped = {};
+    courses.forEach((c) => {
+      if (!grouped[c.semester_row]) grouped[c.semester_row] = [];
+      grouped[c.semester_row].push(c);
+    });
+
+    const reordered = order.map((row) => ({
+      semester_row: row,
+      courses: grouped[row] || []
+    }));
+
+    setOrderedCourses(reordered);
+  }, [courses, user]);
+
   return (
     <div className="dashboard-container">
 
@@ -55,8 +75,12 @@ export default function Dashboard({ user, onLogout }) {
         </div>
       )}
 
-      {!error && courses && (
-        <CoursePlanner courses={courses} currentSemester={1} />
+      {!error && orderedCourses && (
+        <CoursePlanner
+          user={user}
+          orderedCourses={orderedCourses}
+          currentSemester={1}
+        />
       )}
     </div>
   );

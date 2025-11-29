@@ -10,6 +10,7 @@ const app = express();
 // middlewares
 app.use(cors());
 app.use(express.json());
+app.use("/api/planner", require("./routes/planner"));
 
 // MongoDB Connection
 mongoose
