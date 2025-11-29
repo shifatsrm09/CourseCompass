@@ -129,6 +129,15 @@
     "sp": []
   },
 
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 4,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+
   {
     "code": "CSE221",
     "title": "Algorithms",
@@ -151,6 +160,15 @@
     "semester_row": 5,
     "type": "Program Core",
     "hp": ["CSE250"],
+    "sp": []
+  },
+
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 5,
+    "type": "GenEd/COD",
+    "hp": [""],
     "sp": []
   },
 
@@ -179,6 +197,15 @@
     "sp": []
   },
 
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 6,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+
   {
     "code": "CSE370",
     "title": "Software Engineering",
@@ -203,7 +230,14 @@
     "hp": ["CSE260"],
     "sp": []
   },
-
+  {
+    "code": "CSE350",
+    "title": "Computer Architecture",
+    "semester_row": 7,
+    "type": "Program Core",
+    "hp": ["CSE251"],
+    "sp": []
+  },
   {
     "code": "CSE422",
     "title": "Computer Networks",
@@ -228,7 +262,14 @@
     "hp": ["CSE221", "MAT216"],
     "sp": []
   },
-
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 8,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
   {
     "code": "CSE331",
     "title": "Computer Organization",
@@ -251,6 +292,15 @@
     "semester_row": 9,
     "type": "Program Elective",
     "hp": ["CSE260"],
+    "sp": []
+  },
+
+   {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 9,
+    "type": "GenEd/COD",
+    "hp": [""],
     "sp": []
   },
 

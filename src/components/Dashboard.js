@@ -5,6 +5,7 @@ import CoursePlanner from "./CoursePlanner";
 export default function Dashboard({ user, setUser, onLogout }) {
   const [courses, setCourses] = useState(null);
   const [orderedCourses, setOrderedCourses] = useState(null);
+  const [allCourses, setAllCourses] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -30,11 +31,22 @@ export default function Dashboard({ user, setUser, onLogout }) {
 
     import(`../data/${fileName}`)
       .then((json) => {
-        setCourses(json.default);
+        const streamCourses = json.default;
+        setCourses(streamCourses);
         setError(null);
+
+        // build unique course list by code for the add/replace modal
+        const byCode = {};
+        streamCourses.forEach((c) => {
+          if (!byCode[c.code]) {
+            byCode[c.code] = c;
+          }
+        });
+        setAllCourses(Object.values(byCode));
       })
       .catch(() => {
         setCourses(null);
+        setAllCourses([]);
         setError("This stream is not configured yet.");
       });
   }
@@ -42,7 +54,9 @@ export default function Dashboard({ user, setUser, onLogout }) {
   useEffect(() => {
     if (!courses) return;
 
-    const order = user.semesterOrder || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const order = user.semesterOrder || [
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    ];
 
     const grouped = {};
     courses.forEach((c) => {
@@ -98,6 +112,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
           orderedCourses={orderedCourses}
           currentSemester={safeCurrent}
           setCurrentSemester={setCurrentSemester}
+          allCourses={allCourses}
         />
       )}
     </div>

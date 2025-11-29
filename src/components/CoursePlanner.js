@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 import "../styles/planner.css";
 import ConfirmModal from "./ConfirmModal";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-} from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import CourseEditModal from "./CourseEditModal";
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
@@ -14,6 +11,7 @@ export default function CoursePlanner({
   orderedCourses,
   currentSemester,
   setCurrentSemester,
+  allCourses = [],
 }) {
   const [showModal, setShowModal] = useState(false);
 
@@ -25,6 +23,12 @@ export default function CoursePlanner({
       isTarc: row.courses.some((c) => c.is_tarc),
     }))
   );
+
+  // state for add / replace modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [modalCourses, setModalCourses] = useState([]);
+  const [modalContext, setModalContext] = useState(null);
+  // modalContext: { mode: "add" | "replace", semesterIndex: number, courseIndex?: number }
 
   const getStatus = (index) => {
     const safe = currentSemester || 1;
@@ -69,7 +73,6 @@ export default function CoursePlanner({
       }
 
       setCurrentSemester(data.user.currentSemester, data.user);
-
     } catch (err) {
       console.error("Network error:", err);
       alert("Network error contacting server.");
@@ -111,6 +114,82 @@ export default function CoursePlanner({
     });
   };
 
+  // ---- Add / Drop / Modify helpers ----
+
+  const handleDropCourse = (semesterIndex, courseIndex) => {
+    setSemesterSlots((prev) =>
+      prev.map((slot, idx) => {
+        if (idx !== semesterIndex) return slot;
+        // don't allow editing TARC courses
+        if (slot.isTarc) return slot;
+
+        const newCourses = slot.courses.filter((_, i) => i !== courseIndex);
+        return { ...slot, courses: newCourses };
+      })
+    );
+  };
+
+  const openAddCourseModal = (semesterIndex) => {
+    const slot = semesterSlots[semesterIndex];
+
+    if (slot.isTarc) return;
+    if (slot.courses.length >= 5) return;
+
+    const usedCodes = new Set(slot.courses.map((c) => c.code));
+    const selectable = allCourses.filter((c) => !usedCodes.has(c.code));
+
+    setModalCourses(selectable);
+    setModalContext({ mode: "add", semesterIndex });
+    setEditModalVisible(true);
+  };
+
+  const openReplaceCourseModal = (semesterIndex, courseIndex) => {
+    const slot = semesterSlots[semesterIndex];
+
+    if (slot.isTarc) return;
+
+    const usedCodes = new Set(
+      slot.courses.map((c, i) => (i === courseIndex ? null : c.code))
+    );
+    const selectable = allCourses.filter((c) => !usedCodes.has(c.code));
+
+    setModalCourses(selectable);
+    setModalContext({ mode: "replace", semesterIndex, courseIndex });
+    setEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setModalContext(null);
+    setModalCourses([]);
+  };
+
+  const handleCourseSelected = (course) => {
+    if (!modalContext) return;
+
+    const { mode, semesterIndex, courseIndex } = modalContext;
+
+    setSemesterSlots((prev) =>
+      prev.map((slot, idx) => {
+        if (idx !== semesterIndex) return slot;
+        if (slot.isTarc) return slot;
+
+        const newCourses = [...slot.courses];
+
+        if (mode === "add") {
+          if (newCourses.length >= 5) return slot;
+          newCourses.push(course);
+        } else if (mode === "replace" && courseIndex != null) {
+          newCourses[courseIndex] = course;
+        }
+
+        return { ...slot, courses: newCourses };
+      })
+    );
+
+    closeEditModal();
+  };
+
   return (
     <div className="planner-container">
       <h2 className="planner-title">Course Planner</h2>
@@ -134,11 +213,9 @@ export default function CoursePlanner({
                 const status = getStatus(index);
                 const isCurrent = status === "current";
 
-                // NEW: Disable dragging TARC after completed
-               // Disable dragging ONLY when TARC itself is COMPLETED
+                // Disable dragging ONLY when TARC itself is COMPLETED
                 const disableDrag =
-                !slot.isTarc || status === "completed";
-
+                  !slot.isTarc || status === "completed";
 
                 return (
                   <Draggable
@@ -173,7 +250,9 @@ export default function CoursePlanner({
                             </div>
 
                             <div className="row-badges">
-                              {slot.isTarc && <span className="tarc-pill">TARC</span>}
+                              {slot.isTarc && (
+                                <span className="tarc-pill">TARC</span>
+                              )}
 
                               <div
                                 className={`status-col status-${status} ${
@@ -187,11 +266,53 @@ export default function CoursePlanner({
                           </div>
 
                           <div className="courses-col">
-                            {slot.courses.map((course) => (
-                              <div className="course-box" key={course.code}>
-                                {course.code}
+                            {slot.courses.map((course, cIndex) => (
+                              <div
+                                className={`course-box ${
+                                  slot.isTarc ? "course-box-locked" : ""
+                                }`}
+                                key={`${course.code}-${cIndex}`}
+                                onClick={
+                                  slot.isTarc
+                                    ? undefined
+                                    : () =>
+                                        openReplaceCourseModal(
+                                          index,
+                                          cIndex
+                                        )
+                                }
+                              >
+                                <div className="course-box-main">
+                                  <span className="course-code">
+                                    {course.code}
+                                  </span>
+                                </div>
+
+                                {!slot.isTarc && (
+                                  <button
+                                    className="course-drop-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDropCourse(index, cIndex);
+                                    }}
+                                    title="Remove course from semester"
+                                  >
+                                    ×
+                                  </button>
+                                )}
                               </div>
                             ))}
+
+                          {/* Add button: only for non-TARC, non-semester-1, and <5 courses */}
+                            {!slot.isTarc && index !== 0 && slot.courses.length < 5 && (
+                              <button
+                                className="add-course-btn"
+                                onClick={() => openAddCourseModal(index)}
+                              >
+                                + Add Course
+                              </button>
+                            )}
+
                           </div>
                         </div>
                       </div>
@@ -205,6 +326,18 @@ export default function CoursePlanner({
           )}
         </Droppable>
       </DragDropContext>
+
+      <CourseEditModal
+        visible={editModalVisible}
+        onClose={closeEditModal}
+        onSelect={handleCourseSelected}
+        courses={modalCourses}
+        title={
+          modalContext?.mode === "add"
+            ? "Add a course to this semester"
+            : "Replace this course"
+        }
+      />
     </div>
   );
 }
