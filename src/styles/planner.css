@@ -115,7 +115,7 @@
   color: #1e40af;
 }
 
-.status-upcoming {
+.status-recommended {
   background: #fff3cd;
   color: #856404;
 }
@@ -137,4 +137,17 @@
   padding: 10px 16px;
   border-radius: 8px;
   border: 1px solid #e0e6ed;
+}
+
+.status-clickable {
+  cursor: pointer;
+  background-color: #1c7cff !important;
+  color: white !important;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.status-clickable:hover {
+  background-color: #005cdc !important;
 }

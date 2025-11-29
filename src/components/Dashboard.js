@@ -2,25 +2,28 @@ import { useEffect, useState } from "react";
 import "../styles/dashboard.css";
 import CoursePlanner from "./CoursePlanner";
 
-export default function Dashboard({ user, onLogout }) {
+export default function Dashboard({ user, setUser, onLogout }) {
   const [courses, setCourses] = useState(null);
-  const [error, setError] = useState(null);
   const [orderedCourses, setOrderedCourses] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadStreamCourses(user.stream);
   }, [user.stream]);
 
   function loadStreamCourses(stream) {
-    let fileName = "";
+    const files = {
+      "ENG101 + MAT110": "ENG101-MAT110.json",
+      "ENG101 + MAT092": "ENG101-MAT092.json",
+      "ENG102 + MAT110": "ENG102-MAT110.json",
+      "ENG102 + MAT092": "ENG102-MAT092.json",
+      "ENG091 + MAT110": "ENG091-MAT110.json",
+      "ENG091 + MAT092": "ENG091-MAT092.json",
+    };
 
-    if (stream === "ENG101 + MAT110") fileName = "ENG101-MAT110.json";
-    else if (stream === "ENG101 + MAT092") fileName = "ENG101-MAT092.json";
-    else if (stream === "ENG102 + MAT110") fileName = "ENG102-MAT110.json";
-    else if (stream === "ENG102 + MAT092") fileName = "ENG102-MAT092.json";
-    else if (stream === "ENG091 + MAT110") fileName = "ENG091-MAT110.json";
-    else if (stream === "ENG091 + MAT092") fileName = "ENG091-MAT092.json";
-    else {
+    const fileName = files[stream];
+
+    if (!fileName) {
       setError("Invalid stream stored in database");
       return;
     }
@@ -36,11 +39,10 @@ export default function Dashboard({ user, onLogout }) {
       });
   }
 
-  // APPLY SAVED ORDER ONCE COURSES LOAD
   useEffect(() => {
     if (!courses) return;
 
-    const order = user.semesterOrder || [1, 2, 3, 4, 5, 6];
+    const order = user.semesterOrder || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
     const grouped = {};
     courses.forEach((c) => {
@@ -50,28 +52,43 @@ export default function Dashboard({ user, onLogout }) {
 
     const reordered = order.map((row) => ({
       semester_row: row,
-      courses: grouped[row] || []
+      courses: grouped[row] || [],
     }));
 
     setOrderedCourses(reordered);
   }, [courses, user]);
 
+  // store updated user state and persist it
+  const setCurrentSemester = (newVal, updatedUser = null) => {
+    const userToStore = updatedUser || { ...user, currentSemester: newVal };
+
+    setUser(userToStore);
+
+    localStorage.setItem(
+      "courseCompassUser",
+      JSON.stringify({ user: userToStore })
+    );
+  };
+
+  const safeCurrent = user.currentSemester || 1;
+
   return (
     <div className="dashboard-container">
-
       <div className="dashboard-header">
         <div>
           <h2 className="dashboard-title">Welcome, {user.studentId}</h2>
           <p className="dashboard-subtitle">Stream: {user.stream}</p>
         </div>
 
-        <button className="logout-btn" onClick={onLogout}>Logout</button>
+        <button className="logout-btn" onClick={onLogout}>
+          Logout
+        </button>
       </div>
 
       {error && (
         <div className="not-configured">
           <h3>{error}</h3>
-          <p>Your selected stream has no course plan yet.</p>
+          <p>Your selected stream has no course plan.</p>
         </div>
       )}
 
@@ -79,7 +96,8 @@ export default function Dashboard({ user, onLogout }) {
         <CoursePlanner
           user={user}
           orderedCourses={orderedCourses}
-          currentSemester={1}
+          currentSemester={safeCurrent}
+          setCurrentSemester={setCurrentSemester}
         />
       )}
     </div>

@@ -1,12 +1,21 @@
 import React, { useState } from "react";
 import "../styles/planner.css";
+import ConfirmModal from "./ConfirmModal";
 import {
   DragDropContext,
   Droppable,
   Draggable,
 } from "@hello-pangea/dnd";
 
-export default function CoursePlanner({ user, orderedCourses, currentSemester }) {
+const API_BASE = process.env.REACT_APP_API_URL;
+
+export default function CoursePlanner({
+  user,
+  orderedCourses,
+  currentSemester,
+  setCurrentSemester,
+}) {
+  const [showModal, setShowModal] = useState(false);
 
   const [semesterSlots, setSemesterSlots] = useState(
     orderedCourses.map((row) => ({
@@ -18,10 +27,53 @@ export default function CoursePlanner({ user, orderedCourses, currentSemester })
   );
 
   const getStatus = (index) => {
-    if (index < currentSemester - 1) return "completed";
-    if (index === currentSemester - 1) return "current";
-    if (index === currentSemester) return "upcoming";
+    const safe = currentSemester || 1;
+
+    if (index < safe - 1) return "completed";
+    if (index === safe - 1) return "current";
+    if (index === safe) return "recommended";
     return "locked";
+  };
+
+  const openPrompt = () => {
+    setShowModal(true);
+  };
+
+  const cancelComplete = () => {
+    setShowModal(false);
+  };
+
+  const confirmComplete = async () => {
+    setShowModal(false);
+
+    try {
+      const res = await fetch(`${API_BASE}/planner/complete-semester`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: user.studentId }),
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        const raw = await res.text();
+        console.error("Unexpected backend response:", raw);
+        alert("Unexpected server response.");
+        return;
+      }
+
+      if (!data.success) {
+        alert("Error: " + data.error);
+        return;
+      }
+
+      setCurrentSemester(data.user.currentSemester, data.user);
+
+    } catch (err) {
+      console.error("Network error:", err);
+      alert("Network error contacting server.");
+    }
   };
 
   const onDragEnd = async (result) => {
@@ -32,19 +84,24 @@ export default function CoursePlanner({ user, orderedCourses, currentSemester })
 
     const tarcIndex = semesterSlots.findIndex((s) => s.isTarc);
 
+    // TARC can only be moved when NOT completed
     if (from !== tarcIndex) return;
+
+    const tarcStatus = getStatus(tarcIndex);
+
+    if (tarcStatus === "completed") return; // LOCKED FOREVER
+
+    // must stay ≥ 3rd position in UI
     if (to < 2) return;
 
     const updated = [...semesterSlots];
     const [moved] = updated.splice(from, 1);
     updated.splice(to, 0, moved);
-
     setSemesterSlots(updated);
 
-    // SAVE TO BACKEND
     const newOrder = updated.map((s) => s.originalRow);
 
-    await fetch(`${process.env.REACT_APP_API_URL}/planner/save-order`, {
+    await fetch(`${API_BASE}/planner/save-order`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -58,6 +115,13 @@ export default function CoursePlanner({ user, orderedCourses, currentSemester })
     <div className="planner-container">
       <h2 className="planner-title">Course Planner</h2>
 
+      <ConfirmModal
+        visible={showModal}
+        onConfirm={confirmComplete}
+        onCancel={cancelComplete}
+        semester={currentSemester || 1}
+      />
+
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="semesters" direction="vertical">
           {(provided) => (
@@ -68,14 +132,20 @@ export default function CoursePlanner({ user, orderedCourses, currentSemester })
             >
               {semesterSlots.map((slot, index) => {
                 const status = getStatus(index);
-                const isTarc = slot.isTarc;
+                const isCurrent = status === "current";
+
+                // NEW: Disable dragging TARC after completed
+               // Disable dragging ONLY when TARC itself is COMPLETED
+                const disableDrag =
+                !slot.isTarc || status === "completed";
+
 
                 return (
                   <Draggable
                     key={slot.id}
                     draggableId={slot.id}
                     index={index}
-                    isDragDisabled={!isTarc}
+                    isDragDisabled={disableDrag}
                   >
                     {(dragProvided, snapshot) => (
                       <div
@@ -87,11 +157,13 @@ export default function CoursePlanner({ user, orderedCourses, currentSemester })
                       >
                         <div
                           className={`drag-handle ${
-                            isTarc ? "" : "drag-disabled"
+                            disableDrag ? "drag-disabled" : ""
                           }`}
-                          {...(isTarc ? dragProvided.dragHandleProps : {})}
+                          {...(!disableDrag
+                            ? dragProvided.dragHandleProps
+                            : {})}
                         >
-                          {isTarc ? "☰" : ""}
+                          {!disableDrag && slot.isTarc ? "☰" : ""}
                         </div>
 
                         <div className="row-main">
@@ -101,8 +173,14 @@ export default function CoursePlanner({ user, orderedCourses, currentSemester })
                             </div>
 
                             <div className="row-badges">
-                              {isTarc && <span className="tarc-pill">TARC</span>}
-                              <div className={`status-col status-${status}`}>
+                              {slot.isTarc && <span className="tarc-pill">TARC</span>}
+
+                              <div
+                                className={`status-col status-${status} ${
+                                  isCurrent ? "status-clickable" : ""
+                                }`}
+                                onClick={isCurrent ? openPrompt : undefined}
+                              >
                                 {status.toUpperCase()}
                               </div>
                             </div>

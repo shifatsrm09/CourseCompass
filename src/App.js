@@ -21,10 +21,7 @@ function App() {
   // Save to storage
   useEffect(() => {
     if (user) {
-      localStorage.setItem(
-        "courseCompassUser",
-        JSON.stringify({ user })
-      );
+      localStorage.setItem("courseCompassUser", JSON.stringify({ user }));
     }
   }, [user]);
 
@@ -54,7 +51,6 @@ function App() {
     setTempStudentId("");
   };
 
-  // RENDER LOGIC
   if (!user && !firstLogin) {
     return <Login onLogin={handleLogin} />;
   }
@@ -68,7 +64,13 @@ function App() {
     );
   }
 
-  return <Dashboard user={user} onLogout={handleLogout} />;
+  return (
+    <Dashboard
+      user={user}
+      setUser={setUser}
+      onLogout={handleLogout}
+    />
+  );
 }
 
 export default App;
