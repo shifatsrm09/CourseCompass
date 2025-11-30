@@ -4,6 +4,7 @@ import "../../styles/planner.css";
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
+import { validateAddCourse } from "../../engine/engine";
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
@@ -110,7 +111,7 @@ export default function CoursePlanner({
     setEditModalVisible(true);
   };
 
-  // Remove course from semester
+  // Remove course from semester (used from modal remove)
   const handleRemoveCourse = () => {
     if (!modalContext) return;
 
@@ -130,12 +131,32 @@ export default function CoursePlanner({
     closeEditModal();
   };
 
-  // Select course from modal
+  // Select course from modal (ADD or REPLACE)
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
     const { mode, semesterIndex, courseIndex } = modalContext;
 
+    // ── NEW: use engine for ADD validation ──
+    if (mode === "add") {
+      const result = validateAddCourse({
+        semesterIndex,
+        courseToAdd: course,
+        semesterSlots,
+        currentSemester,
+        completedCourses: user.completedCourses || [],
+        maxCoursesPerSemester: 5,
+        maxCodAllowed: 5,
+      });
+
+      if (!result.ok) {
+        // You can replace alert with a nicer toast later
+        alert(result.reason || "You cannot add this course here.");
+        return; // do NOT modify state
+      }
+    }
+
+    // If validation passed (or mode === "replace"), apply the change in UI state
     setSemesterSlots((prev) =>
       prev.map((slot, idx) => {
         if (idx !== semesterIndex || slot.isTarc) return slot;
