@@ -55,19 +55,38 @@
   cursor: grabbing;
 }
 
-/* TEXT */
+/* FIXED & FULL-WIDTH ROW MAIN (ENSURES BADGES GO FAR RIGHT) */
+.row-main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER AREA — BADGES ON FAR RIGHT */
+.row-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;  /* pushes badges right */
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* LEFT SIDE: SEMESTER TITLE */
 .semester-col {
   font-size: 18px;
   font-weight: 600;
   color: #f0f0f0;
 }
 
-/* BADGES */
+/* RIGHT SIDE: BADGES */
 .row-badges {
+  margin-left: auto !important;  /* ALWAYS push far right */
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
+/* BADGE COLORS */
 .tarc-pill {
   padding: 4px 10px;
   border-radius: 999px;
@@ -78,7 +97,6 @@
   font-weight: 600;
 }
 
-/* STATUS COLORS */
 .status-col {
   padding: 6px 14px;
   border-radius: 20px;
@@ -96,6 +114,9 @@
   color: #60aaff;
 }
 
+.status-current:hover{
+  cursor: pointer;
+}
 .status-recommended {
   background: #3a2b01;
   color: #facc67;
@@ -106,7 +127,7 @@
   color: #999;
 }
 
-/* COURSE GRID */
+/* COURSE LIST */
 .courses-col {
   display: flex;
   flex-wrap: wrap;
@@ -121,6 +142,8 @@
   border: 1px solid #333;
   cursor: pointer;
   transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
 }
 
 .course-box:hover:not(.course-box-locked) {
@@ -136,6 +159,7 @@
   color: #f0f0f0;
 }
 
+/* DROP BUTTON (X) */
 .course-drop-btn {
   margin-left: 0.35rem;
   border: none;
@@ -165,16 +189,18 @@
   background: #1f1f1f;
 }
 
-/* EDIT MODAL */
+/* MODAL BACKDROP */
 .modal-backdrop {
   background: rgba(0,0,0,0.65);
 }
 
+/* MODAL PANEL */
 .modal-panel {
   background: #1c1c1c;
   border: 1px solid #333;
 }
 
+/* SELECT BUTTONS */
 .course-select-btn {
   background: #161616;
   border: 1px solid #333;
