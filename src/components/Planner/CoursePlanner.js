@@ -5,6 +5,7 @@ import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
 import { validateAddCourse } from "../../engine/engine";
+import { reinsertRemovedCourse } from "../../engine/removeEngine";
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
@@ -78,11 +79,12 @@ export default function CoursePlanner({
   const openAddCourseModal = (semesterIndex) => {
     const slot = semesterSlots[semesterIndex];
 
+    // No edits for TARC or full semester
     if (slot.isTarc || slot.courses.length >= 5) return;
 
     const usedCodes = new Set(slot.courses.map((c) => c.code));
 
-    // COD is ALWAYS allowed
+    // COD is ALWAYS allowed to be added in UI-level list
     const selectable = allCourses.filter(
       (c) => c.code === "COD" || !usedCodes.has(c.code)
     );
@@ -111,22 +113,38 @@ export default function CoursePlanner({
     setEditModalVisible(true);
   };
 
-  // Remove course from semester (used from modal remove)
+  // Remove course from semester (triggered from modal "Remove Course")
   const handleRemoveCourse = () => {
     if (!modalContext) return;
 
     const { semesterIndex, courseIndex } = modalContext;
 
-    setSemesterSlots((prev) =>
-      prev.map((slot, idx) =>
+    setSemesterSlots((prev) => {
+      const slot = prev[semesterIndex];
+      const removedCourse = slot.courses[courseIndex];
+
+      // 1) Remove from its current semester
+      const afterRemoval = prev.map((s, idx) =>
         idx === semesterIndex
           ? {
-              ...slot,
-              courses: slot.courses.filter((_, i) => i !== courseIndex),
+              ...s,
+              courses: s.courses.filter((_, i) => i !== courseIndex),
             }
-          : slot
-      )
-    );
+          : s
+      );
+
+      // 2) Reinsert into the nearest valid FUTURE semester
+      const reinserted = reinsertRemovedCourse({
+        semesterSlots: afterRemoval,
+        removedCourse,
+        fromSemesterIndex: semesterIndex,
+        completedCourses: user.completedCourses || [],
+        maxCoursesPerSemester: 5,
+        maxCodPerSemester: 1,
+      });
+
+      return reinserted;
+    });
 
     closeEditModal();
   };
@@ -137,7 +155,7 @@ export default function CoursePlanner({
 
     const { mode, semesterIndex, courseIndex } = modalContext;
 
-    // ── NEW: use engine for ADD validation ──
+    // Validate ADD via engine
     if (mode === "add") {
       const result = validateAddCourse({
         semesterIndex,
@@ -150,13 +168,12 @@ export default function CoursePlanner({
       });
 
       if (!result.ok) {
-        // You can replace alert with a nicer toast later
         alert(result.reason || "You cannot add this course here.");
-        return; // do NOT modify state
+        return;
       }
     }
 
-    // If validation passed (or mode === "replace"), apply the change in UI state
+    // Apply change in UI
     setSemesterSlots((prev) =>
       prev.map((slot, idx) => {
         if (idx !== semesterIndex || slot.isTarc) return slot;
