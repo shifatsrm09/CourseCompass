@@ -1,5 +1,5 @@
 import React from "react";
-import "../styles/planner.css";
+import "../../styles/planner.css";
 
 export default function CourseEditModal({
   visible,
