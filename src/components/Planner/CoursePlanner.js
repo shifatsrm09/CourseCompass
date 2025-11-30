@@ -72,19 +72,17 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
-     COURSE EDITING LOGIC
+     OPEN ADD / REPLACE MODAL
   ─────────────────────────────────────────────── */
 
-  // Add a course
   const openAddCourseModal = (semesterIndex) => {
     const slot = semesterSlots[semesterIndex];
 
-    // No edits for TARC or full semester
     if (slot.isTarc || slot.courses.length >= 5) return;
 
     const usedCodes = new Set(slot.courses.map((c) => c.code));
 
-    // COD is ALWAYS allowed to be added in UI-level list
+    // COD can be selected even if used elsewhere; per-semester COD check happens in validation.
     const selectable = allCourses.filter(
       (c) => c.code === "COD" || !usedCodes.has(c.code)
     );
@@ -94,7 +92,6 @@ export default function CoursePlanner({
     setEditModalVisible(true);
   };
 
-  // Replace a course
   const openReplaceCourseModal = (semesterIndex, courseIndex) => {
     const slot = semesterSlots[semesterIndex];
 
@@ -113,29 +110,33 @@ export default function CoursePlanner({
     setEditModalVisible(true);
   };
 
-  // Remove course from semester (triggered from modal "Remove Course")
+  /* ──────────────────────────────────────────────
+     REMOVE COURSE VIA MODAL ("Remove Course" button)
+  ─────────────────────────────────────────────── */
+
   const handleRemoveCourse = () => {
     if (!modalContext) return;
 
     const { semesterIndex, courseIndex } = modalContext;
 
     setSemesterSlots((prev) => {
-      const slot = prev[semesterIndex];
+      const slots = prev.map((slot) => ({
+        ...slot,
+        courses: Array.isArray(slot.courses) ? [...slot.courses] : [],
+      }));
+
+      const slot = slots[semesterIndex];
+      if (!slot) return prev;
+
       const removedCourse = slot.courses[courseIndex];
+      if (!removedCourse) return prev;
 
-      // 1) Remove from its current semester
-      const afterRemoval = prev.map((s, idx) =>
-        idx === semesterIndex
-          ? {
-              ...s,
-              courses: s.courses.filter((_, i) => i !== courseIndex),
-            }
-          : s
-      );
+      // Remove from that semester first
+      slot.courses.splice(courseIndex, 1);
 
-      // 2) Reinsert into the nearest valid FUTURE semester
-      const reinserted = reinsertRemovedCourse({
-        semesterSlots: afterRemoval,
+      // Reinsert using the remove engine (handles HP + chain)
+      const rebalanced = reinsertRemovedCourse({
+        semesterSlots: slots,
         removedCourse,
         fromSemesterIndex: semesterIndex,
         completedCourses: user.completedCourses || [],
@@ -143,19 +144,23 @@ export default function CoursePlanner({
         maxCodPerSemester: 1,
       });
 
-      return reinserted;
+      return rebalanced;
     });
 
     closeEditModal();
   };
 
-  // Select course from modal (ADD or REPLACE)
+  /* ──────────────────────────────────────────────
+     SELECT COURSE FROM MODAL (ADD or REPLACE)
+  ─────────────────────────────────────────────── */
+
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
     const { mode, semesterIndex, courseIndex } = modalContext;
+    const isCod = course.code === "COD";
 
-    // Validate ADD via engine
+    // ── VALIDATION for ADD ──
     if (mode === "add") {
       const result = validateAddCourse({
         semesterIndex,
@@ -173,22 +178,69 @@ export default function CoursePlanner({
       }
     }
 
-    // Apply change in UI
-    setSemesterSlots((prev) =>
-      prev.map((slot, idx) => {
-        if (idx !== semesterIndex || slot.isTarc) return slot;
+    setSemesterSlots((prev) => {
+      const slots = prev.map((slot) => ({
+        ...slot,
+        courses: Array.isArray(slot.courses) ? [...slot.courses] : [],
+      }));
+
+      const targetSlot = slots[semesterIndex];
+      if (!targetSlot || targetSlot.isTarc) return prev;
+
+      if (mode === "add") {
+        // Special COD behavior: pull from closest future semester if possible
+        if (isCod) {
+          // Ensure target has room (validation already checked, but double safety)
+          if (targetSlot.courses.length >= 5) return prev;
+          const alreadyHasCod = targetSlot.courses.some(
+            (c) => c.code === "COD"
+          );
+          if (alreadyHasCod) return prev;
+
+          // Find nearest future semester that has a COD to "deduct" from
+          let futureIndex = -1;
+          for (let i = semesterIndex + 1; i < slots.length; i++) {
+            const s = slots[i];
+            if ((s.courses || []).some((c) => c.code === "COD")) {
+              futureIndex = i;
+              break;
+            }
+          }
+
+          let codToInsert = course;
+
+          if (futureIndex !== -1) {
+            // Pull that COD instance from the future semester
+            const futureSlot = slots[futureIndex];
+            const codPos = futureSlot.courses.findIndex(
+              (c) => c.code === "COD"
+            );
+            if (codPos !== -1) {
+              codToInsert = futureSlot.courses[codPos];
+              futureSlot.courses.splice(codPos, 1);
+            }
+          }
+          // else: no future COD → this becomes a new COD, but global limit
+          // was already handled by validateAddCourse.
+
+          targetSlot.courses.push(codToInsert);
+        } else {
+          // Normal ADD (non-COD)
+          if (targetSlot.courses.length >= 5) return prev;
+          targetSlot.courses.push(course);
+        }
+      } else if (mode === "replace") {
+        // REPLACE: no COD pull, just swap
+        const slot = slots[semesterIndex];
+        if (!slot) return prev;
 
         const newCourses = [...slot.courses];
+        newCourses[courseIndex] = course;
+        slot.courses = newCourses;
+      }
 
-        if (mode === "add" && newCourses.length < 5) {
-          newCourses.push(course);
-        } else if (mode === "replace") {
-          newCourses[courseIndex] = course;
-        }
-
-        return { ...slot, courses: newCourses };
-      })
-    );
+      return slots;
+    });
 
     closeEditModal();
   };

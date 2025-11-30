@@ -46,6 +46,8 @@ export function validateAddCourse({
     return { ok: false, reason: "Invalid semester." };
   }
 
+  const isCod = courseToAdd.code === "COD";
+
   // 1) Capacity check
   if ((targetSlot.courses || []).length >= maxCoursesPerSemester) {
     return {
@@ -54,20 +56,47 @@ export function validateAddCourse({
     };
   }
 
-  // 2) Global COD cap check
-  if (courseToAdd.code === "COD") {
-    const codInPlan = countCodInPlan(semesterSlots);
-
-    // We are about to ADD another COD → this would be +1
-    if (codInPlan >= maxCodAllowed) {
+  // 2) Per-semester COD check
+  if (isCod) {
+    const alreadyHasCod = (targetSlot.courses || []).some(
+      (c) => c.code === "COD"
+    );
+    if (alreadyHasCod) {
       return {
         ok: false,
-        reason: `You have already planned ${maxCodAllowed} COD courses in total.`,
+        reason: "You already have a COD course in this semester.",
       };
     }
   }
 
-  // 3) HP check (only earlier semesters count as completed)
+  // 3) Global COD cap check — but allow "pull from future" if possible
+  if (isCod) {
+    const codInPlan = countCodInPlan(semesterSlots);
+
+    if (codInPlan >= maxCodAllowed) {
+      // See if there is a future COD we can "pull" from
+      let futureHasCod = false;
+      for (let i = semesterIndex + 1; i < semesterSlots.length; i++) {
+        const slot = semesterSlots[i];
+        if ((slot.courses || []).some((c) => c.code === "COD")) {
+          futureHasCod = true;
+          break;
+        }
+      }
+
+      if (!futureHasCod) {
+        return {
+          ok: false,
+          reason: `You have already planned ${maxCodAllowed} COD courses in total.`,
+        };
+      }
+      // If futureHasCod === true, we allow it because we will pull that COD forward
+      // instead of creating a brand-new one.
+    }
+  }
+
+  // 4) HP check (only earlier semesters count as completed)
+  //    (COD typically does not have HP, but we keep this generic.)
   const completedSet = buildCompletedUpTo(
     semesterSlots,
     semesterIndex,
@@ -75,7 +104,6 @@ export function validateAddCourse({
   );
 
   if (!hardPrereqsSatisfied(courseToAdd, completedSet)) {
-    // Build a human readable reason
     const hpArray = Array.isArray(courseToAdd.hp) ? courseToAdd.hp : [];
     const missing = hpArray
       .filter((code) => code && code.trim() !== "")
