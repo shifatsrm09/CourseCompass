@@ -109,3 +109,23 @@
 .cancel-btn:hover {
   background: #3a3a3a;
 }
+
+.course-group {
+  margin-bottom: 12px;
+}
+
+.course-group-title {
+  color: #9cc1ff;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  opacity: 0.9;
+  text-transform: uppercase;
+}
+.course-prereq {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #ff6b6b; /* soft red */
+  font-weight: 600;
+  opacity: 0.9;
+}

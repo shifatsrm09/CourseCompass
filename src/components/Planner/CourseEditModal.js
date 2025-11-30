@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../../styles/courseEditModal.css";
 
 export default function CourseEditModal({
@@ -12,39 +12,93 @@ export default function CourseEditModal({
 }) {
   const [search, setSearch] = useState("");
 
-  // Reset search when modal opens
+  // Reset search on open
   useEffect(() => {
     if (visible) setSearch("");
   }, [visible]);
 
-  // Close on ESC key
+  // Close on ESC
   useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (visible) document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
+    const h = (e) => e.key === "Escape" && onClose();
+    if (visible) document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
   }, [visible, onClose]);
 
-  // Click outside to close
+  // Click outside closes
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains("modal-backdrop")) {
       onClose();
     }
   };
 
-  // Deduplicate & sort with COD on top
-  const cod = courses.find((c) => c.code === "COD");
-  const others = courses
-    .filter((c) => c.code !== "COD")
-    .sort((a, b) => a.code.localeCompare(b.code));
+  // ===========================
+  // GROUPING LOGIC (Restored)
+  // ===========================
 
-  const finalList = cod ? [cod, ...others] : others;
+  const GROUP_ORDER = [
+    "COD",
+    "TARC",
+    "Program Core",
+    "School Core",
+    "GenEd",
+    "Program Elective",
+    "Elective",
+    "Internship",
+    "Others",
+  ];
 
-  // Apply search filter (code only)
-  const filtered = finalList.filter((c) =>
-    c.code.toLowerCase().includes(search.toLowerCase())
-  );
+  const groupLabelFromCourse = (course) => {
+    if (course.code === "COD") return "COD";
+    if (course.is_tarc) return "TARC";
+
+    const t = (course.type || "").toLowerCase();
+
+    if (t.includes("core") && t.includes("program")) return "Program Core";
+    if (t.includes("core") && t.includes("school")) return "School Core";
+    if (t.startsWith("gened")) return "GenEd";
+    if (t.includes("elective") && t.includes("program"))
+      return "Program Elective";
+    if (t.includes("elective")) return "Elective";
+    if (t === "internship") return "Internship";
+
+    return "Others";
+  };
+
+  const groupedCourses = useMemo(() => {
+    const groups = {};
+
+    // Organize into groups
+    courses.forEach((course) => {
+      const g = groupLabelFromCourse(course);
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(course);
+    });
+
+    // Sort inside each group alphabetically
+    Object.keys(groups).forEach((g) => {
+      groups[g].sort((a, b) => a.code.localeCompare(b.code));
+    });
+
+    // Apply global group ordering
+    const sortedGroups = GROUP_ORDER.filter((g) => groups[g]).map((g) => ({
+      label: g,
+      courses: groups[g],
+    }));
+
+    return sortedGroups;
+  }, [courses]);
+
+  // ===========================
+  // SEARCH FILTER
+  // ===========================
+  const filteredGroups = groupedCourses
+    .map((group) => ({
+      ...group,
+      courses: group.courses.filter((c) =>
+        c.code.toLowerCase().includes(search.toLowerCase())
+      ),
+    }))
+    .filter((g) => g.courses.length > 0);
 
   return !visible ? null : (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
@@ -53,7 +107,7 @@ export default function CourseEditModal({
           <h3 className="modal-title">{title}</h3>
         </div>
 
-        {/* Search Bar */}
+        {/* SEARCH BAR */}
         <input
           className="course-search"
           placeholder="Search by course code..."
@@ -61,21 +115,30 @@ export default function CourseEditModal({
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* COURSE LIST */}
+        {/* BODY WITH GROUPS */}
         <div className="modal-body scrollable">
-          {filtered.length > 0 ? (
-            <ul className="course-select-list">
-              {filtered.map((course) => (
-                <li key={course.code}>
-                  <button
-                    className="course-select-btn"
-                    onClick={() => onSelect(course)}
-                  >
-                    <span className="course-select-code">{course.code}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {filteredGroups.length > 0 ? (
+            filteredGroups.map((group) => (
+              <div key={group.label} className="course-group">
+                <div className="course-group-title">{group.label}</div>
+
+                {group.courses.map((course) => (
+              <button
+                key={course.code}
+                className="course-select-btn"
+                onClick={() => onSelect(course)}
+              >
+                <span className="course-select-code">{course.code}</span>
+
+                {/* HARD PREREQ (HP) */}
+                {course.hp && course.hp.length > 0 && course.hp[0] !== "" && (
+                  <span className="course-prereq">HP: {course.hp.join(", ")}</span>
+                )}
+              </button>
+
+                ))}
+              </div>
+            ))
           ) : (
             <p className="modal-empty-text">No matching courses.</p>
           )}
