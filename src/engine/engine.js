@@ -1,144 +1,96 @@
-// src/engine/engine.js
+// engine/engine.js
+
+import { hardPrereqsSatisfied, buildCompletedUpTo } from "./removeEngine";
 
 /**
- * Count how many times COD is used in completed + planned semesters.
+ * Count how many COD courses exist in the current plan.
  */
-function countCodUsages(semesterSlots, completedCourses = []) {
+function countCodInPlan(semesterSlots) {
   let count = 0;
-
-  // COD that are already completed (from DB)
-  for (const code of completedCourses) {
-    if (code === "COD") count++;
-  }
-
-  // COD in current plan (all semesters)
-  for (const slot of semesterSlots) {
-    for (const c of slot.courses || []) {
+  semesterSlots.forEach((slot) => {
+    (slot.courses || []).forEach((c) => {
       if (c.code === "COD") count++;
-    }
-  }
-
+    });
+  });
   return count;
 }
 
 /**
- * Check if all hard prerequisites (hp) are satisfied.
- * We treat empty strings and empty arrays as "no HP".
- */
-function hardPrereqsSatisfied(course, completedSet) {
-  const hp = Array.isArray(course.hp) ? course.hp : [];
-
-  // ignore blank strings
-  const cleanHp = hp.filter((code) => code && code.trim() !== "");
-
-  if (cleanHp.length === 0) return true;
-
-  return cleanHp.every((code) => completedSet.has(code));
-}
-
-/**
- * Build a Set of completed course codes.
- * We trust user.completedCourses from the backend,
- * and ALSO include all courses in semesters that are fully "completed"
- * based on currentSemester index.
+ * Validate whether we can ADD a given course into a given semester.
  *
- * currentSemester is 1-based in your app.
- */
-function buildCompletedSet(semesterSlots, currentSemester, completedCoursesFromUser = []) {
-  const completed = new Set(completedCoursesFromUser || []);
-
-  // Add courses from visually completed semesters (index < currentSemester - 1)
-  semesterSlots.forEach((slot, index) => {
-    if (index < (currentSemester || 1) - 1) {
-      (slot.courses || []).forEach((c) => completed.add(c.code));
-    }
-  });
-
-  return completed;
-}
-
-/**
- * VALIDATION FUNCTION for adding a course to a semester.
+ * Used by CoursePlanner.handleCourseSelected() when mode === "add".
  *
- * It does NOT mutate anything. It only answers:
- * - Is this add allowed under HP & COD rules?
- * - If not, why?
+ * Params:
+ *  - semesterIndex: index in semesterSlots
+ *  - courseToAdd: full course object (with code, hp, type, etc.)
+ *  - semesterSlots: current planner state (array of { courses: [...] })
+ *  - currentSemester: user.currentSemester (for future enhancements)
+ *  - completedCourses: array of course codes officially completed
+ *  - maxCoursesPerSemester: usually 5
+ *  - maxCodAllowed: global cap, usually 5
+ *
+ * Returns:
+ *  { ok: boolean, reason?: string }
  */
 export function validateAddCourse({
   semesterIndex,
   courseToAdd,
   semesterSlots,
   currentSemester,
-  completedCourses, // from user.completedCourses
+  completedCourses = [],
   maxCoursesPerSemester = 5,
   maxCodAllowed = 5,
 }) {
-  if (
-    semesterIndex == null ||
-    !semesterSlots ||
-    !semesterSlots[semesterIndex] ||
-    !courseToAdd
-  ) {
+  const targetSlot = semesterSlots[semesterIndex];
+  if (!targetSlot) {
+    return { ok: false, reason: "Invalid semester." };
+  }
+
+  // 1) Capacity check
+  if ((targetSlot.courses || []).length >= maxCoursesPerSemester) {
     return {
       ok: false,
-      reason: "Invalid data passed to engine.",
+      reason: `You cannot take more than ${maxCoursesPerSemester} courses in one semester.`,
     };
   }
 
-  const slot = semesterSlots[semesterIndex];
-
-  // 1) TARC semesters are not editable
-  if (slot.isTarc) {
-    return {
-      ok: false,
-      reason: "You cannot add courses to the TARC semester.",
-    };
-  }
-
-  // 2) Max courses per semester check
-  if ((slot.courses || []).length >= maxCoursesPerSemester) {
-    return {
-      ok: false,
-      reason: `You cannot take more than ${maxCoursesPerSemester} courses in a semester.`,
-    };
-  }
-
-  // 3) Build completed set (DB + visually completed semesters)
-  const completedSet = buildCompletedSet(
-    semesterSlots,
-    currentSemester,
-    completedCourses
-  );
-
-  // 4) Hard prerequisite check
-  if (!hardPrereqsSatisfied(courseToAdd, completedSet)) {
-    const hp = (courseToAdd.hp || []).filter((h) => h && h.trim() !== "");
-    return {
-      ok: false,
-      reason:
-        hp.length > 0
-          ? `You must complete [${hp.join(
-              ", "
-            )}] before taking ${courseToAdd.code}.`
-          : `Prerequisites for ${courseToAdd.code} are not satisfied.`,
-    };
-  }
-
-  // 5) COD limit check
+  // 2) Global COD cap check
   if (courseToAdd.code === "COD") {
-    const codUsed = countCodUsages(semesterSlots, completedCourses);
+    const codInPlan = countCodInPlan(semesterSlots);
 
-    if (codUsed >= maxCodAllowed) {
+    // We are about to ADD another COD → this would be +1
+    if (codInPlan >= maxCodAllowed) {
       return {
         ok: false,
-        reason: `You have already taken the maximum allowed COD courses (${maxCodAllowed}).`,
+        reason: `You have already planned ${maxCodAllowed} COD courses in total.`,
       };
     }
   }
 
-  // If we reach here, everything is valid
-  return {
-    ok: true,
-    reason: null,
-  };
+  // 3) HP check (only earlier semesters count as completed)
+  const completedSet = buildCompletedUpTo(
+    semesterSlots,
+    semesterIndex,
+    completedCourses
+  );
+
+  if (!hardPrereqsSatisfied(courseToAdd, completedSet)) {
+    // Build a human readable reason
+    const hpArray = Array.isArray(courseToAdd.hp) ? courseToAdd.hp : [];
+    const missing = hpArray
+      .filter((code) => code && code.trim() !== "")
+      .filter((code) => !completedSet.has(code));
+
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        reason: `Missing prerequisite(s): ${missing.join(", ")}`,
+      };
+    }
+
+    return { ok: false, reason: "Prerequisites are not satisfied." };
+  }
+
+  // All checks passed
+  return { ok: true };
 }
