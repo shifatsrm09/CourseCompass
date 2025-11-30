@@ -5,7 +5,7 @@ import Dashboard from "./components/Dashboard";
 
 function App() {
   const [user, setUser] = useState(null);
-  const [firstLogin, setFirstLogin] = useState(false);
+  const [needsStream, setNeedsStream] = useState(false);
   const [tempStudentId, setTempStudentId] = useState("");
 
   // Load from localStorage
@@ -13,8 +13,10 @@ function App() {
     const saved = localStorage.getItem("courseCompassUser");
     if (saved) {
       const parsed = JSON.parse(saved);
-      setUser(parsed.user);
-      setFirstLogin(false);
+      if (parsed.user) {
+        setUser(parsed.user);
+        setNeedsStream(!parsed.user.stream);
+      }
     }
   }, []);
 
@@ -29,33 +31,38 @@ function App() {
   const handleLogin = (data, studentId) => {
     if (data.firstLogin) {
       setTempStudentId(studentId);
-      setFirstLogin(true);
+      setNeedsStream(true);
     } else {
       setUser(data.user);
-      setFirstLogin(false);
+      setNeedsStream(false);
     }
   };
 
   // STREAM SAVED
   const handleStreamSaved = (savedUser) => {
     setUser(savedUser);
-    setFirstLogin(false);
-    localStorage.setItem("courseCompassUser", JSON.stringify({ user: savedUser }));
+    setNeedsStream(false);
+
+    localStorage.setItem(
+      "courseCompassUser",
+      JSON.stringify({ user: savedUser })
+    );
   };
 
   // LOGOUT
   const handleLogout = () => {
     localStorage.removeItem("courseCompassUser");
     setUser(null);
-    setFirstLogin(false);
+    setNeedsStream(false);
     setTempStudentId("");
   };
 
-  if (!user && !firstLogin) {
+  // FLOW CONTROL
+  if (!user && !needsStream) {
     return <Login onLogin={handleLogin} />;
   }
 
-  if (firstLogin) {
+  if (needsStream) {
     return (
       <StreamSelect
         studentId={tempStudentId}
