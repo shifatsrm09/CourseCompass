@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "../styles/login.css";
-import "../styles/card.css";      // card styling
+import "../styles/card.css";
 
 export default function Login({ onLogin }) {
   const [studentId, setStudentId] = useState("");

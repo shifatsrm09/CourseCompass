@@ -44,41 +44,45 @@ export default function SemesterList({
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="semesters" direction="vertical">
-        {(provided) => (
-          <div
-            className="planner-grid"
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-          >
-            {semesterSlots.map((slot, index) => (
-              <Draggable
-                key={slot.id}
-                draggableId={slot.id}
-                index={index}
-                isDragDisabled={!slot.isTarc || getStatus(index) === "completed"}
-              >
-                {(dragProvided, snapshot) => (
-                  <SemesterRow
-                    slot={slot}
-                    index={index}
-                    dragProvided={dragProvided}
-                    snapshot={snapshot}
-                    getStatus={getStatus}
-                    openPrompt={openPrompt}
-                    openAddCourseModal={openAddCourseModal}
-                    openReplaceCourseModal={openReplaceCourseModal}
-                    handleDropCourse={handleDropCourse}
-                  />
-                )}
-              </Draggable>
-            ))}
+    <div className="dark-container">
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="semesters" direction="vertical">
+          {(provided) => (
+            <div
+              className="planner-grid"
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {semesterSlots.map((slot, index) => (
+                <Draggable
+                  key={slot.id}
+                  draggableId={slot.id}
+                  index={index}
+                  isDragDisabled={
+                    !slot.isTarc || getStatus(index) === "completed"
+                  }
+                >
+                  {(dragProvided, snapshot) => (
+                    <SemesterRow
+                      slot={slot}
+                      index={index}
+                      dragProvided={dragProvided}
+                      snapshot={snapshot}
+                      getStatus={getStatus}
+                      openPrompt={openPrompt}
+                      openAddCourseModal={openAddCourseModal}
+                      openReplaceCourseModal={openReplaceCourseModal}
+                      handleDropCourse={handleDropCourse}
+                    />
+                  )}
+                </Draggable>
+              ))}
 
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </div>
   );
 }

@@ -1,20 +1,21 @@
 .card {
-  background: #ffffff;
+  background: #1a1a1a;
   padding: 30px 40px;
   border-radius: 14px;
-  box-shadow: 0px 4px 25px rgba(0, 0, 0, 0.08);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.45);
   max-width: 420px;
   width: 100%;
+  border: 1px solid #2d2d2d;
 }
 
 .card h2 {
   margin-bottom: 20px;
-  color: #222;
+  color: #fafafa;
   font-weight: 600;
 }
 
 .card button {
-  background: #4f46e5;
+  background: #3b82f6;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -23,11 +24,11 @@
   border-radius: 10px;
   cursor: pointer;
   font-size: 16px;
-  transition: 0.2s;
+  transition: background 0.18s;
 }
 
 .card button:hover {
-  background: #4338ca;
+  background: #2563eb;
 }
 
 .card input,
@@ -35,7 +36,14 @@
   width: 100%;
   padding: 12px;
   margin-top: 10px;
-  border: 1px solid #ddd;
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
   border-radius: 8px;
   font-size: 16px;
+}
+
+.card select option {
+  background: #1e1e1e;
+  color: #f0f0f0;
 }

@@ -22,9 +22,10 @@ the core logic is if some student may fail in one course they can select that co
 we will be suggesting course in the consideration of 
 -> earlier course done
 -> what course they need to complete according to the BRAC given full semester sequence 
+-> the current semester whould be our Mark point FLAG to decide we will see what the user has completed by far and whats left from that
+    we suggest whats the next available course according to the order and if that meets the prerequisites or not
 
-
-The system must:
+The system has:
 
 1️⃣ Login System
 
@@ -40,11 +41,12 @@ After selecting once, login goes directly to dashboard.
 Each stream has a JSON file, e.g.:
 
 ENG101-MAT110.json
+and 6 more we will add them later
 
 
 Contains BRAC’s official course sequence:
 
-semester_row (1–12)
+semester_row (1–12) may increase if user take less thn 4 courses or fails 
 
 HP / SP prerequisites
 
@@ -59,7 +61,7 @@ HUM103, BNG103, EMB101, ENG102
 
 By default placed in Semester 3
 
-TARC is movable (drag-down to 4 / 5 / 6)
+TARC is movable (drag-down to 4 / 5 / 6/ ....)
 but cannot be moved to 1st or 2nd semester.
 
 Only TARC can be dragged.
@@ -71,8 +73,6 @@ Each semester has a status:
 
 Current
 
-Upcoming
-
 Completed
 
 Recommended (previously “LOCKED”)
@@ -81,28 +81,6 @@ TARC badge if applicable.
 
 These are dynamic based on currentSemester stored in DB.
 
-5️⃣ Saving User State
-
-User-specific DB fields must include:
-
-{
-  studentId: String,
-  firstLogin: Boolean,
-  stream: String,
-  currentSemester: Number,   // default = 1
-  semesterOrder: [Number],   // e.g. [1,2,3,4,5,...12]
-  completedCourses: [String],
-  overrides: Object           // semester overrides in future
-}
-
-
-All actions must persist:
-
-Moving TARC to another semester
-
-Completing a semester
-
-Future: overriding courses
 
 6️⃣ Planner UI
 
@@ -120,11 +98,8 @@ Smooth vertical-only movement
 
 7️⃣ Current Issue We Were Fixing
 
-Semester statuses all appear “LOCKED”
-
-Because some users in DB do not have currentSemester field
-
-Needed fallback + DB update
+    No issues
+    we need to add functionality
 
 📂 PROJECT DIRECTORY STRUCTURE (REMEMBER THIS TOO)
 COURSE-COMPASS/
@@ -162,19 +137,7 @@ COURSE-COMPASS/
 
 (Please continue from here)
 
-✔ Make semester statuses correct again
 
-(1st = CURRENT, 2nd = UPCOMING, rest = RECOMMENDED)
-
-✔ Add safe fallback when currentSemester missing
-✔ Ensure semester ordering loads from DB
-✔ Begin implementing:
-
-“Mark Semester Completed”
-
-Save currentSemester + 1 into DB
-
-Refresh statuses properly on reload
 
 our very step0 will be implement the add-drop-modify functioanlity and save them to the db.
 

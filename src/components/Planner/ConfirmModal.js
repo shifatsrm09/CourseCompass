@@ -1,7 +1,12 @@
 import React from "react";
 import "../../styles/modal.css";
 
-export default function ConfirmModal({ visible, onConfirm, onCancel, semester }) {
+export default function ConfirmModal({
+  visible,
+  onConfirm,
+  onCancel,
+  semester,
+}) {
   if (!visible) return null;
 
   return (

@@ -1,4 +1,4 @@
-/* Global reset */
+/* GLOBAL RESET */
 * {
   margin: 0;
   padding: 0;
@@ -7,17 +7,35 @@
 }
 
 body {
-  background: #f5f7fa;
-  color: #333;
+  background: #0f0f0f; /* deep dark */
+  color: #e5e5e5;
 }
 
-/* Utility classes */
+/* UTILITY */
 .center {
   display: flex;
   justify-content: center;
   align-items: center;
 }
+.dark-container {
+  background: #0f0f0f;
+  width: 100%;
+}
 
 .container {
   padding: 20px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
 }

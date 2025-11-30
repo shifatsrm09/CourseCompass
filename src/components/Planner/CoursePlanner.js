@@ -93,6 +93,7 @@ export default function CoursePlanner({
     const usedCodes = new Set(
       slot.courses.map((c, i) => (i === courseIndex ? null : c.code))
     );
+
     const selectable = allCourses.filter((c) => !usedCodes.has(c.code));
 
     setModalCourses(selectable);
@@ -117,8 +118,8 @@ export default function CoursePlanner({
 
         const newCourses = [...slot.courses];
 
-        if (mode === "add") {
-          if (newCourses.length < 5) newCourses.push(course);
+        if (mode === "add" && newCourses.length < 5) {
+          newCourses.push(course);
         } else if (mode === "replace") {
           newCourses[courseIndex] = course;
         }
@@ -131,7 +132,7 @@ export default function CoursePlanner({
   };
 
   return (
-    <div className="planner-container">
+    <div className="planner-container dark-container">
       <h2 className="planner-title">Course Planner</h2>
 
       <ConfirmModal

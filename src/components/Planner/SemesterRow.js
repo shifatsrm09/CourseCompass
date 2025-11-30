@@ -31,9 +31,11 @@ export default function SemesterRow({
 
       <div className="row-main">
         <div className="row-header">
+          {/* LEFT: Semester title */}
           <div className="semester-col">Semester {index + 1}</div>
 
-          <div className="row-badges">
+          {/* RIGHT: Badges (aligned to the right again) */}
+          <div className="row-badges" style={{ marginLeft: "auto" }}>
             {slot.isTarc && <span className="tarc-pill">TARC</span>}
 
             <div

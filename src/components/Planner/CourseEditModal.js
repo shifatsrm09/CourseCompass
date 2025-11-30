@@ -16,7 +16,7 @@ export default function CourseEditModal({
     <div className="modal-backdrop">
       <div className="modal-panel">
         <div className="modal-header">
-          <h3>{title}</h3>
+          <h3 style={{ color: "#f0f0f0" }}>{title}</h3>
           <button className="modal-close-btn" onClick={onClose}>
             ×
           </button>
@@ -42,8 +42,11 @@ export default function CourseEditModal({
               ))}
             </ul>
           ) : (
-            <p className="modal-empty-text">
-              No available courses to choose from.
+            <p
+              className="modal-empty-text"
+              style={{ color: "#aaa", textAlign: "center" }}
+            >
+              No available courses.
             </p>
           )}
         </div>

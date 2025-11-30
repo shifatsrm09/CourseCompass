@@ -27,7 +27,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
     );
 
     const data = await res.json();
-    onUpdate(data.user); // send user back to App.js
+    onUpdate(data.user);
   };
 
   return (
@@ -47,7 +47,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
           {/* Configured Streams */}
           <option value="ENG101 + MAT110">ENG101 + MAT110</option>
 
-          {/* Unconfigured streams (disabled or selectable but shows error) */}
+          {/* Unconfigured Streams */}
           <option value="ENG101 + MAT092">ENG101 + MAT092</option>
           <option value="ENG102 + MAT110">ENG102 + MAT110</option>
           <option value="ENG102 + MAT092">ENG102 + MAT092</option>
@@ -55,13 +55,20 @@ export default function StreamSelect({ studentId, onUpdate }) {
           <option value="ENG091 + MAT092">ENG091 + MAT092</option>
         </select>
 
-        {error && <p className="stream-error">{error}</p>}
+        {error && (
+          <p
+            className="stream-error"
+            style={{ color: "#ff6b6b", marginTop: "10px" }}
+          >
+            {error}
+          </p>
+        )}
 
         <button onClick={saveStream} disabled={!stream}>
           Save Stream
         </button>
 
-        <p style={{ marginTop: "10px", fontSize: "0.9rem", opacity: 0.7 }}>
+        <p style={{ marginTop: "10px", fontSize: "0.9rem", color: "#aaa" }}>
           Only ENG101 + MAT110 is currently available.
         </p>
       </div>

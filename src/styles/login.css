@@ -1,15 +1,17 @@
 .login-wrapper {
   height: 100vh;
+  background: #0f0f0f;
 }
 
 .login-title {
   font-size: 28px;
   font-weight: 700;
   margin-bottom: 10px;
+  color: #fafafa;
 }
 
 .login-subtitle {
-  color: #555;
+  color: #bbbbbb;
   margin-bottom: 25px;
   font-size: 15px;
 }
