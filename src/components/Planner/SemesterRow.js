@@ -10,7 +10,6 @@ export default function SemesterRow({
   openPrompt,
   openAddCourseModal,
   openReplaceCourseModal,
-  handleDropCourse,
 }) {
   const status = getStatus(index);
   const isCurrent = status === "current";
@@ -31,11 +30,9 @@ export default function SemesterRow({
 
       <div className="row-main">
         <div className="row-header">
-          {/* LEFT: Semester title */}
           <div className="semester-col">Semester {index + 1}</div>
 
-          {/* RIGHT: Badges (aligned to the right again) */}
-          <div className="row-badges" style={{ marginLeft: "auto" }}>
+          <div className="row-badges">
             {slot.isTarc && <span className="tarc-pill">TARC</span>}
 
             <div
@@ -55,7 +52,6 @@ export default function SemesterRow({
               key={`${course.code}-${cIndex}`}
               course={course}
               isLocked={slot.isTarc}
-              onDrop={() => handleDropCourse(index, cIndex)}
               onReplace={() => openReplaceCourseModal(index, cIndex)}
             />
           ))}

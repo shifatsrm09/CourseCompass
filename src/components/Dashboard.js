@@ -10,32 +10,33 @@ export default function Dashboard({ user, setUser, onLogout }) {
   useEffect(() => {
     if (!user.stream) return;
 
-    // We assume stream is ALWAYS valid because StreamSelect ensured that
     import(`../data/ENG101-MAT110.json`)
       .then((json) => {
         const streamCourses = json.default;
 
         setCourses(streamCourses);
 
-        // build unique course list for modal
+        // Build unique course list — but preserve *first* COD (important)
         const byCode = {};
         streamCourses.forEach((c) => {
           if (!byCode[c.code]) byCode[c.code] = c;
         });
 
-        setAllCourses(Object.values(byCode));
+        // Make COD appear FIRST in the modal
+        const list = Object.values(byCode);
+        const cod = list.find((c) => c.code === "COD");
+        const others = list.filter((c) => c.code !== "COD");
+
+        setAllCourses(cod ? [cod, ...others] : others);
       })
-      .catch(() => {
-        console.error("STREAM JSON IS MISSING");
-      });
+      .catch(() => console.error("STREAM JSON IS MISSING"));
   }, [user.stream]);
 
-  // Reorder semesters based on user order (if exists)
   useEffect(() => {
     if (!courses) return;
 
     const order =
-      user.semesterOrder || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+      user.semesterOrder || [1,2,3,4,5,6,7,8,9,10,11,12];
 
     const grouped = {};
     courses.forEach((c) => {
@@ -43,22 +44,19 @@ export default function Dashboard({ user, setUser, onLogout }) {
       grouped[c.semester_row].push(c);
     });
 
-    const reordered = order.map((row) => ({
-      semester_row: row,
-      courses: grouped[row] || [],
-    }));
-
-    setOrderedCourses(reordered);
+    setOrderedCourses(
+      order.map((row) => ({
+        semester_row: row,
+        courses: grouped[row] || [],
+      }))
+    );
   }, [courses, user]);
 
   const setCurrentSemester = (newVal, updatedUser = null) => {
     const userToStore = updatedUser || { ...user, currentSemester: newVal };
 
     setUser(userToStore);
-    localStorage.setItem(
-      "courseCompassUser",
-      JSON.stringify({ user: userToStore })
-    );
+    localStorage.setItem("courseCompassUser", JSON.stringify({ user: userToStore }));
   };
 
   const safeCurrent = user.currentSemester || 1;
@@ -73,9 +71,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
           <p className="dashboard-subtitle">Stream: {user.stream}</p>
         </div>
 
-        <button className="logout-btn" onClick={onLogout}>
-          Logout
-        </button>
+        <button className="logout-btn" onClick={onLogout}>Logout</button>
       </div>
 
       <CoursePlanner

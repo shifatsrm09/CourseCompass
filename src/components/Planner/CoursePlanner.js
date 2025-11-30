@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "../../styles/planner.css";
+
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
@@ -28,14 +29,21 @@ export default function CoursePlanner({
   const [modalCourses, setModalCourses] = useState([]);
   const [modalContext, setModalContext] = useState(null);
 
+  /* ──────────────────────────────────────────────
+     SEMESTER STATUS
+  ─────────────────────────────────────────────── */
   const getStatus = (index) => {
     const safe = currentSemester || 1;
+
     if (index < safe - 1) return "completed";
     if (index === safe - 1) return "current";
     if (index === safe) return "recommended";
     return "locked";
   };
 
+  /* ──────────────────────────────────────────────
+     MARK SEMESTER COMPLETE
+  ─────────────────────────────────────────────── */
   const openPrompt = () => setShowModal(true);
   const cancelComplete = () => setShowModal(false);
 
@@ -50,63 +58,79 @@ export default function CoursePlanner({
       });
 
       const data = await res.json();
-
       if (!data.success) {
         alert("Error: " + data.error);
         return;
       }
 
       setCurrentSemester(data.user.currentSemester, data.user);
-    } catch (err) {
+    } catch {
       alert("Network error contacting server.");
     }
   };
 
-  const handleDropCourse = (semesterIndex, courseIndex) => {
-    setSemesterSlots((prev) =>
-      prev.map((slot, idx) => {
-        if (idx !== semesterIndex || slot.isTarc) return slot;
-        return {
-          ...slot,
-          courses: slot.courses.filter((_, i) => i !== courseIndex),
-        };
-      })
-    );
-  };
+  /* ──────────────────────────────────────────────
+     COURSE EDITING LOGIC
+  ─────────────────────────────────────────────── */
 
+  // Add a course
   const openAddCourseModal = (semesterIndex) => {
     const slot = semesterSlots[semesterIndex];
+
     if (slot.isTarc || slot.courses.length >= 5) return;
 
     const usedCodes = new Set(slot.courses.map((c) => c.code));
-    const selectable = allCourses.filter((c) => !usedCodes.has(c.code));
+
+    // COD is ALWAYS allowed
+    const selectable = allCourses.filter(
+      (c) => c.code === "COD" || !usedCodes.has(c.code)
+    );
 
     setModalCourses(selectable);
     setModalContext({ mode: "add", semesterIndex });
     setEditModalVisible(true);
   };
 
+  // Replace a course
   const openReplaceCourseModal = (semesterIndex, courseIndex) => {
     const slot = semesterSlots[semesterIndex];
+
     if (slot.isTarc) return;
 
     const usedCodes = new Set(
       slot.courses.map((c, i) => (i === courseIndex ? null : c.code))
     );
 
-    const selectable = allCourses.filter((c) => !usedCodes.has(c.code));
+    const selectable = allCourses.filter(
+      (c) => c.code === "COD" || !usedCodes.has(c.code)
+    );
 
     setModalCourses(selectable);
     setModalContext({ mode: "replace", semesterIndex, courseIndex });
     setEditModalVisible(true);
   };
 
-  const closeEditModal = () => {
-    setEditModalVisible(false);
-    setModalContext(null);
-    setModalCourses([]);
+  // Remove course from semester
+  const handleRemoveCourse = () => {
+    if (!modalContext) return;
+
+    const { semesterIndex, courseIndex } = modalContext;
+
+    setSemesterSlots((prev) =>
+      prev.map((slot, idx) =>
+        idx === semesterIndex
+          ? {
+              ...slot,
+              courses: slot.courses.filter((_, i) => i !== courseIndex),
+            }
+          : slot
+      )
+    );
+
+    closeEditModal();
   };
 
+  // Select course from modal
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
@@ -131,10 +155,20 @@ export default function CoursePlanner({
     closeEditModal();
   };
 
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setModalContext(null);
+    setModalCourses([]);
+  };
+
+  /* ──────────────────────────────────────────────
+     RENDER
+  ─────────────────────────────────────────────── */
   return (
     <div className="planner-container dark-container">
       <h2 className="planner-title">Course Planner</h2>
 
+      {/* Confirm Complete Modal */}
       <ConfirmModal
         visible={showModal}
         onConfirm={confirmComplete}
@@ -142,6 +176,7 @@ export default function CoursePlanner({
         semester={currentSemester || 1}
       />
 
+      {/* Semester List */}
       <SemesterList
         semesterSlots={semesterSlots}
         setSemesterSlots={setSemesterSlots}
@@ -149,16 +184,18 @@ export default function CoursePlanner({
         openPrompt={openPrompt}
         openAddCourseModal={openAddCourseModal}
         openReplaceCourseModal={openReplaceCourseModal}
-        handleDropCourse={handleDropCourse}
         currentSemester={currentSemester}
         user={user}
       />
 
+      {/* Course Edit Modal */}
       <CourseEditModal
         visible={editModalVisible}
         onClose={closeEditModal}
         onSelect={handleCourseSelected}
+        onRemove={handleRemoveCourse}
         courses={modalCourses}
+        modalContext={modalContext}
         title={
           modalContext?.mode === "add" ? "Add a course" : "Replace course"
         }
