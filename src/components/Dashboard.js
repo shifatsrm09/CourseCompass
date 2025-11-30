@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "../styles/dashboard.css";
-import CoursePlanner from "./CoursePlanner";
+import CoursePlanner from "./Planner/CoursePlanner";
 
 export default function Dashboard({ user, setUser, onLogout }) {
   const [courses, setCourses] = useState(null);
