@@ -16,7 +16,7 @@ function collectFutureCourses(slots, startIndex) {
     for (const c of s.courses) {
       if (!c) continue;
 
-      // Never include TARC courses in balance (avoid duplication)
+      // Never include TARC-only marker courses (if any)
       if (c.is_tarc) continue;
 
       list.push(c);
@@ -29,13 +29,19 @@ function collectFutureCourses(slots, startIndex) {
 /**
  * MAIN BALANCE ENGINE
  *
- * RULES:
+ * BASE RULES (same spirit as old stable engine):
  * - Treat CURRENT semester as COMPLETED (HP sees it as done).
  * - Remove all courses from recommended → last semester.
- * - Reinsert them with max 4 per semester.
- * - Never modify TARC semester contents.
+ * - Reinsert them with max 4 per semester using placeCourse().
+ * - Never modify TARC semesters.
  * - Always respect HP rules (delegated to placeCourse).
- * - If needed, can create NEW semesters at the end (Mode B).
+ * - placeCourse MAY create new semesters at the end if needed.
+ *
+ * EXTRA RULE (new, but minimal):
+ * - After normal balance, enforce:
+ *      semester_row 10 and 11 → max 3 normal courses.
+ *   Any extra course is pushed FORWARD using placeCourse again
+ *   (starting from the next semester index).
  */
 export function balanceFutureSemesters({
   semesterSlots,
@@ -76,8 +82,8 @@ export function balanceFutureSemesters({
 
   // 3) Reinsert all courses using shared placeCourse:
   //    - starting from recommended semester index
-  //    - max 4 per semester (your balance target)
-  //    - HP-safe placement, can create new semesters at the end (Mode B)
+  //    - max 4 per semester (your original balance target)
+  //    - HP-safe placement, can create new semesters at the end
   for (const course of futureCourses) {
     placeCourse({
       slots,
@@ -87,6 +93,34 @@ export function balanceFutureSemesters({
       maxCoursesPerSemester: 4,
       maxCodPerSemester: 1,
     });
+  }
+
+  // 4) EXTRA: enforce thesis-friendly caps on semesters 10 and 11
+  //    → at most 3 normal courses (thesis is not in courses array)
+  const SPECIAL_ROWS = new Set([10, 11]);
+
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    if (!slot) continue;
+
+    const row = slot.originalRow;
+    if (!SPECIAL_ROWS.has(row)) continue;
+
+    // While more than 3 normal courses → push the last one forward
+    while ((slot.courses || []).length > 3) {
+      const movedCourse = slot.courses.pop();
+      if (!movedCourse) break;
+
+      // Reinsert starting from *next* semester index
+      placeCourse({
+        slots,
+        course: movedCourse,
+        startIndex: i + 1,
+        completedCourses,
+        maxCoursesPerSemester: 4,
+        maxCodPerSemester: 1,
+      });
+    }
   }
 
   return slots;
