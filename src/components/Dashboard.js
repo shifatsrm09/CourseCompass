@@ -7,6 +7,9 @@ export default function Dashboard({ user, setUser, onLogout }) {
   const [orderedCourses, setOrderedCourses] = useState(null);
   const [allCourses, setAllCourses] = useState([]);
 
+  /* ──────────────────────────────────────────────
+     LOAD STREAM JSON
+  ─────────────────────────────────────────────── */
   useEffect(() => {
     if (!user.stream) return;
 
@@ -16,13 +19,13 @@ export default function Dashboard({ user, setUser, onLogout }) {
 
         setCourses(streamCourses);
 
-        // Build unique course list — but preserve *first* COD (important)
+        // Build unique course list — first appearance wins
         const byCode = {};
         streamCourses.forEach((c) => {
           if (!byCode[c.code]) byCode[c.code] = c;
         });
 
-        // Make COD appear FIRST in the modal
+        // Make COD appear FIRST
         const list = Object.values(byCode);
         const cod = list.find((c) => c.code === "COD");
         const others = list.filter((c) => c.code !== "COD");
@@ -32,31 +35,66 @@ export default function Dashboard({ user, setUser, onLogout }) {
       .catch(() => console.error("STREAM JSON IS MISSING"));
   }, [user.stream]);
 
+  /* ──────────────────────────────────────────────
+     LOAD ORDERED PLAN
+     1) If user.customPlan == null → use default JSON
+     2) If user.customPlan != null → convert DB plan to UI plan
+  ─────────────────────────────────────────────── */
   useEffect(() => {
     if (!courses) return;
 
-    const order =
-      user.semesterOrder || [1,2,3,4,5,6,7,8,9,10,11,12];
+    // CASE 1: No custom plan → use default JSON-based plan
+    if (!user.customPlan) {
+      const order =
+        user.semesterOrder || [1,2,3,4,5,6,7,8,9,10,11,12];
 
-    const grouped = {};
-    courses.forEach((c) => {
-      if (!grouped[c.semester_row]) grouped[c.semester_row] = [];
-      grouped[c.semester_row].push(c);
+      const grouped = {};
+      courses.forEach((c) => {
+        if (!grouped[c.semester_row]) grouped[c.semester_row] = [];
+        grouped[c.semester_row].push(c);
+      });
+
+      setOrderedCourses(
+        order.map((row) => ({
+          semester_row: row,
+          courses: grouped[row] || [],
+        }))
+      );
+
+      return;
+    }
+
+    // CASE 2: customPlan exists → reconstruct planner from DB
+    const planFromDB = user.customPlan;  // [{ semester, courses:[codes] }]
+
+    // map codes → course objects (lookup from allCourses)
+    const byCode = {};
+    allCourses.forEach((course) => {
+      byCode[course.code] = course;
     });
 
-    setOrderedCourses(
-      order.map((row) => ({
-        semester_row: row,
-        courses: grouped[row] || [],
-      }))
-    );
-  }, [courses, user]);
+    // Convert DB plan → UI format
+    const rebuilt = planFromDB.map((sem) => ({
+      semester_row: sem.semester,
+      courses: sem.courses
+        .map((code) => byCode[code])
+        .filter(Boolean), // remove missing ones
+    }));
 
+    setOrderedCourses(rebuilt);
+  }, [courses, user, allCourses]);
+
+  /* ──────────────────────────────────────────────
+     UPDATE CURRENT SEMESTER LOCALLY
+  ─────────────────────────────────────────────── */
   const setCurrentSemester = (newVal, updatedUser = null) => {
     const userToStore = updatedUser || { ...user, currentSemester: newVal };
 
     setUser(userToStore);
-    localStorage.setItem("courseCompassUser", JSON.stringify({ user: userToStore }));
+    localStorage.setItem(
+      "courseCompassUser",
+      JSON.stringify({ user: userToStore })
+    );
   };
 
   const safeCurrent = user.currentSemester || 1;
@@ -71,7 +109,9 @@ export default function Dashboard({ user, setUser, onLogout }) {
           <p className="dashboard-subtitle">Stream: {user.stream}</p>
         </div>
 
-        <button className="logout-btn" onClick={onLogout}>Logout</button>
+        <button className="logout-btn" onClick={onLogout}>
+          Logout
+        </button>
       </div>
 
       <CoursePlanner

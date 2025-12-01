@@ -44,6 +44,49 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
+     DB SYNC HELPER
+  ─────────────────────────────────────────────── */
+  const syncPlanToServer = async (slots) => {
+    try {
+      // build customPlan from slots
+      const plan = slots.map((slot) => ({
+        semester: slot.originalRow,
+        courses: (slot.courses || []).map((c) => c.code),
+      }));
+
+      // count CODs globally
+      const codCount = plan.reduce(
+        (acc, sem) =>
+          acc + sem.courses.filter((code) => code === "COD").length,
+        0
+      );
+
+      // find current semester's courses based on originalRow
+      const currentRow = currentSemester || 1;
+      const currentSlot = slots.find(
+        (s) => s.originalRow === currentRow
+      );
+      const currentCourses = currentSlot
+        ? (currentSlot.courses || []).map((c) => c.code)
+        : [];
+
+      await fetch(`${API_BASE}/planner/save-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: user.studentId,
+          plan,
+          codCount,
+          currentCourses,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to sync plan to server:", err);
+      // No alert: we don't want to annoy user if network blips.
+    }
+  };
+
+  /* ──────────────────────────────────────────────
      MARK SEMESTER COMPLETE
   ─────────────────────────────────────────────── */
   const openPrompt = () => setShowModal(true);
@@ -112,7 +155,6 @@ export default function CoursePlanner({
 
     setModalCourses(selectable);
 
-    // include status & isTarc for modal logic
     setModalContext({
       mode: "add",
       semesterIndex,
@@ -174,7 +216,7 @@ export default function CoursePlanner({
 
       slots[semesterIndex].courses.splice(courseIndex, 1);
 
-      return reinsertRemovedCourse({
+      const rebalanced = reinsertRemovedCourse({
         semesterSlots: slots,
         removedCourse,
         fromSemesterIndex: semesterIndex,
@@ -182,6 +224,10 @@ export default function CoursePlanner({
         maxCoursesPerSemester: 5,
         maxCodPerSemester: 1,
       });
+
+      // sync to DB
+      syncPlanToServer(rebalanced);
+      return rebalanced;
     });
 
     closeEditModal();
@@ -229,14 +275,13 @@ export default function CoursePlanner({
 
       if (mode === "add") {
         if (isCod) {
-          // ───────── COD SPECIAL BEHAVIOUR (pull from future) ─────────
+          // COD special behaviour (pull from future)
           if (targetSlot.courses.length >= 5) return prev;
           const alreadyHasCod = targetSlot.courses.some(
             (c) => c.code === "COD"
           );
           if (alreadyHasCod) return prev;
 
-          // Find nearest future semester that has a COD
           let futureIndex = -1;
           for (let i = semesterIndex + 1; i < slots.length; i++) {
             const s = slots[i];
@@ -255,15 +300,13 @@ export default function CoursePlanner({
             );
             if (codPos !== -1) {
               codToInsert = futureSlot.courses[codPos];
-              futureSlot.courses.splice(codPos, 1); // remove from future semester
+              futureSlot.courses.splice(codPos, 1);
             }
           }
-          // else: no future COD → this becomes a new COD
-          // (global cap already enforced in validateAddCourse)
 
           targetSlot.courses.push(codToInsert);
         } else {
-          // ───────── NORMAL COURSE ADD ─────────
+          // Normal course add
           if (targetSlot.courses.length >= 5) return prev;
           targetSlot.courses.push(course);
 
@@ -292,6 +335,8 @@ export default function CoursePlanner({
         }
       }
 
+      // sync updated plan
+      syncPlanToServer(slots);
       return slots;
     });
 

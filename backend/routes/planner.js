@@ -61,4 +61,55 @@ router.post("/complete-semester", async (req, res) => {
   });
 });
 
+// ----------------------------------------------
+// SAVE FULL CUSTOM PLAN (ENGINE OUTPUT)
+// ----------------------------------------------
+//
+// Body:
+// {
+//   studentId: string,
+//   plan: [
+//     { semester: Number, courses: [ "CSE110", "MAT110", ... ] },
+//     ...
+//   ],
+//   codCount: Number,
+//   currentCourses: [String]
+// }
+//
+router.post("/save-plan", async (req, res) => {
+  const { studentId, plan, codCount, currentCourses } = req.body;
+
+  if (!studentId || !Array.isArray(plan)) {
+    return res
+      .status(400)
+      .json({ error: "studentId and plan (array) are required" });
+  }
+
+  const user = await User.findOne({ studentId });
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  await ensureCurrentSemester(user);
+
+  // Store custom engine-adjusted plan
+  user.customPlan = plan;
+
+  // Update COD count if provided
+  if (typeof codCount === "number") {
+    user.codCount = codCount;
+  }
+
+  // Update current courses if provided
+  if (Array.isArray(currentCourses)) {
+    user.currentCourses = currentCourses;
+  }
+
+  await user.save();
+
+  return res.json({
+    success: true,
+    message: "Plan saved successfully",
+    user,
+  });
+});
+
 module.exports = router;
