@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "../../styles/courseEditModal.css";
 
+// ✅ FIX: GROUP_ORDER moved below imports but still outside component
+const GROUP_ORDER = [
+  "COD",
+  "TARC",
+  "Program Core",
+  "School Core",
+  "GenEd",
+  "Program Elective",
+  "Elective",
+  "Internship",
+  "Others",
+];
+
 export default function CourseEditModal({
   visible,
   onClose,
@@ -12,40 +25,36 @@ export default function CourseEditModal({
 }) {
   const [search, setSearch] = useState("");
 
-  // Reset search on open
   useEffect(() => {
     if (visible) setSearch("");
   }, [visible]);
 
-  // Close on ESC
   useEffect(() => {
     const h = (e) => e.key === "Escape" && onClose();
     if (visible) document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [visible, onClose]);
 
-  // Click outside closes
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains("modal-backdrop")) {
       onClose();
     }
   };
 
-  // ===========================
-  // GROUPING LOGIC (Restored)
-  // ===========================
+  /* ──────────────────────────────────────────────
+     REMOVE BUTTON LOGIC
+  ─────────────────────────────────────────────── */
+  const disableRemove =
+    modalContext?.isTarc || // TARC cannot delete
+    modalContext?.semesterIndex === 0 || // first semester cannot delete
+    !(
+      modalContext?.status === "current" ||
+      modalContext?.status === "recommended"
+    ); // completed/locked cannot delete
 
-  const GROUP_ORDER = [
-    "COD",
-    "TARC",
-    "Program Core",
-    "School Core",
-    "GenEd",
-    "Program Elective",
-    "Elective",
-    "Internship",
-    "Others",
-  ];
+  /* ──────────────────────────────────────────────
+     GROUPING & SEARCH
+  ─────────────────────────────────────────────── */
 
   const groupLabelFromCourse = (course) => {
     if (course.code === "COD") return "COD";
@@ -67,30 +76,22 @@ export default function CourseEditModal({
   const groupedCourses = useMemo(() => {
     const groups = {};
 
-    // Organize into groups
     courses.forEach((course) => {
       const g = groupLabelFromCourse(course);
       if (!groups[g]) groups[g] = [];
       groups[g].push(course);
     });
 
-    // Sort inside each group alphabetically
-    Object.keys(groups).forEach((g) => {
-      groups[g].sort((a, b) => a.code.localeCompare(b.code));
-    });
+    Object.keys(groups).forEach((g) =>
+      groups[g].sort((a, b) => a.code.localeCompare(b.code))
+    );
 
-    // Apply global group ordering
-    const sortedGroups = GROUP_ORDER.filter((g) => groups[g]).map((g) => ({
+    return GROUP_ORDER.filter((g) => groups[g]).map((g) => ({
       label: g,
       courses: groups[g],
     }));
-
-    return sortedGroups;
   }, [courses]);
 
-  // ===========================
-  // SEARCH FILTER
-  // ===========================
   const filteredGroups = groupedCourses
     .map((group) => ({
       ...group,
@@ -100,6 +101,9 @@ export default function CourseEditModal({
     }))
     .filter((g) => g.courses.length > 0);
 
+  /* ──────────────────────────────────────────────
+     RENDER
+  ─────────────────────────────────────────────── */
   return !visible ? null : (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
       <div className="modal-panel">
@@ -107,7 +111,6 @@ export default function CourseEditModal({
           <h3 className="modal-title">{title}</h3>
         </div>
 
-        {/* SEARCH BAR */}
         <input
           className="course-search"
           placeholder="Search by course code..."
@@ -115,7 +118,6 @@ export default function CourseEditModal({
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* BODY WITH GROUPS */}
         <div className="modal-body scrollable">
           {filteredGroups.length > 0 ? (
             filteredGroups.map((group) => (
@@ -123,19 +125,21 @@ export default function CourseEditModal({
                 <div className="course-group-title">{group.label}</div>
 
                 {group.courses.map((course) => (
-              <button
-                key={course.code}
-                className="course-select-btn"
-                onClick={() => onSelect(course)}
-              >
-                <span className="course-select-code">{course.code}</span>
+                  <button
+                    key={course.code}
+                    className="course-select-btn"
+                    onClick={() => onSelect(course)}
+                  >
+                    <span className="course-select-code">{course.code}</span>
 
-                {/* HARD PREREQ (HP) */}
-                {course.hp && course.hp.length > 0 && course.hp[0] !== "" && (
-                  <span className="course-prereq">HP: {course.hp.join(", ")}</span>
-                )}
-              </button>
-
+                    {course.hp &&
+                      course.hp.length > 0 &&
+                      course.hp[0] !== "" && (
+                        <span className="course-prereq">
+                          HP: {course.hp.join(", ")}
+                        </span>
+                      )}
+                  </button>
                 ))}
               </div>
             ))
@@ -144,9 +148,8 @@ export default function CourseEditModal({
           )}
         </div>
 
-        {/* FOOTER BUTTONS */}
         <div className="modal-footer">
-          {modalContext?.mode === "replace" && (
+          {modalContext?.mode === "replace" && !disableRemove && (
             <button className="remove-btn" onClick={onRemove}>
               Remove Course
             </button>

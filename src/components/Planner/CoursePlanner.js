@@ -32,10 +32,11 @@ export default function CoursePlanner({
   const [modalContext, setModalContext] = useState(null);
 
   /* ──────────────────────────────────────────────
-      SEMESTER STATUS
+     SEMESTER STATUS
   ─────────────────────────────────────────────── */
   const getStatus = (index) => {
     const safe = currentSemester || 1;
+
     if (index < safe - 1) return "completed";
     if (index === safe - 1) return "current";
     if (index === safe) return "recommended";
@@ -43,7 +44,7 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
-      MARK SEMESTER COMPLETE
+     MARK SEMESTER COMPLETE
   ─────────────────────────────────────────────── */
   const openPrompt = () => setShowModal(true);
   const cancelComplete = () => setShowModal(false);
@@ -71,42 +72,38 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
-      PERMISSION HELPERS
+     HELPER PERMISSION FUNCTIONS
   ─────────────────────────────────────────────── */
+
   const canModify = (index, slot) => {
     const status = getStatus(index);
 
-    if (index === 0) return false; // first semester locked
+    if (index === 0) return false;
     if (status === "current" || status === "recommended") return true;
-    if (slot.isTarc) return true; // TARC special case
+    if (slot.isTarc) return true;
+
     return false;
   };
 
   const canRemove = (index, slot) => {
     const status = getStatus(index);
     if (index === 0) return false;
-    if (slot.isTarc) return false; // TARC cannot delete
+    if (slot.isTarc) return false;
     return status === "current" || status === "recommended";
   };
 
   /* ──────────────────────────────────────────────
-      OPEN ADD MODAL (patched with new rules)
+     OPEN ADD COURSE MODAL
   ─────────────────────────────────────────────── */
   const openAddCourseModal = (semesterIndex) => {
     const slot = semesterSlots[semesterIndex];
     const status = getStatus(semesterIndex);
 
-    // 1. Block first semester
-    if (semesterIndex === 0) return;
+    if (!canModify(semesterIndex, slot)) return;
 
-    // 2. Block completed + locked
-    if (!(status === "current" || status === "recommended" || slot.isTarc))
-      return;
-
-    // 3. Block TARC add if full (>=4)
+    // TARC cannot exceed 4
     if (slot.isTarc && slot.courses.length >= 4) return;
 
-    // 4. Existing original rule was WRONG (it blocked TARC completely)
     const usedCodes = new Set(slot.courses.map((c) => c.code));
 
     const selectable = allCourses.filter(
@@ -114,15 +111,24 @@ export default function CoursePlanner({
     );
 
     setModalCourses(selectable);
-    setModalContext({ mode: "add", semesterIndex, isTarc: slot.isTarc });
+
+    // include status & isTarc for modal logic
+    setModalContext({
+      mode: "add",
+      semesterIndex,
+      status,
+      isTarc: slot.isTarc,
+    });
+
     setEditModalVisible(true);
   };
 
   /* ──────────────────────────────────────────────
-      OPEN REPLACE MODAL (patched with rules)
+     OPEN REPLACE COURSE MODAL
   ─────────────────────────────────────────────── */
   const openReplaceCourseModal = (semesterIndex, courseIndex) => {
     const slot = semesterSlots[semesterIndex];
+    const status = getStatus(semesterIndex);
 
     if (!canModify(semesterIndex, slot)) return;
 
@@ -135,17 +141,20 @@ export default function CoursePlanner({
     );
 
     setModalCourses(selectable);
+
     setModalContext({
       mode: "replace",
       semesterIndex,
       courseIndex,
+      status,
       isTarc: slot.isTarc,
     });
+
     setEditModalVisible(true);
   };
 
   /* ──────────────────────────────────────────────
-      REMOVE COURSE (patched)
+     REMOVE COURSE
   ─────────────────────────────────────────────── */
   const handleRemoveCourse = () => {
     if (!modalContext) return;
@@ -158,10 +167,11 @@ export default function CoursePlanner({
     setSemesterSlots((prev) => {
       const slots = prev.map((slot) => ({
         ...slot,
-        courses: [...slot.courses],
+        courses: Array.isArray(slot.courses) ? [...slot.courses] : [],
       }));
 
       const removedCourse = slots[semesterIndex].courses[courseIndex];
+
       slots[semesterIndex].courses.splice(courseIndex, 1);
 
       return reinsertRemovedCourse({
@@ -178,18 +188,19 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
-      SELECT FROM MODAL (KEEP OLD LOGIC)
+     SELECT COURSE FROM MODAL (ADD/REPLACE)
   ─────────────────────────────────────────────── */
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
-    const { mode, semesterIndex, courseIndex, isTarc } = modalContext;
-
-    // Block add on full TARC
+    const { mode, semesterIndex, courseIndex } = modalContext;
     const slot = semesterSlots[semesterIndex];
+    const isCod = course.code === "COD";
+
+    // TARC cap safeguard
     if (slot.isTarc && slot.courses.length >= 4) return;
 
-    // Validation for ADD only
+    // VALIDATION for ADD
     if (mode === "add") {
       const result = validateAddCourse({
         semesterIndex,
@@ -202,22 +213,83 @@ export default function CoursePlanner({
       });
 
       if (!result.ok) {
-        alert(result.reason || "You cannot add this course.");
+        alert(result.reason || "You cannot add this course here.");
         return;
       }
     }
 
-    // Apply change
     setSemesterSlots((prev) => {
       const slots = prev.map((slot) => ({
         ...slot,
-        courses: [...slot.courses],
+        courses: Array.isArray(slot.courses) ? [...slot.courses] : [],
       }));
 
+      const targetSlot = slots[semesterIndex];
+      if (!targetSlot) return prev;
+
       if (mode === "add") {
-        slots[semesterIndex].courses.push(course);
-      } else {
-        slots[semesterIndex].courses[courseIndex] = course;
+        if (isCod) {
+          // ───────── COD SPECIAL BEHAVIOUR (pull from future) ─────────
+          if (targetSlot.courses.length >= 5) return prev;
+          const alreadyHasCod = targetSlot.courses.some(
+            (c) => c.code === "COD"
+          );
+          if (alreadyHasCod) return prev;
+
+          // Find nearest future semester that has a COD
+          let futureIndex = -1;
+          for (let i = semesterIndex + 1; i < slots.length; i++) {
+            const s = slots[i];
+            if ((s.courses || []).some((c) => c.code === "COD")) {
+              futureIndex = i;
+              break;
+            }
+          }
+
+          let codToInsert = course;
+
+          if (futureIndex !== -1) {
+            const futureSlot = slots[futureIndex];
+            const codPos = futureSlot.courses.findIndex(
+              (c) => c.code === "COD"
+            );
+            if (codPos !== -1) {
+              codToInsert = futureSlot.courses[codPos];
+              futureSlot.courses.splice(codPos, 1); // remove from future semester
+            }
+          }
+          // else: no future COD → this becomes a new COD
+          // (global cap already enforced in validateAddCourse)
+
+          targetSlot.courses.push(codToInsert);
+        } else {
+          // ───────── NORMAL COURSE ADD ─────────
+          if (targetSlot.courses.length >= 5) return prev;
+          targetSlot.courses.push(course);
+
+          // Remove this course from ALL future semesters
+          for (let i = semesterIndex + 1; i < slots.length; i++) {
+            const s = slots[i];
+            if (!Array.isArray(s.courses)) continue;
+            s.courses = s.courses.filter((c) => c.code !== course.code);
+          }
+        }
+      } else if (mode === "replace") {
+        const slotToEdit = slots[semesterIndex];
+        if (!slotToEdit) return prev;
+
+        const newCourses = [...slotToEdit.courses];
+        newCourses[courseIndex] = course;
+        slotToEdit.courses = newCourses;
+
+        // For non-COD replace, also remove future duplicates
+        if (!isCod) {
+          for (let i = semesterIndex + 1; i < slots.length; i++) {
+            const s = slots[i];
+            if (!Array.isArray(s.courses)) continue;
+            s.courses = s.courses.filter((c) => c.code !== course.code);
+          }
+        }
       }
 
       return slots;
@@ -233,7 +305,7 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
-      RENDER
+     RENDER
   ─────────────────────────────────────────────── */
   return (
     <div className="planner-container dark-container">

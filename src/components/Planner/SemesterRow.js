@@ -36,7 +36,7 @@ export default function SemesterRow({
           ? dragProvided.dragHandleProps
           : {})}
       >
-        {slot.isTarc && !slot.isTarc && "☰"}
+        {!(!slot.isTarc || status === "completed") && "☰"}
       </div>
 
       <div className="row-main">
