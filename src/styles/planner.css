@@ -245,3 +245,37 @@
 .modal-cancel-btn:hover {
   background: #3a3a3a;
 }
+/*THESIS BLOCK*/
+
+/* === THESIS ROW LAYOUT === */
+
+.courses-row-flex {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+
+/* Allow course chips to push thesis + locked right */
+.thesis-courses-col {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Thesis badge */
+.thesis-right-pill {
+  background: #2b0000;
+  color: #ff6767;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid #ff6b6b;
+  white-space: nowrap;
+}
+
+/* LOCKED pill aligned far right */
+.lock-pill-right {
+  margin-left: 10px;
+}
