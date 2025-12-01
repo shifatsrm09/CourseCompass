@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/planner.css";
-import { balanceFutureSemesters } from "../../engine/balanceEngine"; // NEW IMPORT
 
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
+
 import { validateAddCourse } from "../../engine/engine";
 import { reinsertRemovedCourse } from "../../engine/removeEngine";
+import { balanceFutureSemesters } from "../../engine/balanceEngine";
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
 export default function CoursePlanner({
   user,
+  setUser, // NEW
   orderedCourses,
   currentSemester,
   setCurrentSemester,
@@ -19,6 +21,7 @@ export default function CoursePlanner({
 }) {
   const [showModal, setShowModal] = useState(false);
 
+  // Base plan: from JSON / orderedCourses
   const [semesterSlots, setSemesterSlots] = useState(
     orderedCourses.map((row) => ({
       id: `sem-${row.semester_row}`,
@@ -33,6 +36,29 @@ export default function CoursePlanner({
   const [modalContext, setModalContext] = useState(null);
 
   /* ──────────────────────────────────────────────
+     HYDRATE FROM DB (customPlan) IF AVAILABLE
+  ─────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!user.customPlan || !Array.isArray(user.customPlan)) return;
+    if (!Array.isArray(allCourses) || allCourses.length === 0) return;
+
+    const restored = user.customPlan.map((p) => {
+      const rowCourses = allCourses.filter((c) =>
+        (p.courses || []).includes(c.code)
+      );
+
+      return {
+        id: `sem-${p.semester}`,
+        originalRow: p.semester,
+        courses: rowCourses,
+        isTarc: rowCourses.some((c) => c.is_tarc),
+      };
+    });
+
+    setSemesterSlots(restored);
+  }, [user.customPlan, allCourses]);
+
+  /* ──────────────────────────────────────────────
      SEMESTER STATUS
   ─────────────────────────────────────────────── */
   const getStatus = (index) => {
@@ -45,51 +71,40 @@ export default function CoursePlanner({
   };
 
   /* ──────────────────────────────────────────────
-   AUTO BALANCE BUTTON HANDLER
-────────────────────────────────────────────── */
-const handleBalance = () => {
-  // ------------------------------------------------------
-  // 🔥 1) First-login protection (no customPlan yet)
-  // ------------------------------------------------------
-  if (!user.customPlan) {
-    alert(
-      "This is the official BRAC course sequence.\n" +
-      "Auto-balance is only available after you make modifications\n" +
-      "or after completing your first semester."
-    );
-    return;
-  }
-
-  // ------------------------------------------------------
-  // 🔥 2) Run Auto-Balance normally
-  // ------------------------------------------------------
-  setSemesterSlots((prev) => {
-    const balanced = balanceFutureSemesters({
-      semesterSlots: prev,
-      currentSemester,
-      completedCourses: user.completedCourses || [],
-    });
-
-    // ------------------------------------------------------
-    // 🔥 3) Sync to DB
-    // ------------------------------------------------------
-    syncPlanToServer(balanced);
-
-    return balanced;
-  });
-};
-
-
-  /* ──────────────────────────────────────────────
-     DB SYNC HELPER
+     HELPERS: SYNC PLAN TO SERVER + UPDATE USER
   ─────────────────────────────────────────────── */
+
+  const buildPlanFromSlots = (slots) =>
+    slots.map((slot) => ({
+      semester: slot.originalRow,
+      courses: (slot.courses || []).map((c) => c.code),
+    }));
+
+  const updateUserPlanInState = (slots) => {
+    if (!setUser) return;
+
+    const newCustomPlan = buildPlanFromSlots(slots);
+    const updatedUser = {
+      ...user,
+      customPlan: newCustomPlan,
+      firstLogin: false,
+    };
+
+    setUser(updatedUser);
+
+    try {
+      localStorage.setItem(
+        "courseCompassUser",
+        JSON.stringify({ user: updatedUser })
+      );
+    } catch (e) {
+      console.error("Failed to persist user to localStorage:", e);
+    }
+  };
+
   const syncPlanToServer = async (slots) => {
     try {
-      // build customPlan from slots
-      const plan = slots.map((slot) => ({
-        semester: slot.originalRow,
-        courses: (slot.courses || []).map((c) => c.code),
-      }));
+      const plan = buildPlanFromSlots(slots);
 
       // count CODs globally
       const codCount = plan.reduce(
@@ -100,9 +115,7 @@ const handleBalance = () => {
 
       // find current semester's courses based on originalRow
       const currentRow = currentSemester || 1;
-      const currentSlot = slots.find(
-        (s) => s.originalRow === currentRow
-      );
+      const currentSlot = slots.find((s) => s.originalRow === currentRow);
       const currentCourses = currentSlot
         ? (currentSlot.courses || []).map((c) => c.code)
         : [];
@@ -119,8 +132,35 @@ const handleBalance = () => {
       });
     } catch (err) {
       console.error("Failed to sync plan to server:", err);
-      // No alert: we don't want to annoy user if network blips.
+      // Silent fail: do not annoy user on brief network issue
     }
+  };
+
+  /* ──────────────────────────────────────────────
+     AUTO BALANCE BUTTON HANDLER
+  ─────────────────────────────────────────────── */
+  const handleBalance = () => {
+    // Block on pure default BRAC layout
+    if (!user.customPlan || user.firstLogin) {
+      alert(
+        "This is the official BRAC sequence.\n" +
+          "Auto-balance becomes available after you modify your plan or complete a semester."
+      );
+      return;
+    }
+
+    setSemesterSlots((prev) => {
+      const balanced = balanceFutureSemesters({
+        semesterSlots: prev,
+        currentSemester,
+        completedCourses: user.completedCourses || [],
+      });
+
+      syncPlanToServer(balanced);
+      updateUserPlanInState(balanced);
+
+      return balanced;
+    });
   };
 
   /* ──────────────────────────────────────────────
@@ -154,7 +194,6 @@ const handleBalance = () => {
   /* ──────────────────────────────────────────────
      HELPER PERMISSION FUNCTIONS
   ─────────────────────────────────────────────── */
-
   const canModify = (index, slot) => {
     const status = getStatus(index);
 
@@ -262,8 +301,9 @@ const handleBalance = () => {
         maxCodPerSemester: 1,
       });
 
-      // sync to DB
       syncPlanToServer(rebalanced);
+      updateUserPlanInState(rebalanced);
+
       return rebalanced;
     });
 
@@ -372,8 +412,9 @@ const handleBalance = () => {
         }
       }
 
-      // sync updated plan
       syncPlanToServer(slots);
+      updateUserPlanInState(slots);
+
       return slots;
     });
 
@@ -409,9 +450,8 @@ const handleBalance = () => {
         openReplaceCourseModal={openReplaceCourseModal}
         currentSemester={currentSemester}
         user={user}
-        onBalance={handleBalance}   // <-- NEW
+        onBalance={handleBalance}
       />
-
 
       <CourseEditModal
         visible={editModalVisible}

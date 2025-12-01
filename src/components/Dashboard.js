@@ -116,6 +116,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
 
       <CoursePlanner
         user={user}
+        setUser = {setUser}
         orderedCourses={orderedCourses}
         currentSemester={safeCurrent}
         setCurrentSemester={setCurrentSemester}
