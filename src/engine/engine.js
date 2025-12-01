@@ -65,11 +65,23 @@ export function validateAddCourse({
 
   const isCod = courseToAdd.code === "COD";
 
+  // 🔹 SPECIAL CAP: semesters 10 & 11 → at most 3 normal courses
+  // We rely on originalRow if present; otherwise fall back to the global cap.
+  let effectiveMax = maxCoursesPerSemester;
+  const row = typeof targetSlot.originalRow === "number"
+    ? targetSlot.originalRow
+    : null;
+
+  if (row === 10 || row === 11) {
+    // User wants at most 3 of our suggested courses in those semesters
+    effectiveMax = Math.min(effectiveMax, 3);
+  }
+
   // 1) Capacity check per semester
-  if ((targetSlot.courses || []).length >= maxCoursesPerSemester) {
+  if ((targetSlot.courses || []).length >= effectiveMax) {
     return {
       ok: false,
-      reason: `You cannot take more than ${maxCoursesPerSemester} courses in one semester.`,
+      reason: `You cannot take more than ${effectiveMax} courses in this semester.`,
     };
   }
 

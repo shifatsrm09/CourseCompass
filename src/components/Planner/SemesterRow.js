@@ -1,3 +1,4 @@
+// src/components/Planner/SemesterRow.js
 import React from "react";
 import CourseBox from "./CourseBox";
 
@@ -15,12 +16,13 @@ export default function SemesterRow({
   const isCurrent = status === "current";
   const isRecommended = status === "recommended";
   const isTarc = slot.isTarc;
+  const hasThesis = !!slot.thesis;
 
   const canAdd =
-    (isCurrent || isRecommended) ||
-    (isTarc && slot.courses.length < 4);
+    !hasThesis &&
+    ((isCurrent || isRecommended) || (isTarc && slot.courses.length < 4));
 
-  const canReplace = isCurrent || isRecommended || isTarc;
+  const canReplace = !hasThesis && (isCurrent || isRecommended || isTarc);
 
   return (
     <div
@@ -28,56 +30,90 @@ export default function SemesterRow({
       ref={dragProvided.innerRef}
       {...dragProvided.draggableProps}
     >
+      {/* DRAG HANDLE */}
       <div
         className={`drag-handle ${
-          !slot.isTarc || status === "completed" ? "drag-disabled" : ""
+          !isTarc || status === "completed" ? "drag-disabled" : ""
         }`}
-        {...(!(!slot.isTarc || status === "completed")
+        {...(!(!isTarc || status === "completed")
           ? dragProvided.dragHandleProps
           : {})}
       >
-        {!(!slot.isTarc || status === "completed") && "☰"}
+        {!(!isTarc || status === "completed") && "☰"}
       </div>
 
       <div className="row-main">
+        {/* HEADER */}
         <div className="row-header">
           <div className="semester-col">Semester {index + 1}</div>
 
           <div className="row-badges">
-            {slot.isTarc && <span className="tarc-pill">TARC</span>}
+            {isTarc && <span className="tarc-pill">TARC</span>}
 
-            <div
-              className={`status-col status-${status} ${
-                isCurrent ? "status-clickable" : ""
-              }`}
-              onClick={isCurrent ? openPrompt : undefined}
-            >
-              {status.toUpperCase()}
-            </div>
+            {/* Status pill (non-thesis only) */}
+            {!hasThesis && (
+              <div
+                className={`status-col status-${status} ${
+                  isCurrent ? "status-clickable" : ""
+                }`}
+                onClick={isCurrent ? openPrompt : undefined}
+              >
+                {status.toUpperCase()}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="courses-col">
-          {slot.courses.map((course, cIndex) => (
-            <CourseBox
-              key={`${course.code}-${cIndex}`}
-              course={course}
-              isLocked={isTarc}
-              onReplace={
-                canReplace ? () => openReplaceCourseModal(index, cIndex) : null
-              }
-            />
-          ))}
+        {/* CONTENT */}
+        {hasThesis ? (
+          <div className="courses-row-flex">
+            {/* Courses left */}
+            <div className="courses-col thesis-courses-col">
+              {slot.courses.map((course, cIndex) => (
+                <CourseBox
+                  key={`${course.code}-${cIndex}`}
+                  course={course}
+                  isLocked={true}
+                  onReplace={null}
+                />
+              ))}
+            </div>
 
-          {canAdd && index !== 0 && (
-            <button
-              className="add-course-btn"
-              onClick={() => openAddCourseModal(index)}
-            >
-              + Add Course
-            </button>
-          )}
-        </div>
+            {/* Thesis badge */}
+            <span className="thesis-right-pill">
+              {slot.thesis.title}
+            </span>
+
+            {/* Right LOCKED pill */}
+            <div className={`status-col status-${status} lock-pill-right`}>
+              {status.toUpperCase()}
+            </div>
+          </div>
+        ) : (
+          <div className="courses-col">
+            {slot.courses.map((course, cIndex) => (
+              <CourseBox
+                key={`${course.code}-${cIndex}`}
+                course={course}
+                isLocked={isTarc}
+                onReplace={
+                  canReplace
+                    ? () => openReplaceCourseModal(index, cIndex)
+                    : null
+                }
+              />
+            ))}
+
+            {canAdd && index !== 0 && (
+              <button
+                className="add-course-btn"
+                onClick={() => openAddCourseModal(index)}
+              >
+                + Add Course
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

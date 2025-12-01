@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../../styles/planner.css";
+import thesisPlan from "../../data/thesisPlan.json";
 
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
@@ -22,14 +23,22 @@ export default function CoursePlanner({
   const [showModal, setShowModal] = useState(false);
 
   // Base plan: from JSON / orderedCourses
-  const [semesterSlots, setSemesterSlots] = useState(
-    orderedCourses.map((row) => ({
-      id: `sem-${row.semester_row}`,
-      originalRow: row.semester_row,
-      courses: row.courses,
-      isTarc: row.courses.some((c) => c.is_tarc),
-    }))
-  );
+    const [semesterSlots, setSemesterSlots] = useState(() => {
+      return orderedCourses.map((row) => {
+        const thesis = thesisPlan.find(
+          (t) => t.semester_row === row.semester_row
+        );
+
+        return {
+          id: `sem-${row.semester_row}`,
+          originalRow: row.semester_row,
+          courses: row.courses,
+          isTarc: row.courses.some((c) => c.is_tarc),
+          thesis: thesis || null,
+        };
+      });
+    });
+
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [modalCourses, setModalCourses] = useState([]);
@@ -47,12 +56,18 @@ export default function CoursePlanner({
         (p.courses || []).includes(c.code)
       );
 
-      return {
-        id: `sem-${p.semester}`,
-        originalRow: p.semester,
-        courses: rowCourses,
-        isTarc: rowCourses.some((c) => c.is_tarc),
-      };
+          const thesis = thesisPlan.find(
+              (t) => t.semester_row === p.semester
+            );
+
+            return {
+              id: `sem-${p.semester}`,
+              originalRow: p.semester,
+              courses: rowCourses,
+              isTarc: rowCourses.some((c) => c.is_tarc),
+              thesis: thesis || null,
+            };
+
     });
 
     setSemesterSlots(restored);
