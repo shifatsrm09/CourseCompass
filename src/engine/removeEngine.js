@@ -5,9 +5,12 @@
  * We ignore empty strings in hp.
  */
 function hardPrereqsSatisfied(course, completedSet) {
+  if (!course) return true;
+
   const hpArray = Array.isArray(course.hp) ? course.hp : [];
   const cleanHp = hpArray.filter((code) => code && code.trim() !== "");
   if (cleanHp.length === 0) return true;
+
   return cleanHp.every((code) => completedSet.has(code));
 }
 
@@ -19,16 +22,32 @@ function hardPrereqsSatisfied(course, completedSet) {
  */
 function buildCompletedUpTo(slots, uptoIndex, completedCourses = []) {
   const set = new Set(completedCourses || []);
+
   for (let i = 0; i < uptoIndex; i++) {
     const s = slots[i];
-    (s.courses || []).forEach((c) => set.add(c.code));
+    if (!s || !Array.isArray(s.courses)) continue;
+
+    s.courses.forEach((c) => {
+      if (c && c.code) set.add(c.code);
+    });
   }
+
   return set;
 }
 
 /**
  * Try to place a single course into the earliest valid semester,
  * starting from `startIndex`.
+ *
+ * Rules:
+ * - Skip TARC semesters.
+ * - Max `maxCoursesPerSemester` per semester.
+ * - Max 1 COD per semester.
+ * - Respect HP (based on completed + earlier semesters).
+ * - If no semester works, create a new extra semester at the end.
+ *
+ * NOTE: This mutates `slots` in place.
+ * Always call it on a cloned array from React.
  */
 function placeCourse({
   slots,
@@ -36,15 +55,19 @@ function placeCourse({
   startIndex,
   completedCourses = [],
   maxCoursesPerSemester = 5,
-  maxCodPerSemester = 1,
+  maxCodPerSemester = 1, // reserved for future use
 }) {
+  if (!course || !Array.isArray(slots)) return;
+
   const totalSlots = slots.length;
 
   const slotHasCod = (slot) =>
     (slot.courses || []).some((c) => c.code === "COD");
 
+  // Try existing semesters first
   for (let idx = startIndex; idx < totalSlots; idx++) {
     const slot = slots[idx];
+    if (!slot) continue;
 
     // Skip TARC
     if (slot.isTarc) continue;
@@ -55,7 +78,7 @@ function placeCourse({
     // COD per-semester check
     if (course.code === "COD" && slotHasCod(slot)) continue;
 
-    // HP check
+    // HP check (only earlier semesters count)
     const completedSet = buildCompletedUpTo(slots, idx, completedCourses);
     if (!hardPrereqsSatisfied(course, completedSet)) continue;
 
@@ -64,7 +87,7 @@ function placeCourse({
     return;
   }
 
-  // No spot found → create new semester at end
+  // No spot found in existing semesters → create new semester at the end.
   const last = slots[slots.length - 1];
   const newOriginalRow =
     last && typeof last.originalRow === "number"
@@ -82,6 +105,10 @@ function placeCourse({
 /**
  * Global HP rebalance:
  * Ensures all HP chains remain valid after reinsertion.
+ *
+ *  - Scan all semesters top-down
+ *  - If a course appears before its HP are satisfied, remove it
+ *  - Then reinsert all removed courses later where HP IS satisfied
  */
 function rebalanceAllPrereqs({
   slots,
@@ -89,13 +116,17 @@ function rebalanceAllPrereqs({
   maxCoursesPerSemester = 5,
   maxCodPerSemester = 1,
 }) {
+  if (!Array.isArray(slots)) return slots;
+
   const pending = [];
 
+  // First pass: remove invalid courses
   for (let idx = 0; idx < slots.length; idx++) {
     const slot = slots[idx];
+    if (!slot || !Array.isArray(slot.courses) || slot.courses.length === 0)
+      continue;
 
-    if (!slot.courses || slot.courses.length === 0) continue;
-
+    // TARC courses are fixed, but they still contribute to completedSet
     if (slot.isTarc) continue;
 
     const completedSet = buildCompletedUpTo(slots, idx, completedCourses);
@@ -112,7 +143,7 @@ function rebalanceAllPrereqs({
     slot.courses = keep;
   }
 
-  // Reinsert all invalid courses
+  // Second pass: reinsert all invalid courses later, HP-safe
   for (const course of pending) {
     placeCourse({
       slots,
@@ -128,15 +159,16 @@ function rebalanceAllPrereqs({
 }
 
 /**
- * Main Remove Logic
+ * Main Remove Logic (used by CoursePlanner after a REMOVE).
  *
- * PATCHED:
- * If a course was completed earlier:
- *   → DO NOT REINSERT IT
- *   → JUST REMOVE
+ * PATCHED BEHAVIOR:
+ * - If a course was completed earlier:
+ *      → DO NOT REINSERT IT
+ *      → JUST REMOVE
  *
- * If not completed earlier:
- *   → Use original chain-moving logic
+ * - If not completed earlier:
+ *      → Insert into nearest valid FUTURE semester
+ *      → Then run global HP rebalance
  */
 export function reinsertRemovedCourse({
   semesterSlots,
@@ -146,26 +178,22 @@ export function reinsertRemovedCourse({
   maxCoursesPerSemester = 5,
   maxCodPerSemester = 1,
 }) {
-  if (!removedCourse) return semesterSlots;
+  if (!removedCourse || !Array.isArray(semesterSlots)) {
+    return semesterSlots;
+  }
 
-  // Clone slots safely
+  // Shallow-clone slots + courses arrays so we don't mutate React state directly
   const slots = semesterSlots.map((slot) => ({
     ...slot,
     courses: Array.isArray(slot.courses) ? [...slot.courses] : [],
   }));
 
-  // ============================================================
-  // NEW FIX:
-  // Detect whether this course was completed earlier by using:
-  // - DB completed courses
-  // - All semesters before fromSemesterIndex
-  // ============================================================
+  // 1) Check whether this course was already completed earlier.
   const completedSet = buildCompletedUpTo(
     slots,
     fromSemesterIndex,
     completedCourses
   );
-
   const completedEarlier = completedSet.has(removedCourse.code);
 
   // If completed earlier → DO NOT reinsert → return "clean" slots
@@ -173,11 +201,7 @@ export function reinsertRemovedCourse({
     return slots;
   }
 
-  // ============================================================
-  // ORIGINAL CHAIN BEHAVIOR FOR NON-COMPLETED COURSES
-  // ============================================================
-
-  // Step 1: Place in nearest valid future semester
+  // 2) Place removed course in the nearest valid FUTURE semester
   placeCourse({
     slots,
     course: removedCourse,
@@ -187,7 +211,7 @@ export function reinsertRemovedCourse({
     maxCodPerSemester,
   });
 
-  // Step 2: Rebalance all HP chains
+  // 3) Rebalance all HP chains
   const rebalanced = rebalanceAllPrereqs({
     slots,
     completedCourses,
@@ -198,4 +222,5 @@ export function reinsertRemovedCourse({
   return rebalanced;
 }
 
-export { hardPrereqsSatisfied, buildCompletedUpTo };
+// Export helpers for other engine modules
+export { hardPrereqsSatisfied, buildCompletedUpTo, placeCourse };

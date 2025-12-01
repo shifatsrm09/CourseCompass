@@ -1,17 +1,22 @@
 // engine/engine.js
 
-import { hardPrereqsSatisfied, buildCompletedUpTo } from "./removeEngine";
+import {
+  hardPrereqsSatisfied,
+  buildCompletedUpTo,
+} from "./removeEngine";
 
 /**
  * Count how many COD courses exist in the current plan.
  */
 function countCodInPlan(semesterSlots) {
   let count = 0;
-  semesterSlots.forEach((slot) => {
-    (slot.courses || []).forEach((c) => {
-      if (c.code === "COD") count++;
+
+  (semesterSlots || []).forEach((slot) => {
+    (slot?.courses || []).forEach((c) => {
+      if (c && c.code === "COD") count++;
     });
   });
+
   return count;
 }
 
@@ -36,11 +41,23 @@ export function validateAddCourse({
   semesterIndex,
   courseToAdd,
   semesterSlots,
-  currentSemester,
+  currentSemester, // currently unused but kept for future rules
   completedCourses = [],
   maxCoursesPerSemester = 5,
   maxCodAllowed = 5,
 }) {
+  if (
+    !Array.isArray(semesterSlots) ||
+    semesterIndex < 0 ||
+    semesterIndex >= semesterSlots.length
+  ) {
+    return { ok: false, reason: "Invalid semester." };
+  }
+
+  if (!courseToAdd || !courseToAdd.code) {
+    return { ok: false, reason: "Invalid course selection." };
+  }
+
   const targetSlot = semesterSlots[semesterIndex];
   if (!targetSlot) {
     return { ok: false, reason: "Invalid semester." };
@@ -48,7 +65,7 @@ export function validateAddCourse({
 
   const isCod = courseToAdd.code === "COD";
 
-  // 1) Capacity check
+  // 1) Capacity check per semester
   if ((targetSlot.courses || []).length >= maxCoursesPerSemester) {
     return {
       ok: false,
@@ -76,9 +93,10 @@ export function validateAddCourse({
     if (codInPlan >= maxCodAllowed) {
       // See if there is a future COD we can "pull" from
       let futureHasCod = false;
+
       for (let i = semesterIndex + 1; i < semesterSlots.length; i++) {
         const slot = semesterSlots[i];
-        if ((slot.courses || []).some((c) => c.code === "COD")) {
+        if ((slot?.courses || []).some((c) => c.code === "COD")) {
           futureHasCod = true;
           break;
         }
