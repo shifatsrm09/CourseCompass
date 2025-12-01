@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "../../styles/planner.css";
+import { balanceFutureSemesters } from "../../engine/balanceEngine"; // NEW IMPORT
 
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
@@ -42,6 +43,42 @@ export default function CoursePlanner({
     if (index === safe) return "recommended";
     return "locked";
   };
+
+  /* ──────────────────────────────────────────────
+   AUTO BALANCE BUTTON HANDLER
+────────────────────────────────────────────── */
+const handleBalance = () => {
+  // ------------------------------------------------------
+  // 🔥 1) First-login protection (no customPlan yet)
+  // ------------------------------------------------------
+  if (!user.customPlan) {
+    alert(
+      "This is the official BRAC course sequence.\n" +
+      "Auto-balance is only available after you make modifications\n" +
+      "or after completing your first semester."
+    );
+    return;
+  }
+
+  // ------------------------------------------------------
+  // 🔥 2) Run Auto-Balance normally
+  // ------------------------------------------------------
+  setSemesterSlots((prev) => {
+    const balanced = balanceFutureSemesters({
+      semesterSlots: prev,
+      currentSemester,
+      completedCourses: user.completedCourses || [],
+    });
+
+    // ------------------------------------------------------
+    // 🔥 3) Sync to DB
+    // ------------------------------------------------------
+    syncPlanToServer(balanced);
+
+    return balanced;
+  });
+};
+
 
   /* ──────────────────────────────────────────────
      DB SYNC HELPER
@@ -372,7 +409,9 @@ export default function CoursePlanner({
         openReplaceCourseModal={openReplaceCourseModal}
         currentSemester={currentSemester}
         user={user}
+        onBalance={handleBalance}   // <-- NEW
       />
+
 
       <CourseEditModal
         visible={editModalVisible}

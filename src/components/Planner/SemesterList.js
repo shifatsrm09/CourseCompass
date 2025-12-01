@@ -13,6 +13,7 @@ export default function SemesterList({
   openReplaceCourseModal,
   handleDropCourse,
   user,
+  onBalance, // NEW
 }) {
   const onDragEnd = async (result) => {
     if (!result.destination) return;
@@ -45,6 +46,25 @@ export default function SemesterList({
 
   return (
     <div className="dark-container">
+      {/* BALANCE BUTTON */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+        <button
+          onClick={onBalance}
+          className="balance-btn"
+          style={{
+            padding: "8px 14px",
+            background: "#3a86ff",
+            borderRadius: "6px",
+            border: "none",
+            color: "white",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          ⚖ Auto Balance
+        </button>
+      </div>
+
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="semesters" direction="vertical">
           {(provided) => (
