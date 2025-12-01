@@ -1,203 +1,204 @@
-Prompt Title: Continue Course Compass Project (Full Context Provided)
+Hi, I’m continuing a long-running project and I want to restart this thread without losing the previous context. Below is the full project description, architecture, current progress, remaining issues, and development goals so you can continue seamlessly as if we never switched threads.
 
+Please load this entire explanation as the new working memory for this conversation.
 
-Hi ChatGPT, I am continuing a long project and I want you to load this full context so we can pick up EXACTLY where we left off — without losing any details.
+🎓 PROJECT: Course Compass
 
-🧠 PROJECT NAME:
+We are building a full-stack course planning system for BRAC University students.
+Goal: Suggest & adjust semester-wise course sequences using rules, hard prerequisites, COD rules, TARC logic, and a smart engine.
 
-Course Compass – BRAC University Smart Advising System
+Students can override their plan and the engine must recompute the remaining semesters accordingly.
 
-📌 SUMMARY OF THE PROJECT (PLEASE REMEMBER THIS)
+The entire planning recalculates dynamically (frontend engine for now).
 
-We are building a course suggestion + planning web application for BRAC University CSE students.
-so student will be  choosing a specific stream given by university and based on that we will load the whole
-course sequence thats the default behaviour which the project already does. our goal is to establish a edit functionality for the semester blocks
-what is edit functionality? 
-BRAC allows maximum of 5 courses minimum 3
-there should be a button "Add" in each block to add extra one course or more upto five
-every course shows here should be modify-able if we click on a course we can delete it from the semester or we can change the course.
-
-the core logic is if some student may fail in one course they can select that course again in the next semester (it will add up) but after 5 course added student cannot add anymore but they can replace that course if they replace a course ssuppose: STA201 thn the STA201 will move to the next available semester (If the next semester is TARC we dont move it to TARC semester THIS is a locked sequence block)
-
-we will be suggesting course in the consideration of 
--> earlier course done
--> what course they need to complete according to the BRAC given full semester sequence 
--> the current semester whould be our Mark point FLAG to decide we will see what the user has completed by far and whats left from that
-    we suggest whats the next available course according to the order and if that meets the prerequisites or not
-
-The system has:
-
-1️⃣ Login System
-
-User logs in using only Student ID.
-
-On first login → system asks them to select their stream
-(e.g., ENG101 + MAT110).
-
-After selecting once, login goes directly to dashboard.
-
-2️⃣ Stream-Based Course Plan
-
-Each stream has a JSON file, e.g.:
-
-ENG101-MAT110.json
-and 6 more we will add them later
-
-
-Contains BRAC’s official course sequence:
-
-semester_row (1–12) may increase if user take less thn 4 courses or fails 
-
-HP / SP prerequisites
-
-course type
-
-tarc marking (is_tarc)
-
-3️⃣ TARC Semester Logic
-
-TARC (residential semester) is fixed courses:
-HUM103, BNG103, EMB101, ENG102
-
-By default placed in Semester 3
-
-TARC is movable (drag-down to 4 / 5 / 6/ ....)
-but cannot be moved to 1st or 2nd semester.
-
-Only TARC can be dragged.
-No other semester is draggable.
-
-4️⃣ Semester Status Flow
-
-Each semester has a status:
-
-Current
-
-Completed
-
-Recommended (previously “LOCKED”)
-
-TARC badge if applicable.
-
-These are dynamic based on currentSemester stored in DB.
-
-
-6️⃣ Planner UI
-
-Shows 12 semester rows
-
-Courses displayed per semester
-
-Status chip on the right
-
-TARC pill on the right of TARC block
-
-Drag handle only for TARC
-
-Smooth vertical-only movement
-
-7️⃣ Current Issue We Were Fixing
-
-    No issues
-    we need to add functionality
-
-📂 PROJECT DIRECTORY STRUCTURE (REMEMBER THIS TOO)
+📂 CURRENT PROJECT DIRECTORY STRUCTURE (from my real project)
 COURSE-COMPASS/
 │
-├─ backend/
-│   ├─ models/
-│   │   └─ User.js
-│   ├─ routes/
-│   │   ├─ auth.js
-│   │   └─ planner.js
-│   ├─ server.js
-│   └─ .env
+├── backend/
+│   ├── models/
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   └── planner.js
+│   ├── server.js
+│   ├── package.json
+│   └── .env
 │
-├─ src/
-│   ├─ components/
-│   │   ├─ Login.js
-│   │   ├─ StreamSelect.js
-│   │   ├─ Dashboard.js
-│   │   └─ CoursePlanner.js
-│   ├─ data/
-│   │   └─ ENG101-MAT110.json
-│   ├─ styles/
-│   │   ├─ card.css
-│   │   ├─ dashboard.css
-│   │   ├─ globals.css
-│   │   ├─ login.css
-│   │   └─ planner.css
-│   ├─ App.js
-│   ├─ index.js
-│   └─ .env
+├── public/
 │
-└─ package.json
+├── src/
+│   ├── components/
+│   │   ├── Planner/
+│   │   │   ├── ConfirmModal.js
+│   │   │   ├── CourseBox.js
+│   │   │   ├── CourseEditModal.js
+│   │   │   ├── CoursePlanner.js
+│   │   │   ├── SemesterList.js
+│   │   │   └── SemesterRow.js
+│   │   ├── Dashboard.js
+│   │   ├── Login.js
+│   │   └── StreamSelect.js
+│   │
+│   ├── data/
+│   │   └── ENG101-MAT110.json   (full course catalog with HP + semester_row)
+│   │
+│   ├── engine/
+│   │   ├── engine.js           (validateAddCourse logic)
+│   │   └── removeEngine.js     (reinsertion logic after deletion)
+│   │
+│   ├── styles/
+│   │   ├── card.css
+│   │   ├── confirmModal.css
+│   │   ├── courseEditModal.css
+│   │   ├── dashboard.css
+│   │   ├── globals.css
+│   │   ├── login.css
+│   │   └── planner.css
+│   │
+│   ├── App.js
+│   ├── index.js
+│   └── setupTests.js
+│
+├── package.json
+└── README.md
 
-🧩 WHAT WE WERE ABOUT TO WORK ON NEXT
 
-(Please continue from here)
+🎯 CURRENT STATE OF THE PROJECT
+
+We already built:
+
+✅ Fully working Course Planner UI:
+
+Add Course
+
+Replace Course
+
+Remove Course
+
+Course grouping in modal
+
+TARC semester (draggable only)
+
+Completed / Current / Recommended / Locked marking
+
+Search inside modal
+
+Modal close on ESC and outside click
+
+✅ Add Engine: validateAddCourse
+
+✔ HP check
+✔ Max 5 courses per semester
+✔ COD per semester = 1
+✔ Global COD limit = 5
+✔ Allows COD add by pulling from future COD if total COD already 5
+
+✅ Remove Engine: reinsertRemovedCourse
+
+✔ Moves removed course to earliest valid future semester
+✔ HP respected
+✔ TARC skipped
+⚠ But still missing some major part needs reworking
+
+✅ COD pull works (final version just tested)
+
+When adding a COD:
+
+It searches future semesters
+
+Pulls the closest COD
+
+Inserts it into the chosen semester
+
+If no future COD → creates new COD (only if <5 total COD)
 
 
+we must fixed this issues
 
-our very step0 will be implement the add-drop-modify functioanlity and save them to the db.
+3. ❗ Not saving modifications to database
 
-Please load this full context and continue development from the next logical step. and tell me if you understood the logic core and concept of the website
+We must sync:
 
-Actual Project Purpose (Restated Clearly)
+Added courses
 
-You want to build a smart advising engine that:
+Removed courses
 
-✔ Reads completed semesters + completed courses
-✔ Checks remaining courses from the program
-✔ Applies prerequisite rules
-✔ Suggests the best 4 courses for the next semester
-✔ Priority Rules:
+COD usage
 
-Missing required courses from earlier semesters → highest priority
+completedCourses
 
-Hard prerequisites must be satisfied
+currentCourses
 
-Max 4 courses per semester
+semesterOrder
 
-1 slot reserved for COD (if COD count < 5)
+4. ❗ Recompute recommended course sequence after every change
 
-If no COD allowed → 4 program/core courses
+Currently only add/remove works on UI, not a full re-evaluation.
 
-The final sequence may grow to extra semesters if required
+5. ❗ On first login:
 
-✔ Inputs:
+Load default JSON → Save it → After any modification engine writes to DB. (this isnt workinig yet)
 
-Student's completed courses
+🧠 ENGINE RULES THAT MUST PREVAIL
+🔹 Core Rules
 
-Entire stream’s JSON (semester, type, HP, SP, COD etc.)
+Max 4 recommended courses per semester
 
-✔ Output:
+Max 1 COD per semester
 
-Next semester’s recommended 4 courses
+Max 5 COD total if semester count increases  
 
-lets think of the engine as function/method just like in programming language ok?
-with some parameter.
+TARC semester is locked for add/remove
 
-for the initial login user will get everything by default (suggested course sequence etc ) our engine dont play any role here yet
+Remove engine skips TARC and continues
 
-student may fail/ want to retake a course/ do the course later when this modificatio or override comes from the user only thn our engine comes to play 
+HP must always be respected
 
-we send data to engine (what semester user are in from the current semester tag, 
-what courses they have done till now, the whole courseplan JSON )
+If HP empty, course prefers original semester_row
 
-then the engine will compute oh ok fine user completed y courses from JSON and in x semester remaining courses are k's ok then engine will start computing it will take what courses arent being completed yet, what needs to be done x semester(Hard Prerequisite maintained) and if cod <5 then we add a cod first if not 4 core courses will be computed
+Completed courses never appear again (unless user repeats them)
 
-thus engine can return what user should take in next semester recommended
+Engine considers current semester as completed when computing suggestions
 
-also engine should calculate the upcoming semester plan as well and we visualize everything in the UI 
+🔥 WHAT WE ARE FIXING NEXT
 
-function generateRecommendations({
-  currentSemester,
-  completedCourses,
-  coursePlanJSON
-}) { 
-   return { 
-      nextSemester: [...4 courses],
-      fullFuturePlan: { ...semester: courses } 
-   };
-}
+We are at the stage where:
+
+✔ Add COD works
+✔ Remove course reinsertion works
+
+Now we must fix the remaining edge cases + integrate DB saving.
+
+PARTS TO BUILD NEXT:
+
+Upgrade remove engine to support dependency chains (HP children).
+
+Recompute full future semesters after any change.
+
+Insert all changes into DB (currentCourses, completedCourses, semesterOrder).
+
+When adding COD, ensure engine deducts from future COD ALWAYS.
+
+Improve recommendation generator (max 4 + HP satisfied).
+
+This is exactly where we left off.
+
+✔ What I want you (ChatGPT) to do next in the new session
+
+Continue the development exactly where we stopped:
+
+👉 We are now ready to upgrade the engine behavior and then integrate everything with the database.
+
+Start by confirming the restored context and asking me which subsystem to tackle first:
+
+Add Engine
+
+Remove Engine (chain logic)
+
+Full Rebalance Engine
+
+Database Sync Logic
+
+Recommendation Algorithm
+
+UI updates for saved state

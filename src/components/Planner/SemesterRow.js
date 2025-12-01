@@ -13,7 +13,14 @@ export default function SemesterRow({
 }) {
   const status = getStatus(index);
   const isCurrent = status === "current";
-  const disableDrag = !slot.isTarc || status === "completed";
+  const isRecommended = status === "recommended";
+  const isTarc = slot.isTarc;
+
+  const canAdd =
+    (isCurrent || isRecommended) ||
+    (isTarc && slot.courses.length < 4);
+
+  const canReplace = isCurrent || isRecommended || isTarc;
 
   return (
     <div
@@ -22,10 +29,14 @@ export default function SemesterRow({
       {...dragProvided.draggableProps}
     >
       <div
-        className={`drag-handle ${disableDrag ? "drag-disabled" : ""}`}
-        {...(!disableDrag ? dragProvided.dragHandleProps : {})}
+        className={`drag-handle ${
+          !slot.isTarc || status === "completed" ? "drag-disabled" : ""
+        }`}
+        {...(!(!slot.isTarc || status === "completed")
+          ? dragProvided.dragHandleProps
+          : {})}
       >
-        {!disableDrag && slot.isTarc ? "☰" : ""}
+        {slot.isTarc && !slot.isTarc && "☰"}
       </div>
 
       <div className="row-main">
@@ -51,12 +62,14 @@ export default function SemesterRow({
             <CourseBox
               key={`${course.code}-${cIndex}`}
               course={course}
-              isLocked={slot.isTarc}
-              onReplace={() => openReplaceCourseModal(index, cIndex)}
+              isLocked={isTarc}
+              onReplace={
+                canReplace ? () => openReplaceCourseModal(index, cIndex) : null
+              }
             />
           ))}
 
-          {!slot.isTarc && index !== 0 && slot.courses.length < 5 && (
+          {canAdd && index !== 0 && (
             <button
               className="add-course-btn"
               onClick={() => openAddCourseModal(index)}
