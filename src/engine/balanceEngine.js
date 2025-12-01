@@ -1,105 +1,91 @@
 // engine/balanceEngine.js
 
-import { hardPrereqsSatisfied, buildCompletedUpTo } from "./removeEngine";
+import { placeCourse } from "./removeEngine";
 
 /**
- * Helper: flatten all courses after CURRENT semester
+ * Helper: flatten all courses after CURRENT semester.
+ * We exclude TARC courses so they never get duplicated.
  */
 function collectFutureCourses(slots, startIndex) {
   const list = [];
+
   for (let i = startIndex; i < slots.length; i++) {
     const s = slots[i];
-    if (!Array.isArray(s.courses)) continue;
+    if (!s || !Array.isArray(s.courses)) continue;
 
     for (const c of s.courses) {
-      // 🔥 FIX: never include TARC courses in balance
+      if (!c) continue;
+
+      // Never include TARC courses in balance (avoid duplication)
       if (c.is_tarc) continue;
 
       list.push(c);
     }
   }
+
   return list;
-}
-
-
-/**
- * Try placing ONE course into balanced slots using HP rules.
- * This is similar to placeCourse() but with MAX 4 and no creation of new semesters.
- */
-function tryPlaceBalanced({
-  slots,
-  course,
-  startIndex,
-  completedCourses,
-  maxPerSem = 4,
-}) {
-  for (let i = startIndex; i < slots.length; i++) {
-    const slot = slots[i];
-
-    // Skip TARC
-    if (slot.isTarc) continue;
-
-    // Max 4 cap
-    if ((slot.courses || []).length >= maxPerSem) continue;
-
-    // One COD per semester
-    const alreadyHasCod = (slot.courses || []).some(
-      (c) => c.code === "COD"
-    );
-    if (course.code === "COD" && alreadyHasCod) continue;
-
-    // HP check
-    const completedSet = buildCompletedUpTo(slots, i, completedCourses);
-    if (!hardPrereqsSatisfied(course, completedSet)) continue;
-
-    slot.courses.push(course);
-    return true;
-  }
-
-  return false; // failed to place (rare)
 }
 
 /**
  * MAIN BALANCE ENGINE
  *
  * RULES:
- * - Treat CURRENT semester as COMPLETED.
+ * - Treat CURRENT semester as COMPLETED (HP sees it as done).
  * - Remove all courses from recommended → last semester.
  * - Reinsert them with max 4 per semester.
- * - Never modify TARC semester.
- * - Always respect HP rules.
+ * - Never modify TARC semester contents.
+ * - Always respect HP rules (delegated to placeCourse).
+ * - If needed, can create NEW semesters at the end (Mode B).
  */
 export function balanceFutureSemesters({
   semesterSlots,
   currentSemester,
   completedCourses = [],
 }) {
+  if (!Array.isArray(semesterSlots) || semesterSlots.length === 0) {
+    return semesterSlots;
+  }
+
+  // Clone slots and course arrays for safe mutation
   const slots = semesterSlots.map((s) => ({
     ...s,
     courses: Array.isArray(s.courses) ? [...s.courses] : [],
   }));
 
-  const currentIndex = currentSemester - 1;
-  const startBalanceIndex = currentIndex + 1; // recommended semester
+  const safeCurrent = currentSemester || 1;
+  const currentIndex = safeCurrent - 1;
+  const startBalanceIndex = currentIndex + 1; // recommended semester index
 
-  // 1) Collect all future courses
+  if (startBalanceIndex >= slots.length) {
+    // No future semesters to balance
+    return slots;
+  }
+
+  // 1) Collect all future (non-TARC) courses from recommended → end
   const futureCourses = collectFutureCourses(slots, startBalanceIndex);
 
-  // 2) Wipe future semesters (recommended → end)
+  // 2) Wipe future semesters (recommended → end), but keep TARC untouched
   for (let i = startBalanceIndex; i < slots.length; i++) {
-    if (!slots[i].isTarc) {
-      slots[i].courses = [];
+    const slot = slots[i];
+    if (!slot) continue;
+
+    if (!slot.isTarc) {
+      slot.courses = [];
     }
   }
 
-  // 3) Reinsert all courses using HP & max-4 logic
+  // 3) Reinsert all courses using shared placeCourse:
+  //    - starting from recommended semester index
+  //    - max 4 per semester (your balance target)
+  //    - HP-safe placement, can create new semesters at the end (Mode B)
   for (const course of futureCourses) {
-    tryPlaceBalanced({
+    placeCourse({
       slots,
       course,
       startIndex: startBalanceIndex,
       completedCourses,
-      maxPerSem: 4,
+      maxCoursesPerSemester: 4,
+      maxCodPerSemester: 1,
     });
   }
 
