@@ -63,14 +63,21 @@ export function validateAddCourse({
     return { ok: false, reason: "Invalid semester." };
   }
 
+  // 🔐 Extra safety: TARC semester should not be modified via ADD
+  if (targetSlot.isTarc) {
+    return {
+      ok: false,
+      reason: "You cannot modify courses in the TARC semester.",
+    };
+  }
+
   const isCod = courseToAdd.code === "COD";
 
   // 🔹 SPECIAL CAP: semesters 10 & 11 → at most 3 normal courses
   // We rely on originalRow if present; otherwise fall back to the global cap.
   let effectiveMax = maxCoursesPerSemester;
-  const row = typeof targetSlot.originalRow === "number"
-    ? targetSlot.originalRow
-    : null;
+  const row =
+    typeof targetSlot.originalRow === "number" ? targetSlot.originalRow : null;
 
   if (row === 10 || row === 11) {
     // User wants at most 3 of our suggested courses in those semesters

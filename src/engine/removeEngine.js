@@ -159,6 +159,36 @@ function rebalanceAllPrereqs({
 }
 
 /**
+ * Trim trailing empty, non-TARC semesters.
+ * This prevents long chains of empty 15,16,17,... after rebalancing.
+ */
+function trimTrailingEmptySemesters(slots) {
+  if (!Array.isArray(slots)) return slots;
+
+  let end = slots.length;
+
+  while (end > 0) {
+    const slot = slots[end - 1];
+    if (!slot) {
+      end--;
+      continue;
+    }
+
+    const hasCourses = Array.isArray(slot.courses) && slot.courses.length > 0;
+
+    // Stop trimming if:
+    //  - slot has courses, OR
+    //  - this is a TARC semester (never remove)
+    if (hasCourses || slot.isTarc) break;
+
+    end--;
+  }
+
+  if (end === slots.length) return slots;
+  return slots.slice(0, end);
+}
+
+/**
  * Main Remove Logic (used by CoursePlanner after a REMOVE).
  *
  * PATCHED BEHAVIOR:
@@ -198,7 +228,7 @@ export function reinsertRemovedCourse({
 
   // If completed earlier → DO NOT reinsert → return "clean" slots
   if (completedEarlier) {
-    return slots;
+    return trimTrailingEmptySemesters(slots);
   }
 
   // 2) Place removed course in the nearest valid FUTURE semester
@@ -219,8 +249,14 @@ export function reinsertRemovedCourse({
     maxCodPerSemester,
   });
 
-  return rebalanced;
+  // 4) Clean up trailing empty semesters
+  return trimTrailingEmptySemesters(rebalanced);
 }
 
 // Export helpers for other engine modules
-export { hardPrereqsSatisfied, buildCompletedUpTo, placeCourse };
+export {
+  hardPrereqsSatisfied,
+  buildCompletedUpTo,
+  placeCourse,
+  trimTrailingEmptySemesters,
+};

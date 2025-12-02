@@ -1,10 +1,9 @@
 // engine/balanceEngine.js
 
-import { placeCourse } from "./removeEngine";
+import { placeCourse, hardPrereqsSatisfied, buildCompletedUpTo } from "./removeEngine";
 
 /**
- * Helper: flatten all courses after CURRENT semester.
- * We exclude TARC courses so they never get duplicated.
+ * Flatten all future NON-TARC courses from recommended onward
  */
 function collectFutureCourses(slots, startIndex) {
   const list = [];
@@ -12,14 +11,10 @@ function collectFutureCourses(slots, startIndex) {
   for (let i = startIndex; i < slots.length; i++) {
     const s = slots[i];
     if (!s || !Array.isArray(s.courses)) continue;
+    if (s.isTarc) continue;
 
     for (const c of s.courses) {
-      if (!c) continue;
-
-      // Never include TARC-only marker courses (if any)
-      if (c.is_tarc) continue;
-
-      list.push(c);
+      if (c) list.push(c);
     }
   }
 
@@ -27,21 +22,16 @@ function collectFutureCourses(slots, startIndex) {
 }
 
 /**
- * MAIN BALANCE ENGINE
- *
- * BASE RULES (same spirit as old stable engine):
- * - Treat CURRENT semester as COMPLETED (HP sees it as done).
- * - Remove all courses from recommended → last semester.
- * - Reinsert them with max 4 per semester using placeCourse().
- * - Never modify TARC semesters.
- * - Always respect HP rules (delegated to placeCourse).
- * - placeCourse MAY create new semesters at the end if needed.
- *
- * EXTRA RULE (new, but minimal):
- * - After normal balance, enforce:
- *      semester_row 10 and 11 → max 3 normal courses.
- *   Any extra course is pushed FORWARD using placeCourse again
- *   (starting from the next semester index).
+ * Completely NEW auto-balance:
+ * 1. Treat CURRENT semester as completed
+ * 2. Extract all future NON-TARC courses
+ * 3. Clear all NON-TARC future semesters
+ * 4. Repack globally:
+ *      → HP-safe
+ *      → max 4 per semester
+ *      → fills earlier gaps first (pulling backward)
+ * 5. Apply special rule (sem 10 & 11 max 3)
+ * 6. Trim trailing empty semesters
  */
 export function balanceFutureSemesters({
   semesterSlots,
@@ -52,7 +42,7 @@ export function balanceFutureSemesters({
     return semesterSlots;
   }
 
-  // Clone slots and course arrays for safe mutation
+  // Clone array safely
   const slots = semesterSlots.map((s) => ({
     ...s,
     courses: Array.isArray(s.courses) ? [...s.courses] : [],
@@ -60,67 +50,95 @@ export function balanceFutureSemesters({
 
   const safeCurrent = currentSemester || 1;
   const currentIndex = safeCurrent - 1;
-  const startBalanceIndex = currentIndex + 1; // recommended semester index
+  const startBalanceIndex = currentIndex + 1;
 
-  if (startBalanceIndex >= slots.length) {
-    // No future semesters to balance
-    return slots;
-  }
+  if (startBalanceIndex >= slots.length) return slots;
 
-  // 1) Collect all future (non-TARC) courses from recommended → end
-  const futureCourses = collectFutureCourses(slots, startBalanceIndex);
+  // -----------------------------------------------
+  // 1. Collect all future NON-TARC courses
+  // -----------------------------------------------
+  const allFuture = collectFutureCourses(slots, startBalanceIndex);
 
-  // 2) Wipe future semesters (recommended → end), but keep TARC untouched
+  // -----------------------------------------------
+  // 2. Clear future NON-TARC semesters
+  // -----------------------------------------------
   for (let i = startBalanceIndex; i < slots.length; i++) {
-    const slot = slots[i];
-    if (!slot) continue;
-
-    if (!slot.isTarc) {
-      slot.courses = [];
+    if (!slots[i].isTarc) {
+      slots[i].courses = [];
     }
   }
 
-  // 3) Reinsert all courses using shared placeCourse:
-  //    - starting from recommended semester index
-  //    - max 4 per semester (your original balance target)
-  //    - HP-safe placement, can create new semesters at the end
-  for (const course of futureCourses) {
-    placeCourse({
-      slots,
-      course,
-      startIndex: startBalanceIndex,
-      completedCourses,
-      maxCoursesPerSemester: 4,
-      maxCodPerSemester: 1,
-    });
+  // -----------------------------------------------
+  // 3. GLOBAL repack: fill semesters from earliest to latest
+  // -----------------------------------------------
+  for (const course of allFuture) {
+    for (let sem = startBalanceIndex; sem < slots.length; sem++) {
+      const slot = slots[sem];
+
+      // Skip TARC
+      if (slot.isTarc) continue;
+
+      // Capacity (max 4)
+      if (slot.courses.length >= 4) continue;
+
+      // HP check
+      const completedSet = buildCompletedUpTo(slots, sem, completedCourses);
+      if (!hardPrereqsSatisfied(course, completedSet)) continue;
+
+      // Valid → insert
+      slot.courses.push(course);
+      break;
+    }
   }
 
-  // 4) EXTRA: enforce thesis-friendly caps on semesters 10 and 11
-  //    → at most 3 normal courses (thesis is not in courses array)
-  const SPECIAL_ROWS = new Set([10, 11]);
+  // -----------------------------------------------
+  // 4. Enforce max 3 courses on semesters 10 & 11
+  //    BUT we now PULL backward instead of only pushing forward
+  // -----------------------------------------------
+  const SPECIAL = new Set([10, 11]);
 
   for (let i = 0; i < slots.length; i++) {
-    const slot = slots[i];
-    if (!slot) continue;
+    if (!SPECIAL.has(slots[i].originalRow)) continue;
 
-    const row = slot.originalRow;
-    if (!SPECIAL_ROWS.has(row)) continue;
+    while (slots[i].courses.length > 3) {
+      const extra = slots[i].courses.pop();
 
-    // While more than 3 normal courses → push the last one forward
-    while ((slot.courses || []).length > 3) {
-      const movedCourse = slot.courses.pop();
-      if (!movedCourse) break;
+      // Try placing backward first (pull)
+      let placed = false;
+      for (let b = i - 1; b >= startBalanceIndex; b--) {
+        if (slots[b].isTarc) continue;
+        if (slots[b].courses.length >= 4) continue;
 
-      // Reinsert starting from *next* semester index
-      placeCourse({
-        slots,
-        course: movedCourse,
-        startIndex: i + 1,
-        completedCourses,
-        maxCoursesPerSemester: 4,
-        maxCodPerSemester: 1,
-      });
+        const done = buildCompletedUpTo(slots, b, completedCourses);
+        if (!hardPrereqsSatisfied(extra, done)) continue;
+
+        slots[b].courses.push(extra);
+        placed = true;
+        break;
+      }
+
+      if (!placed) {
+        // fallback: place forward
+        placeCourse({
+          slots,
+          course: extra,
+          startIndex: i + 1,
+          completedCourses,
+          maxCoursesPerSemester: 4,
+        });
+      }
     }
+  }
+
+  // -----------------------------------------------
+  // 5. Trim trailing empty semesters
+  // -----------------------------------------------
+  while (
+    slots.length > startBalanceIndex &&
+    slots[slots.length - 1].courses.length === 0 &&
+    !slots[slots.length - 1].isTarc
+  ) {
+    slots.pop();
   }
 
   return slots;
