@@ -125,7 +125,7 @@
        {
     "code": "COD",
     "title": "Computer Organization",
-    "semester_row": 2,
+    "semester_row": 4,
     "type": "GenEd/COD",
     "hp": [""],
     "sp": []
@@ -134,7 +134,7 @@
   {
     "code": "PHY112",
     "title": "Physics I Lab",
-    "semester_row": 2,
+    "semester_row": 4,
     "type": "School Core",
     "hp": ["PHY111"],
     "sp": []
