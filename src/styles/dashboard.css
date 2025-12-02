@@ -57,6 +57,7 @@
 
 .student-id {
   font-weight: 600;
+  font-size: 18px;
   color: #ffffff;
   background: rgba(59, 130, 246, 0.1);
   padding: 2px 6px;
@@ -73,6 +74,7 @@
 .stream-name {
   color: #d1d5db;
   font-weight: 500;
+  font-size: 18px;
 }
 
 /* CENTER: Progress Stats - Desktop Only */

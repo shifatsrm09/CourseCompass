@@ -159,9 +159,10 @@ export default function Dashboard({ user, setUser, onLogout }) {
         {/* LEFT: Brand & Student Info */}
         <div className="navbar-brand">
           <div className="brand-content">
-            <h1 className="app-name">Course Compass</h1>
+         
             <div className="student-info-compact">
-              <span className="student-id">{user.studentId}</span>
+              <span className="student-id">ID: {user.studentId}</span>
+            
               <span className="separator">•</span>
               <span className="stream-name">{user.stream}</span>
             </div>
