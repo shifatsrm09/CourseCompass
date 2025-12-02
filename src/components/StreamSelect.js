@@ -1,16 +1,26 @@
+// src/components/StreamSelect.js
 import { useState } from "react";
 import "../styles/card.css";
+
+// Import the central stream config
+import streamsConfig from "../data/streamsConfig";
 
 export default function StreamSelect({ studentId, onUpdate }) {
   const [stream, setStream] = useState("");
   const [error, setError] = useState("");
 
-  // Only ENG101 + MAT110 is configured
-  const allowedStreams = ["ENG101 + MAT110"];
+  // Convert config object → array for select rendering
+  const streamOptions = Object.values(streamsConfig);
 
   const saveStream = async () => {
-    if (!allowedStreams.includes(stream)) {
-      setError("This stream is not configured yet.");
+    if (!stream) {
+      setError("Please select a stream.");
+      return;
+    }
+
+    // Validate stream ID from config
+    if (!streamsConfig[stream]) {
+      setError("Invalid stream selected. Please try again.");
       return;
     }
 
@@ -21,13 +31,17 @@ export default function StreamSelect({ studentId, onUpdate }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentId,
-          stream,
+          stream, // Save EXACT stream ID
         }),
       }
     );
 
     const data = await res.json();
-    onUpdate(data.user);
+    if (data.user) {
+      onUpdate(data.user);
+    } else {
+      setError("Could not save stream. Please try again.");
+    }
   };
 
   return (
@@ -44,15 +58,11 @@ export default function StreamSelect({ studentId, onUpdate }) {
         >
           <option value="">Choose Stream</option>
 
-          {/* Configured Streams */}
-          <option value="ENG101 + MAT110">ENG101 + MAT110</option>
-
-          {/* Unconfigured Streams */}
-          <option value="ENG101 + MAT092">ENG101 + MAT092</option>
-          <option value="ENG102 + MAT110">ENG102 + MAT110</option>
-          <option value="ENG102 + MAT092">ENG102 + MAT092</option>
-          <option value="ENG091 + MAT110">ENG091 + MAT110</option>
-          <option value="ENG091 + MAT092">ENG091 + MAT092</option>
+          {streamOptions.map((st) => (
+            <option key={st.id} value={st.id}>
+              {st.label}
+            </option>
+          ))}
         </select>
 
         {error && (
@@ -69,7 +79,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
         </button>
 
         <p style={{ marginTop: "10px", fontSize: "0.9rem", color: "#aaa" }}>
-          Only ENG101 + MAT110 is currently available.
+          Please choose your correct stream.
         </p>
       </div>
     </div>

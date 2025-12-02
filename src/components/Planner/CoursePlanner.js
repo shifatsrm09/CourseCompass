@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import "../../styles/planner.css";
 import thesisPlan from "../../data/thesisPlan.json";
 
+// 🔵 STREAM SUPPORT
+import streamsConfig, {
+  DEFAULT_STREAM_ID,
+} from "../../data/streamsConfig";
+
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
@@ -12,41 +17,107 @@ import { balanceFutureSemesters } from "../../engine/balanceEngine";
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
+// 🔵 STREAM SUPPORT: helper
+const getBasePlanForStream = (streamId) => {
+  const id = streamsConfig[streamId] ? streamId : DEFAULT_STREAM_ID;
+  return streamsConfig[id].plan; // JSON course layout
+};
+
 export default function CoursePlanner({
   user,
-  setUser, // NEW
-  orderedCourses,
+  setUser,
+  orderedCourses, // IGNORE this old prop if switching to stream-based plan
   currentSemester,
   setCurrentSemester,
   allCourses = [],
 }) {
   const [showModal, setShowModal] = useState(false);
 
-  // Base plan: from JSON / orderedCourses
-    const [semesterSlots, setSemesterSlots] = useState(() => {
-      return orderedCourses.map((row) => {
-        const thesis = thesisPlan.find(
-          (t) => t.semester_row === row.semester_row
-        );
+  /* 
+  -----------------------------------------------------------
+  INITIAL PLAN LOADING (from stream or DB)
+  ----------------------------------------------------------- 
+  🔵 STREAM SUPPORT:
+  1. If DB customPlan exists → restore it.
+  2. Else → load stream-specific default JSON plan.
+  */
 
-        return {
-          id: `sem-${row.semester_row}`,
-          originalRow: row.semester_row,
-          courses: row.courses,
-          isTarc: row.courses.some((c) => c.is_tarc),
-          thesis: thesis || null,
-        };
-      });
+/* 
+-----------------------------------------------------------
+INITIAL PLAN LOADING (from stream or DB)
+----------------------------------------------------------- 
+🔵 STREAM SUPPORT (FLAT JSON FORMAT):
+1. Stream JSON is a flat list of course objects.
+2. We group them by semester_row dynamically.
+*/
+
+// Convert flat JSON stream → grouped semester blocks
+const loadDefaultStreamPlan = () => {
+  const flat = getBasePlanForStream(user.stream); 
+  // flat = [{ code, title, semester_row, hp, sp, ... }, ...]
+
+  const bySemester = {};
+
+  // group courses by semester_row
+  flat.forEach((course) => {
+    const sem = course.semester_row;
+    if (!bySemester[sem]) bySemester[sem] = [];
+    bySemester[sem].push(course);
+  });
+
+  // build planner-compatible structure
+  return Object.keys(bySemester)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((sem) => {
+      const semesterCourses = bySemester[sem];
+
+      const thesis = thesisPlan.find(
+        (t) => t.semester_row === Number(sem)
+      );
+
+      return {
+        id: `sem-${sem}`,
+        originalRow: Number(sem),
+        courses: semesterCourses,
+        isTarc: semesterCourses.some((c) => c.is_tarc),
+        thesis: thesis || null,
+      };
     });
+};
+
+// INITIALIZE SEMESTER SLOTS -------------------------
+const [semesterSlots, setSemesterSlots] = useState(() => {
+  // CASE 1 — No custom plan → load default stream layout
+  if (!user.customPlan || !Array.isArray(user.customPlan)) {
+    return loadDefaultStreamPlan();
+  }
+
+  // CASE 2 — Hydrate from DB customPlan
+  return user.customPlan.map((p) => {
+    const rowCourses = allCourses.filter((c) =>
+      (p.courses || []).includes(c.code)
+    );
+
+    const thesis = thesisPlan.find(
+      (t) => t.semester_row === p.semester
+    );
+
+    return {
+      id: `sem-${p.semester}`,
+      originalRow: p.semester,
+      courses: rowCourses,
+      isTarc: rowCourses.some((c) => c.is_tarc),
+      thesis: thesis || null,
+    };
+  });
+});
 
 
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [modalCourses, setModalCourses] = useState([]);
-  const [modalContext, setModalContext] = useState(null);
-
-  /* ──────────────────────────────────────────────
-     HYDRATE FROM DB (customPlan) IF AVAILABLE
-  ─────────────────────────────────────────────── */
+  /* 
+  -----------------------------------------------------------
+  HYDRATE FROM DB WHEN USER.customPlan ARRIVES LATER
+  ----------------------------------------------------------- 
+  */
   useEffect(() => {
     if (!user.customPlan || !Array.isArray(user.customPlan)) return;
     if (!Array.isArray(allCourses) || allCourses.length === 0) return;
@@ -56,26 +127,45 @@ export default function CoursePlanner({
         (p.courses || []).includes(c.code)
       );
 
-          const thesis = thesisPlan.find(
-              (t) => t.semester_row === p.semester
-            );
+      const thesis = thesisPlan.find(
+        (t) => t.semester_row === p.semester
+      );
 
-            return {
-              id: `sem-${p.semester}`,
-              originalRow: p.semester,
-              courses: rowCourses,
-              isTarc: rowCourses.some((c) => c.is_tarc),
-              thesis: thesis || null,
-            };
-
+      return {
+        id: `sem-${p.semester}`,
+        originalRow: p.semester,
+        courses: rowCourses,
+        isTarc: rowCourses.some((c) => c.is_tarc),
+        thesis: thesis || null,
+      };
     });
 
     setSemesterSlots(restored);
   }, [user.customPlan, allCourses]);
 
-  /* ──────────────────────────────────────────────
-     SEMESTER STATUS
-  ─────────────────────────────────────────────── */
+  /* 
+  -----------------------------------------------------------
+  RELOAD PLAN IF STREAM CHANGES
+  ----------------------------------------------------------- 
+  🔵 STREAM SUPPORT:
+  Very important: When user chooses a different stream,
+  planner resets to the new stream’s default unless they
+  already have a custom plan.
+  */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!user.stream) return;
+
+    // If user has already edited → never overwrite customPlan
+    if (user.customPlan && user.customPlan.length > 0) return;
+
+    // Otherwise: load NEW stream's default
+    setSemesterSlots(loadDefaultStreamPlan());
+  }, [user.stream]);
+
+  /* ---------------------------------------------------- */
+  /* SEMESTER STATUS HELPERS                              */
+  /* ---------------------------------------------------- */
   const getStatus = (index) => {
     const safe = currentSemester || 1;
 
@@ -85,9 +175,9 @@ export default function CoursePlanner({
     return "locked";
   };
 
-  /* ──────────────────────────────────────────────
-     HELPERS: SYNC PLAN TO SERVER + UPDATE USER
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* SYNC HELPERS: SAVE PLAN LOCALLY & SERVER             */
+  /* ---------------------------------------------------- */
 
   const buildPlanFromSlots = (slots) =>
     slots.map((slot) => ({
@@ -121,14 +211,12 @@ export default function CoursePlanner({
     try {
       const plan = buildPlanFromSlots(slots);
 
-      // count CODs globally
       const codCount = plan.reduce(
         (acc, sem) =>
           acc + sem.courses.filter((code) => code === "COD").length,
         0
       );
 
-      // find current semester's courses based on originalRow
       const currentRow = currentSemester || 1;
       const currentSlot = slots.find((s) => s.originalRow === currentRow);
       const currentCourses = currentSlot
@@ -147,15 +235,14 @@ export default function CoursePlanner({
       });
     } catch (err) {
       console.error("Failed to sync plan to server:", err);
-      // Silent fail: do not annoy user on brief network issue
     }
   };
 
-  /* ──────────────────────────────────────────────
-     AUTO BALANCE BUTTON HANDLER
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* AUTO BALANCE                                         */
+  /* ---------------------------------------------------- */
+
   const handleBalance = () => {
-    // Block on pure default BRAC layout
     if (!user.customPlan || user.firstLogin) {
       alert(
         "This is the official BRAC sequence.\n" +
@@ -178,9 +265,9 @@ export default function CoursePlanner({
     });
   };
 
-  /* ──────────────────────────────────────────────
-     MARK SEMESTER COMPLETE
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* MARK SEMESTER COMPLETE                               */
+  /* ---------------------------------------------------- */
   const openPrompt = () => setShowModal(true);
   const cancelComplete = () => setShowModal(false);
 
@@ -206,9 +293,9 @@ export default function CoursePlanner({
     }
   };
 
-  /* ──────────────────────────────────────────────
-     HELPER PERMISSION FUNCTIONS
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* MODIFY PERMISSIONS                                   */
+  /* ---------------------------------------------------- */
   const canModify = (index, slot) => {
     const status = getStatus(index);
 
@@ -226,16 +313,20 @@ export default function CoursePlanner({
     return status === "current" || status === "recommended";
   };
 
-  /* ──────────────────────────────────────────────
-     OPEN ADD COURSE MODAL
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* ADD / REPLACE COURSE                                 */
+  /* ---------------------------------------------------- */
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [modalCourses, setModalCourses] = useState([]);
+  const [modalContext, setModalContext] = useState(null);
+
   const openAddCourseModal = (semesterIndex) => {
     const slot = semesterSlots[semesterIndex];
     const status = getStatus(semesterIndex);
 
     if (!canModify(semesterIndex, slot)) return;
 
-    // TARC cannot exceed 4
     if (slot.isTarc && slot.courses.length >= 4) return;
 
     const usedCodes = new Set(slot.courses.map((c) => c.code));
@@ -256,9 +347,6 @@ export default function CoursePlanner({
     setEditModalVisible(true);
   };
 
-  /* ──────────────────────────────────────────────
-     OPEN REPLACE COURSE MODAL
-  ─────────────────────────────────────────────── */
   const openReplaceCourseModal = (semesterIndex, courseIndex) => {
     const slot = semesterSlots[semesterIndex];
     const status = getStatus(semesterIndex);
@@ -286,9 +374,10 @@ export default function CoursePlanner({
     setEditModalVisible(true);
   };
 
-  /* ──────────────────────────────────────────────
-     REMOVE COURSE
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* REMOVE COURSE                                         */
+  /* ---------------------------------------------------- */
+
   const handleRemoveCourse = () => {
     if (!modalContext) return;
 
@@ -325,9 +414,10 @@ export default function CoursePlanner({
     closeEditModal();
   };
 
-  /* ──────────────────────────────────────────────
-     SELECT COURSE FROM MODAL (ADD/REPLACE)
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* ADD / REPLACE APPLY                                  */
+  /* ---------------------------------------------------- */
+
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
@@ -335,10 +425,8 @@ export default function CoursePlanner({
     const slot = semesterSlots[semesterIndex];
     const isCod = course.code === "COD";
 
-    // TARC cap safeguard
     if (slot.isTarc && slot.courses.length >= 4) return;
 
-    // VALIDATION for ADD
     if (mode === "add") {
       const result = validateAddCourse({
         semesterIndex,
@@ -367,7 +455,6 @@ export default function CoursePlanner({
 
       if (mode === "add") {
         if (isCod) {
-          // COD special behaviour (pull from future)
           if (targetSlot.courses.length >= 5) return prev;
           const alreadyHasCod = targetSlot.courses.some(
             (c) => c.code === "COD"
@@ -398,11 +485,9 @@ export default function CoursePlanner({
 
           targetSlot.courses.push(codToInsert);
         } else {
-          // Normal course add
           if (targetSlot.courses.length >= 5) return prev;
           targetSlot.courses.push(course);
 
-          // Remove this course from ALL future semesters
           for (let i = semesterIndex + 1; i < slots.length; i++) {
             const s = slots[i];
             if (!Array.isArray(s.courses)) continue;
@@ -417,7 +502,6 @@ export default function CoursePlanner({
         newCourses[courseIndex] = course;
         slotToEdit.courses = newCourses;
 
-        // For non-COD replace, also remove future duplicates
         if (!isCod) {
           for (let i = semesterIndex + 1; i < slots.length; i++) {
             const s = slots[i];
@@ -442,9 +526,9 @@ export default function CoursePlanner({
     setModalCourses([]);
   };
 
-  /* ──────────────────────────────────────────────
-     RENDER
-  ─────────────────────────────────────────────── */
+  /* ---------------------------------------------------- */
+  /* RENDER                                               */
+  /* ---------------------------------------------------- */
   return (
     <div className="planner-container dark-container">
       <h2 className="planner-title">Course Planner</h2>
