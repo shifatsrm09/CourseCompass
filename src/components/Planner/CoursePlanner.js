@@ -520,7 +520,7 @@ export default function CoursePlanner({
           color: "#ddd",
         }}
       >
-        Total Courses:{" "}
+        Total Courses:{" "} 
         <span
           style={{
             color:
@@ -530,9 +530,9 @@ export default function CoursePlanner({
           }}
         >
           {totalCoursesDisplayed}
-        </span>{" "}
+        </span>{" "} 
         / {expectedCount}
-      </div>
+      </div>  Total : 45 (Thesis)
 
       <ConfirmModal
         visible={showModal}
