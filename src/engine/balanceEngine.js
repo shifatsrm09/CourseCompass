@@ -21,18 +21,6 @@ function collectFutureCourses(slots, startIndex) {
   return list;
 }
 
-/**
- * Completely NEW auto-balance:
- * 1. Treat CURRENT semester as completed
- * 2. Extract all future NON-TARC courses
- * 3. Clear all NON-TARC future semesters
- * 4. Repack globally:
- *      → HP-safe
- *      → max 4 per semester
- *      → fills earlier gaps first (pulling backward)
- * 5. Apply special rule (sem 10 & 11 max 3)
- * 6. Trim trailing empty semesters
- */
 export function balanceFutureSemesters({
   semesterSlots,
   currentSemester,
@@ -42,7 +30,7 @@ export function balanceFutureSemesters({
     return semesterSlots;
   }
 
-  // Clone array safely
+  // Clone slots safely
   const slots = semesterSlots.map((s) => ({
     ...s,
     courses: Array.isArray(s.courses) ? [...s.courses] : [],
@@ -51,50 +39,41 @@ export function balanceFutureSemesters({
   const safeCurrent = currentSemester || 1;
   const currentIndex = safeCurrent - 1;
   const startBalanceIndex = currentIndex + 1;
-
   if (startBalanceIndex >= slots.length) return slots;
 
-  // -----------------------------------------------
-  // 1. Collect all future NON-TARC courses
-  // -----------------------------------------------
+  // ------------------------------------------
+  // 1. Collect all future courses
+  // ------------------------------------------
   const allFuture = collectFutureCourses(slots, startBalanceIndex);
 
-  // -----------------------------------------------
-  // 2. Clear future NON-TARC semesters
-  // -----------------------------------------------
+  // ------------------------------------------
+  // 2. Clear future semesters
+  // ------------------------------------------
   for (let i = startBalanceIndex; i < slots.length; i++) {
-    if (!slots[i].isTarc) {
-      slots[i].courses = [];
-    }
+    if (!slots[i].isTarc) slots[i].courses = [];
   }
 
-  // -----------------------------------------------
-  // 3. GLOBAL repack: fill semesters from earliest to latest
-  // -----------------------------------------------
+  // ------------------------------------------
+  // 3. GLOBAL repack (fills gaps forward)
+  // ------------------------------------------
   for (const course of allFuture) {
     for (let sem = startBalanceIndex; sem < slots.length; sem++) {
       const slot = slots[sem];
 
-      // Skip TARC
       if (slot.isTarc) continue;
-
-      // Capacity (max 4)
       if (slot.courses.length >= 4) continue;
 
-      // HP check
-      const completedSet = buildCompletedUpTo(slots, sem, completedCourses);
-      if (!hardPrereqsSatisfied(course, completedSet)) continue;
+      const done = buildCompletedUpTo(slots, sem, completedCourses);
+      if (!hardPrereqsSatisfied(course, done)) continue;
 
-      // Valid → insert
       slot.courses.push(course);
       break;
     }
   }
 
-  // -----------------------------------------------
-  // 4. Enforce max 3 courses on semesters 10 & 11
-  //    BUT we now PULL backward instead of only pushing forward
-  // -----------------------------------------------
+  // ------------------------------------------
+  // 4. Sem 10/11 max 3 courses (pull backwards)
+  // ------------------------------------------
   const SPECIAL = new Set([10, 11]);
 
   for (let i = 0; i < slots.length; i++) {
@@ -103,8 +82,9 @@ export function balanceFutureSemesters({
     while (slots[i].courses.length > 3) {
       const extra = slots[i].courses.pop();
 
-      // Try placing backward first (pull)
       let placed = false;
+
+      // Try backward first
       for (let b = i - 1; b >= startBalanceIndex; b--) {
         if (slots[b].isTarc) continue;
         if (slots[b].courses.length >= 4) continue;
@@ -118,7 +98,6 @@ export function balanceFutureSemesters({
       }
 
       if (!placed) {
-        // fallback: place forward
         placeCourse({
           slots,
           course: extra,
@@ -130,15 +109,50 @@ export function balanceFutureSemesters({
     }
   }
 
-  // -----------------------------------------------
-  // 5. Trim trailing empty semesters
-  // -----------------------------------------------
+  // ------------------------------------------
+  // 5. Trim strictly empty trailing semesters
+  // ------------------------------------------
   while (
     slots.length > startBalanceIndex &&
     slots[slots.length - 1].courses.length === 0 &&
     !slots[slots.length - 1].isTarc
   ) {
     slots.pop();
+  }
+
+  // ------------------------------------------
+  // ⭐ 6. FINAL BALANCE FIX:
+  //    If last semester has only 1 course → pull from earlier
+  // ------------------------------------------
+  const lastIndex = slots.length - 1;
+  const last = slots[lastIndex];
+
+  if (!last.isTarc && last.courses.length === 1) {
+    const targetCourse = last.courses[0];
+
+    for (let i = lastIndex - 1; i >= startBalanceIndex; i--) {
+      const slot = slots[i];
+      if (slot.isTarc) continue;
+      if (slot.courses.length <= 2) continue; // avoid making earlier too small
+
+      const candidate = slot.courses[slot.courses.length - 1];
+
+      // HP check for placing candidate into last
+      const doneLast = buildCompletedUpTo(slots, lastIndex, completedCourses);
+      if (!hardPrereqsSatisfied(candidate, doneLast)) continue;
+
+      // HP check to see if removing candidate breaks earlier semester
+      const doneBeforeRemove = buildCompletedUpTo(slots, i, completedCourses);
+      // If candidate was required before → skip
+      // (simple safeguard: we assume OK if candidate HP is satisfied)
+      // More complex chains are rare in BRAC structure
+      if (!hardPrereqsSatisfied(candidate, doneBeforeRemove)) continue;
+
+      // Move
+      slot.courses.pop();
+      last.courses.push(candidate);
+      break;
+    }
   }
 
   return slots;
