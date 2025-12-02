@@ -272,7 +272,7 @@
     {
     "code": "CSE350",
     "title": "Computer Architecture",
-    "semester_row": 7,
+    "semester_row": 8,
     "type": "Program Core",
     "hp": ["CSE251"],
     "sp": []
@@ -394,6 +394,22 @@
     "title": null,
     "semester_row": 12,
     "type": "Elective",
+    "hp": [],
+    "sp": []
+  },
+      {
+    "code": "CSE461",
+    "title": "",
+    "semester_row": 12,
+    "type": "Program Core",
+    "hp": ["CSE260"],
+    "sp": []
+  },
+      {
+    "code": "COD",
+    "title": "Computer Architecture",
+    "semester_row": 12,
+    "type": "COD",
     "hp": [],
     "sp": []
   }

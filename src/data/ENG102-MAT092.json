@@ -366,6 +366,16 @@
     "hp": ["CSE370"],
     "sp": []
   },
+
+    {
+    "code": "CSE460",
+    "title": "Internship/Project II",
+    "semester_row": 11,
+    "type": "Program Core",
+    "hp": ["CSE260"],
+    "sp": []
+  },
+  
   
 
   {
