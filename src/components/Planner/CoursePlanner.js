@@ -11,7 +11,11 @@ import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
 
-import { validateAddCourse } from "../../engine/engine";
+import {
+  validateAddCourse,
+  validateCourseForSemester,   // ✅ NEW IMPORT
+} from "../../engine/engine";
+
 import { reinsertRemovedCourse } from "../../engine/removeEngine";
 import { balanceFutureSemesters } from "../../engine/balanceEngine";
 
@@ -380,6 +384,9 @@ export default function CoursePlanner({
     closeEditModal();
   };
 
+  /* ----------------------------------------------------------------
+     ADD / REPLACE (SELECTION APPLY)
+  -----------------------------------------------------------------*/
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
@@ -389,6 +396,9 @@ export default function CoursePlanner({
 
     const isCod = course.code === "COD";
 
+    // ---------------------------------------------
+    // VALIDATE ADD
+    // ---------------------------------------------
     if (mode === "add") {
       const result = validateAddCourse({
         semesterIndex,
@@ -406,6 +416,30 @@ export default function CoursePlanner({
       }
     }
 
+    // ---------------------------------------------
+    // ✅ NEW: VALIDATE REPLACE (HP + COD + rules)
+    // ---------------------------------------------
+    if (mode === "replace") {
+      const result = validateCourseForSemester({
+        semesterIndex,
+        course,
+        semesterSlots,
+        currentSemester,
+        completedCourses: user.completedCourses || [],
+        maxCoursesPerSemester: 5,
+        maxCodAllowed: 5,
+        mode: "replace",
+      });
+
+      if (!result.ok) {
+        alert(result.reason || "You cannot place this course here.");
+        return;
+      }
+    }
+
+    // ---------------------------------------------
+    // MUTATE PLAN
+    // ---------------------------------------------
     setSemesterSlots((prev) => {
       const slots = prev.map((s) => ({
         ...s,
@@ -427,7 +461,7 @@ export default function CoursePlanner({
 
           let futureIndex = -1;
           for (let i = semesterIndex + 1; i < slots.length; i++) {
-            if (slots[i].courses.some((c) => c.code === "COD")) {
+            if ((slots[i].courses || []).some((c) => c.code === "COD")) {
               futureIndex = i;
               break;
             }
@@ -520,7 +554,7 @@ export default function CoursePlanner({
           color: "#ddd",
         }}
       >
-        Total Courses:{" "} 
+        Total Courses:{" "}
         <span
           style={{
             color:
@@ -530,9 +564,10 @@ export default function CoursePlanner({
           }}
         >
           {totalCoursesDisplayed}
-        </span>{" "} 
+        </span>{" "}
         / {expectedCount}
-      </div>  Total : 45 (Thesis)
+      </div>{" "}
+      Total : 45 (Thesis)
 
       <ConfirmModal
         visible={showModal}
