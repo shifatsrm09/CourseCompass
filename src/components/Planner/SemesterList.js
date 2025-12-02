@@ -87,21 +87,14 @@ export default function SemesterList({
   return (
     <div className="dark-container">
       {/* BALANCE BUTTON */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+      
+      <div className="balance-section">
         <button
           onClick={onBalance}
-          className="balance-btn"
-          style={{
-            padding: "8px 14px",
-            background: "#3a86ff",
-            borderRadius: "6px",
-            border: "none",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
+          className="balance-button"
         >
-          ⚖ Auto Balance
+          <span className="balance-icon">⚖</span>
+          Auto Balance Courses
         </button>
       </div>
 

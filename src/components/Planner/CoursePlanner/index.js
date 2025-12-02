@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * CoursePlanner/index.js
+ * CoursePlanner/index.js - PATCHED WITH MAIN CONTENT
  * =========================================================================
  * PURPOSE:
  *   This is the MAIN orchestrator component of the entire planner system.
@@ -18,7 +18,6 @@
  *        › Opening course editing modals
  *        › Status calculation (current, completed, recommended, locked)
  *   - Render:
- *        › PlannerHeader (course counters)
  *        › ConfirmModal (complete semester)
  *        › SemesterList (all semesters + drag/drop)
  *        › CourseEditModal (add/replace course dialog)
@@ -56,7 +55,7 @@ import "../../../styles/planner.css";
 import usePlannerState from "./usePlannerState";
 import usePlannerSync from "./usePlannerSync";
 import usePlannerModals from "./usePlannerModals";
-import PlannerHeader from "./PlannerHeader";
+// REMOVED: PlannerHeader import - navbar now handles this
 
 import ConfirmModal from "../ConfirmModal";
 import CourseEditModal from "../CourseEditModal";
@@ -166,38 +165,46 @@ export default function CoursePlanner({
 
   return (
     <div className="planner-container dark-container">
-      <PlannerHeader semesterSlots={semesterSlots} streamId={user.stream} />
+      {/* MAIN CONTENT WRAPPER */}
+      <div className="main-content">
+        {/* Title Section */}
+        <h2 className="planner-title">Course Planner</h2>
+        <p className="planner-subtitle">Plan your academic journey</p>
 
-      <ConfirmModal
-        visible={showModal}
-        onConfirm={confirmComplete}
-        onCancel={cancelComplete}
-        semester={currentSemester || 1}
-      />
+        {/* Complete Semester Modal */}
+        <ConfirmModal
+          visible={showModal}
+          onConfirm={confirmComplete}
+          onCancel={cancelComplete}
+          semester={currentSemester || 1}
+        />
 
-      <SemesterList
-        semesterSlots={semesterSlots}
-        setSemesterSlots={setSemesterSlots}
-        getStatus={getStatus}
-        openPrompt={openPrompt}
-        openAddCourseModal={openAddCourseModal}
-        openReplaceCourseModal={openReplaceCourseModal}
-        currentSemester={currentSemester}
-        user={user}
-        onBalance={handleBalance}
-      />
+        {/* Semester List with Auto-Balance */}
+        <SemesterList
+          semesterSlots={semesterSlots}
+          setSemesterSlots={setSemesterSlots}
+          getStatus={getStatus}
+          openPrompt={openPrompt}
+          openAddCourseModal={openAddCourseModal}
+          openReplaceCourseModal={openReplaceCourseModal}
+          currentSemester={currentSemester}
+          user={user}
+          onBalance={handleBalance}
+        />
 
-      <CourseEditModal
-        visible={editModalVisible}
-        onClose={closeEditModal}
-        onSelect={handleCourseSelected}
-        onRemove={handleRemoveCourse}
-        courses={modalCourses}
-        modalContext={modalContext}
-        title={
-          modalContext?.mode === "add" ? "Add a course" : "Replace course"
-        }
-      />
+        {/* Course Edit Modal */}
+        <CourseEditModal
+          visible={editModalVisible}
+          onClose={closeEditModal}
+          onSelect={handleCourseSelected}
+          onRemove={handleRemoveCourse}
+          courses={modalCourses}
+          modalContext={modalContext}
+          title={
+            modalContext?.mode === "add" ? "Add a course" : "Replace course"
+          }
+        />
+      </div>
     </div>
   );
 }
