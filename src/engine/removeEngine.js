@@ -174,7 +174,8 @@ function trimTrailingEmptySemesters(slots) {
       continue;
     }
 
-    const hasCourses = Array.isArray(slot.courses) && slot.courses.length > 0;
+    const hasCourses =
+      Array.isArray(slot.courses) && slot.courses.length > 0;
 
     // Stop trimming if:
     //  - slot has courses, OR
@@ -191,7 +192,7 @@ function trimTrailingEmptySemesters(slots) {
 /**
  * Main Remove Logic (used by CoursePlanner after a REMOVE).
  *
- * PATCHED BEHAVIOR:
+ * Behavior:
  * - If a course was completed earlier:
  *      → DO NOT REINSERT IT
  *      → JUST REMOVE
@@ -199,6 +200,8 @@ function trimTrailingEmptySemesters(slots) {
  * - If not completed earlier:
  *      → Insert into nearest valid FUTURE semester
  *      → Then run global HP rebalance
+ *
+ * NEW: Hard failsafe so removedCourse is never lost.
  */
 export function reinsertRemovedCourse({
   semesterSlots,
@@ -242,7 +245,7 @@ export function reinsertRemovedCourse({
   });
 
   // 3) Rebalance all HP chains
-  const rebalanced = rebalanceAllPrereqs({
+  let rebalanced = rebalanceAllPrereqs({
     slots,
     completedCourses,
     maxCoursesPerSemester,
@@ -250,7 +253,51 @@ export function reinsertRemovedCourse({
   });
 
   // 4) Clean up trailing empty semesters
-  return trimTrailingEmptySemesters(rebalanced);
+  rebalanced = trimTrailingEmptySemesters(rebalanced);
+
+  // 5) ⭐ HARD FAILSAFE:
+  //    Ensure the specific removedCourse object still exists somewhere.
+  //    We compare by OBJECT IDENTITY (===), not by code.
+  let found = false;
+  for (const s of rebalanced) {
+    if (!s || !Array.isArray(s.courses)) continue;
+    if (s.courses.includes(removedCourse)) {
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    // As a last resort, append it to the last non-TARC semester.
+    let inserted = false;
+    for (let i = rebalanced.length - 1; i >= 0; i--) {
+      const slot = rebalanced[i];
+      if (!slot || slot.isTarc) continue;
+
+      if (!Array.isArray(slot.courses)) slot.courses = [];
+      slot.courses.push(removedCourse);
+      inserted = true;
+      break;
+    }
+
+    // If somehow all were TARC (shouldn't happen), create a new semester.
+    if (!inserted) {
+      const last = rebalanced[rebalanced.length - 1];
+      const newOriginalRow =
+        last && typeof last.originalRow === "number"
+          ? last.originalRow + 1
+          : rebalanced.length + 1;
+
+      rebalanced.push({
+        id: `sem-extra-${rebalanced.length + 1}`,
+        originalRow: newOriginalRow,
+        courses: [removedCourse],
+        isTarc: false,
+      });
+    }
+  }
+
+  return rebalanced;
 }
 
 // Export helpers for other engine modules
