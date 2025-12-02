@@ -168,8 +168,7 @@ export default function CoursePlanner({
       {/* MAIN CONTENT WRAPPER */}
       <div className="main-content">
         {/* Title Section */}
-        <h2 className="planner-title">Course Planner</h2>
-        <p className="planner-subtitle">Plan your academic journey</p>
+        <h2 className="planner-title">Course Compass</h2>
 
         {/* Complete Semester Modal */}
         <ConfirmModal

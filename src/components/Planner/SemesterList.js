@@ -94,7 +94,7 @@ export default function SemesterList({
           className="balance-button"
         >
           <span className="balance-icon">⚖</span>
-          Auto Balance Courses
+          Balance Engine
         </button>
       </div>
 
