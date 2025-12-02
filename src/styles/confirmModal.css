@@ -1,4 +1,5 @@
 /* ===========================
+confirmModal.css
    CONFIRM MODAL (CURRENT → COMPLETE)
    =========================== */
 
@@ -77,4 +78,32 @@
 
 .confirm-btn.confirm:hover {
   background: #1d4ed8;
+}
+
+/* ================================================
+   RESPONSIVE LAYOUT – CONFIRM MODAL
+   ================================================ */
+
+@media (max-width: 540px) {
+  .confirm-box {
+    width: 90%;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .confirm-title {
+    font-size: 18px;
+  }
+
+  .confirm-text {
+    font-size: 13px;
+  }
+
+  .confirm-actions {
+    gap: 8px;
+  }
+
+  .confirm-btn {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
 }

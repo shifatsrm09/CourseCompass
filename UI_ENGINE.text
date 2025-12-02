@@ -1,0 +1,23 @@
+UI LAYER (React Components)
+└─ index.js
+└─ SemesterList.js
+└─ SemesterRow.js
+└─ CourseEditModal.js
+└─ ConfirmModal.js
+└─ CourseBox.js
+└─ PlannerHeader.js
+└─ Dashboard.js
+
+LOGIC LAYER (React Hooks + Engines)
+└─ usePlannerState.js
+└─ usePlannerSync.js
+└─ usePlannerModals.js
+└─ plannerUtils.js
+└─ engine/engine.js
+└─ engine/removeEngine.js
+└─ engine/balanceEngine.js
+
+DATA / CONFIG LAYER
+└─ streamsConfig.js
+└─ thesisPlan.json
+└─ stream JSON files (ENG101-MAT110.json)

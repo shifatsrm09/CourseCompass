@@ -1,3 +1,4 @@
+/* dashboard.css */
 .dashboard-container {
   max-width: 1000px;
   margin: 0 auto;
@@ -57,4 +58,64 @@
   text-align: center;
   font-size: 16px;
   font-weight: 500;
+}
+
+
+
+/* ================================================
+   RESPONSIVE LAYOUT – DASHBOARD
+   ================================================ */
+
+@media (max-width: 900px) {
+  .dashboard-container {
+    padding: 20px 14px;
+  }
+
+  .dashboard-header {
+    padding: 12px 16px;
+  }
+
+  .dashboard-title {
+    font-size: 20px;
+  }
+
+  .dashboard-subtitle {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 18px 12px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .logout-btn {
+    align-self: stretch;
+    text-align: center;
+  }
+}
+
+@media (max-width: 540px) {
+  .dashboard-container {
+    padding: 16px 10px;
+  }
+
+  .dashboard-title {
+    font-size: 18px;
+  }
+
+  .dashboard-subtitle {
+    font-size: 13px;
+  }
+
+  .logout-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
 }

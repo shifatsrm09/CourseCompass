@@ -1,3 +1,41 @@
+/**
+ * ---------------------------------------------------------------------
+ * Dashboard.js
+ * ---------------------------------------------------------------------
+ * PURPOSE:
+ *  The main entry point after login. Loads course data, builds the
+ *  user's academic context, and renders the CoursePlanner component.
+ *
+ * RESPONSIBILITY:
+ *  - Loads stream JSON dynamically based on user.stream.
+ *  - Builds the full course list (allCourses) with COD at the top.
+ *  - Builds orderedCourses:
+ *       › Default BRAC plan (no custom plan)
+ *       › Or reconstructed plan from DB (customPlan exists)
+ *  - Stores the updated user object into localStorage.
+ *  - Renders CoursePlanner with prepared data.
+ *
+ * HOW IT FITS INTO COURSE COMPASS:
+ *  Dashboard is the “root screen” of the planner area.
+ *  It prepares and normalizes all data before feeding it into the planner.
+ *
+ * MAIN JOBS:
+ *  1) Load stream course JSON (ENG101-MAT110.json initially)
+ *  2) Build unique course list
+ *  3) Build semester → course mapping
+ *  4) Manage user.currentSemester updates
+ *  5) Render CoursePlanner with all required props
+ *
+ * PROPS:
+ *  - user          → logged in student data
+ *  - setUser       → update user state
+ *  - onLogout      → sign out
+ *
+ * USED BY:
+ *  - App.js (Top-level router)
+ * ---------------------------------------------------------------------
+ */
+
 import { useEffect, useState } from "react";
 import "../styles/dashboard.css";
 import CoursePlanner from "./Planner/CoursePlanner";

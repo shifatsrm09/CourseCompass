@@ -1,3 +1,48 @@
+/**
+ * ---------------------------------------------------------------------
+ * SemesterRow.js
+ * ---------------------------------------------------------------------
+ * PURPOSE:
+ *  Renders one semester block in the planner grid.
+ *
+ * RESPONSIBILITY:
+ *  - Shows semester label, status pill, TARC badge, thesis badge.
+ *  - Renders all courses as <CourseBox>.
+ *  - Shows +Add Course button when rules allow.
+ *  - Provides drag handle for the TARC semester.
+ *
+ * HOW IT FITS INTO COURSE COMPASS:
+ *  Each semester is rendered as one row.
+ *  This component takes raw semester data and converts it to UI.
+ *
+ * SEMESTER LOGIC:
+ *  Status:
+ *   - completed
+ *   - current
+ *   - recommended
+ *   - locked
+ *
+ *  Add/Replace Permissions:
+ *   - TARC: partially editable
+ *   - Thesis semester: locked, no editing
+ *   - First semester: no deletes
+ *
+ * KEY PROPS:
+ *  - slot              → semester object (courses, TARC, thesis)
+ *  - index             → semester index
+ *  - dragProvided      → DnD helpers
+ *  - snapshot          → DnD state
+ *  - getStatus         → determines semester status
+ *  - openPrompt        → complete-semester modal
+ *  - openAddCourseModal → add course modal
+ *  - openReplaceCourseModal → replace modal
+ *
+ * USED BY:
+ *  - SemesterList.js
+ * ---------------------------------------------------------------------
+ */
+
+
 // src/components/Planner/SemesterRow.js
 import React from "react";
 import CourseBox from "./CourseBox";

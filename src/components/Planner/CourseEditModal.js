@@ -1,7 +1,49 @@
+/**
+ * ---------------------------------------------------------------------
+ * CourseEditModal.js
+ * ---------------------------------------------------------------------
+ * PURPOSE:
+ * Main UI for selecting a course when:
+ *   ✔ Adding a course to a semester
+ *   ✔ Replacing an existing course
+ *   ✔ Removing a course (when allowed)
+ *
+ * ROLE IN SYSTEM:
+ * - Displays a searchable list of all eligible courses
+ * - Groups courses by type in a structured, readable UI
+ * - Allows deletion when modalContext.mode === "replace"
+ *
+ * WHY THIS EXISTS:
+ * Course selection is complex. This modal:
+ * - Organizes courses by groups (Core, Elective, TARC, COD, etc.)
+ * - Handles searching
+ * - Shows prerequisite info (HP)
+ * - Prevents illegal deletions (TARC, locked status)
+ *
+ * PROPS:
+ * - visible        → whether modal is shown
+ * - onClose        → close modal
+ * - onSelect       → selecting a course triggers planner logic
+ * - onRemove       → removes existing course (replace only)
+ * - courses        → array of selectable courses
+ * - modalContext   → contains info about the target semester
+ * - title          → modal title
+ *
+ * STATE:
+ * - search → for course searching
+ *
+ * USED BY:
+ * - usePlannerModals.js (logic)
+ * - CoursePlanner/index.js
+ *
+ * NOTE:
+ * GROUP_ORDER ensures consistent ordering of category sections.
+ * ---------------------------------------------------------------------
+ */
+
 import React, { useState, useEffect, useMemo } from "react";
 import "../../styles/courseEditModal.css";
 
-// ✅ FIX: GROUP_ORDER moved below imports but still outside component
 const GROUP_ORDER = [
   "COD",
   "TARC",
@@ -25,37 +67,35 @@ export default function CourseEditModal({
 }) {
   const [search, setSearch] = useState("");
 
+  /* Reset search when opened */
   useEffect(() => {
     if (visible) setSearch("");
   }, [visible]);
 
+  /* Close modal with Escape key */
   useEffect(() => {
     const h = (e) => e.key === "Escape" && onClose();
     if (visible) document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [visible, onClose]);
 
+  /* Close if background is clicked */
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains("modal-backdrop")) {
       onClose();
     }
   };
 
-  /* ──────────────────────────────────────────────
-     REMOVE BUTTON LOGIC
-  ─────────────────────────────────────────────── */
+  /* Remove button conditions */
   const disableRemove =
-    modalContext?.isTarc || // TARC cannot delete
-    modalContext?.semesterIndex === 0 || // first semester cannot delete
+    modalContext?.isTarc ||
+    modalContext?.semesterIndex === 0 ||
     !(
       modalContext?.status === "current" ||
       modalContext?.status === "recommended"
-    ); // completed/locked cannot delete
+    );
 
-  /* ──────────────────────────────────────────────
-     GROUPING & SEARCH
-  ─────────────────────────────────────────────── */
-
+  /* Grouping logic */
   const groupLabelFromCourse = (course) => {
     if (course.code === "COD") return "COD";
     if (course.is_tarc) return "TARC";
@@ -65,8 +105,7 @@ export default function CourseEditModal({
     if (t.includes("core") && t.includes("program")) return "Program Core";
     if (t.includes("core") && t.includes("school")) return "School Core";
     if (t.startsWith("gened")) return "GenEd";
-    if (t.includes("elective") && t.includes("program"))
-      return "Program Elective";
+    if (t.includes("elective") && t.includes("program")) return "Program Elective";
     if (t.includes("elective")) return "Elective";
     if (t === "internship") return "Internship";
 
@@ -92,6 +131,7 @@ export default function CourseEditModal({
     }));
   }, [courses]);
 
+  /* Search filter */
   const filteredGroups = groupedCourses
     .map((group) => ({
       ...group,
@@ -101,16 +141,15 @@ export default function CourseEditModal({
     }))
     .filter((g) => g.courses.length > 0);
 
-  /* ──────────────────────────────────────────────
-     RENDER
-  ─────────────────────────────────────────────── */
   return !visible ? null : (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
       <div className="modal-panel">
+        {/* HEADER */}
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
         </div>
 
+        {/* SEARCH BAR */}
         <input
           className="course-search"
           placeholder="Search by course code..."
@@ -118,6 +157,7 @@ export default function CourseEditModal({
           onChange={(e) => setSearch(e.target.value)}
         />
 
+        {/* COURSE GROUPS */}
         <div className="modal-body scrollable">
           {filteredGroups.length > 0 ? (
             filteredGroups.map((group) => (
@@ -148,6 +188,7 @@ export default function CourseEditModal({
           )}
         </div>
 
+        {/* FOOTER */}
         <div className="modal-footer">
           {modalContext?.mode === "replace" && !disableRemove && (
             <button className="remove-btn" onClick={onRemove}>

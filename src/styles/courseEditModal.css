@@ -1,3 +1,4 @@
+/*confirmEditModal.css*/
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -128,4 +129,79 @@
   color: #ff6b6b; /* soft red */
   font-weight: 600;
   opacity: 0.9;
+}
+
+
+/* ================================================
+   RESPONSIVE LAYOUT – COURSE EDIT MODAL
+   ================================================ */
+
+@media (max-width: 768px) {
+  .modal-panel {
+    max-width: 420px;
+    width: 92%;
+    max-height: 80vh;
+  }
+
+  .modal-title {
+    font-size: 18px;
+  }
+
+  .course-search {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .course-select-btn {
+    padding: 0.5rem 0.6rem;
+    font-size: 13px;
+  }
+
+  .course-prereq {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 540px) {
+  /* Full-screen feeling on mobile */
+  .modal-backdrop {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .modal-panel {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    max-height: 100vh;
+    height: 100vh;
+    padding: 0.75rem 0.9rem;
+  }
+
+  .modal-header {
+    margin-bottom: 8px;
+  }
+
+  .modal-title {
+    font-size: 17px;
+  }
+
+  .course-search {
+    margin-bottom: 10px;
+  }
+
+  .modal-body.scrollable {
+    padding-right: 4px;
+  }
+
+  .modal-footer {
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  .remove-btn,
+  .cancel-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 13px;
+  }
 }

@@ -1,4 +1,4 @@
-/* MAIN LAYOUT */
+/* planner.css */
 .planner-container {
   max-width: 900px;
   margin: 0 auto;
@@ -278,4 +278,206 @@
 /* LOCKED pill aligned far right */
 .lock-pill-right {
   margin-left: 10px;
+}
+
+/* ===================================================================
+   RESPONSIVE LAYOUT — CLEAN PRODUCTION VERSION
+   =================================================================== */
+
+/* ================================================================
+   900px — Small laptops / large tablets
+   ================================================================ */
+@media (max-width: 900px) {
+  .planner-container {
+    padding: 24px 14px;
+  }
+
+  .planner-row {
+    padding: 16px;
+  }
+
+  .semester-col {
+    font-size: 17px;
+  }
+
+  .planner-title {
+    font-size: 24px;
+  }
+}
+
+/* ================================================================
+   768px — Tablets / large phones (landscape)
+   ================================================================ */
+@media (max-width: 768px) {
+  .planner-container {
+    padding: 20px 12px;
+  }
+
+  .planner-title {
+    font-size: 22px;
+  }
+
+  .planner-grid {
+    gap: 14px;
+  }
+
+  .planner-row {
+    padding: 14px 14px;
+  }
+
+  .courses-col,
+  .thesis-courses-col {
+    gap: 8px;
+  }
+
+  .course-box {
+    padding: 8px 12px;
+  }
+
+  .course-code {
+    font-size: 13px;
+  }
+
+  .add-course-btn {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.55rem;
+  }
+}
+
+/* ================================================================
+   540px — Mobile phones (primary breakpoint)
+   ================================================================ */
+@media (max-width: 540px) {
+  .planner-container {
+    padding: 18px 10px;
+  }
+
+  .planner-title {
+    font-size: 20px;
+  }
+
+  /* Keep header EXACTLY like desktop on mobile */
+  .row-header {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100%;
+    gap: 0 !important;
+  }
+
+  /* Left text */
+  .semester-col {
+    font-size: 16px;
+  }
+
+  /* Right badges (TARC + Status) */
+  .row-badges {
+    margin-left: auto !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  /* Status + TARC pills */
+  .status-col,
+  .tarc-pill {
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* Reduce row padding */
+  .planner-row {
+    padding: 14px 14px !important;
+  }
+
+  /* Course chips: slightly tighter */
+  .courses-col,
+  .thesis-courses-col {
+    gap: 8px !important;
+  }
+
+  .course-box {
+    padding: 7px 11px !important;
+  }
+
+  .course-code {
+    font-size: 12px !important;
+  }
+
+  /* ============================================================
+     THESIS ROWS (Pre-Thesis, Final Thesis, Deferred)
+     ============================================================ */
+
+  .courses-row-flex {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100%;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    min-width: 0;
+  }
+
+  /* Left course chips */
+  .thesis-courses-col {
+    flex: 1 1 auto !important;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+
+  /* Thesis badge in center-right */
+  .thesis-right-pill {
+    flex-shrink: 0;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+  }
+
+  /* Locked badge far right */
+  .lock-pill-right {
+    flex-shrink: 0;
+    margin-left: auto !important;
+    white-space: nowrap;
+  }
+}
+
+/* ================================================================
+   400px — Ultra small phones (iPhone SE)
+   ================================================================ */
+@media (max-width: 400px) {
+  .planner-container {
+    padding: 16px 8px;
+  }
+
+  .planner-title {
+    font-size: 18px;
+  }
+
+  .course-box {
+    padding: 6px 9px !important;
+  }
+
+  .course-code {
+    font-size: 11px !important;
+  }
+
+  .status-col,
+  .tarc-pill,
+  .lock-pill-right {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .thesis-right-pill {
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+  }
 }
