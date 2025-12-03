@@ -1,3 +1,43 @@
+
+/**
+ * ---------------------------------------------------------------------
+ * SemesterList.js
+ * ---------------------------------------------------------------------
+ * PURPOSE:
+ *  Displays the list of semesters in order, along with:
+ *   - Drag & drop functionality for moving TARC semester
+ *   - Rendering each semester using <SemesterRow>
+ *   - Auto-Balance button
+ *
+ * RESPONSIBILITY:
+ *  - Hosts the entire vertical list of semester rows.
+ *  - Implements drag-and-drop using @hello-pangea/dnd.
+ *  - Enforces TARC movement rules:
+ *       › Only TARC semester can move
+ *       › Cannot move into completed zone
+ *       › Cannot be placed before semester 3
+ *
+ * HOW IT FITS INTO COURSE COMPASS:
+ *  The planner view is a list of semesters.
+ *  This component manages the visual list + reordering logic.
+ *
+ * SERVER SYNC:
+ *  When user drags TARC to a new position, the updated order is saved to DB.
+ *
+ * KEY PROPS:
+ *  - semesterSlots       → array of semester objects
+ *  - setSemesterSlots    → update state
+ *  - getStatus           → current/completed/recommended/locked
+ *  - openPrompt          → open “complete semester” modal
+ *  - openAddCourseModal  → open add-course modal
+ *  - openReplaceCourseModal → open replace modal
+ *  - onBalance           → triggers Auto-Balance engine
+ *  - user                → needed for saving drag order
+ *
+ * USED BY:
+ *  - CoursePlanner/index.js
+ * ---------------------------------------------------------------------
+ */
 import React from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import SemesterRow from "./SemesterRow";
@@ -47,21 +87,14 @@ export default function SemesterList({
   return (
     <div className="dark-container">
       {/* BALANCE BUTTON */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+      
+      <div className="balance-section">
         <button
           onClick={onBalance}
-          className="balance-btn"
-          style={{
-            padding: "8px 14px",
-            background: "#3a86ff",
-            borderRadius: "6px",
-            border: "none",
-            color: "white",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
+          className="balance-button"
         >
-          ⚖ Auto Balance
+          <span className="balance-icon">⚖</span>
+          Balance Engine
         </button>
       </div>
 

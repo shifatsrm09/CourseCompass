@@ -1,3 +1,4 @@
+/*card.css*/
 .card {
   background: #1a1a1a;
   padding: 30px 40px;
@@ -47,3 +48,28 @@
   background: #1e1e1e;
   color: #f0f0f0;
 }
+/* ================================================
+   RESPONSIVE – CARD
+   ================================================ */
+
+@media (max-width: 540px) {
+  .card {
+    padding: 20px 18px;
+    max-width: 100%;
+  }
+
+  .card h2 {
+    font-size: 20px;
+  }
+
+  .card input,
+  .card select {
+    font-size: 14px;
+  }
+
+  .card button {
+    font-size: 15px;
+    padding: 10px 18px;
+  }
+}
+

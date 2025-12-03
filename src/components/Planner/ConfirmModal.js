@@ -1,3 +1,36 @@
+/**
+ * ---------------------------------------------------------------------
+ * ConfirmModal.js
+ * ---------------------------------------------------------------------
+ * PURPOSE:
+ * A small confirmation dialog used when the user attempts
+ * to "Complete a Semester".
+ *
+ * ROLE IN SYSTEM:
+ * - Displays a modal overlay with two actions:
+ *      ✔ Confirm completion of the semester
+ *      ✔ Cancel the action
+ *
+ * WHY THIS EXISTS:
+ * Completing a semester is a critical irreversible action
+ * (it updates DB state and moves user to next semester).
+ * This modal ensures the user does not click it accidentally.
+ *
+ * PROPS:
+ * - visible       → controls whether modal is rendered
+ * - onConfirm     → callback when user confirms
+ * - onCancel      → callback when user cancels
+ * - semester      → semester number shown in title
+ *
+ * USED IN:
+ * - CoursePlanner (index.js)
+ *
+ * BEHAVIOR:
+ * - When visible = false → returns null (not in DOM)
+ * - Shows overlay + box + actions
+ * ---------------------------------------------------------------------
+ */
+
 import React from "react";
 import "../../styles/confirmModal.css";
 

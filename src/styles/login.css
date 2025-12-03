@@ -1,3 +1,4 @@
+/*login.css*/
 .login-wrapper {
   height: 100vh;
   background: #0f0f0f;
@@ -14,4 +15,22 @@
   color: #bbbbbb;
   margin-bottom: 25px;
   font-size: 15px;
+}
+
+/* ================================================
+   RESPONSIVE – LOGIN
+   ================================================ */
+
+@media (max-width: 540px) {
+  .login-wrapper {
+    padding: 0 16px;
+  }
+
+  .login-title {
+    font-size: 24px;
+  }
+
+  .login-subtitle {
+    font-size: 14px;
+  }
 }
