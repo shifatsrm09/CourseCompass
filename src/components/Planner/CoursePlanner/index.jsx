@@ -52,18 +52,18 @@
 import React, { useState } from "react";
 import "../../../styles/planner.css";
 
-import usePlannerState from "./usePlannerState";
-import usePlannerSync from "./usePlannerSync";
-import usePlannerModals from "./usePlannerModals";
+import usePlannerState from "./usePlannerState.jsx";
+import usePlannerSync from "./usePlannerSync.jsx";
+import usePlannerModals from "./usePlannerModals.jsx";
 // REMOVED: PlannerHeader import - navbar now handles this
 
-import ConfirmModal from "../ConfirmModal";
-import CourseEditModal from "../CourseEditModal";
-import SemesterList from "../SemesterList";
+import ConfirmModal from "../ConfirmModal.jsx";
+import CourseEditModal from "../CourseEditModal.jsx";
+import SemesterList from "../SemesterList.jsx";
 
 import { balanceFutureSemesters } from "../../../engine/balanceEngine";
 
-const API_BASE = process.env.REACT_APP_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function CoursePlanner({
   user,
@@ -119,7 +119,7 @@ export default function CoursePlanner({
     getStatus,
   });
 
-  // Auto-balance future semesters
+  // .jsx-balance future semesters
   const handleBalance = () => {
     if (!user.customPlan || user.firstLogin) {
       alert(

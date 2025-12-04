@@ -1,3 +1,4 @@
+// api/models/User.js
 const mongoose = require("mongoose");
 
 // One semester entry in the user's custom plan
@@ -34,27 +35,15 @@ const userSchema = new mongoose.Schema({
   currentCourses: { type: [String], default: [] },
 
   /**
-   * NEW: The student's personal, engine-adjusted course plan.
-   *
-   * IMPORTANT LOGIC:
-   * - On first login + stream selection, this stays NULL.
-   *   That means "show default JSON BRAC sequence" on the frontend.
-   *
-   * - As soon as the user makes a modification (add/remove/replace/complete),
-   *   the engine computes a new plan and we SAVE it here.
-   *
-   * - From that point on, the planner should load from `customPlan`
-   *   instead of regenerating from JSON, so the user sees the SAME plan
-   *   each login.
+   * The student's personal, engine-adjusted course plan.
    */
   customPlan: {
     type: [semesterPlanSchema],
-    default: null, // <-- NULL = use default JSON; non-null = use this plan
+    default: null, // NULL = use default JSON; non-null = use this plan
   },
 
   /**
-   * NEW: how many COD courses the student has taken/placed in the plan.
-   * We enforce "at most 5 COD total" using this.
+   * how many COD courses the student has taken/placed in the plan.
    */
   codCount: {
     type: Number,
@@ -62,4 +51,5 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("User", userSchema);
+// Important for serverless: reuse existing model if already compiled
+module.exports = mongoose.models.User || mongoose.model("User", userSchema);

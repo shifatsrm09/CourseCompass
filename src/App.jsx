@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import Login from "./components/Login";
-import StreamSelect from "./components/StreamSelect";
-import Dashboard from "./components/Dashboard";
+import Login from "./components/Login.jsx";
+import StreamSelect from "./components/StreamSelect.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 
 function App() {
   const [user, setUser] = useState(null);

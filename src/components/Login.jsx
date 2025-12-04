@@ -9,7 +9,7 @@ export default function Login({ onLogin }) {
     e.preventDefault();
 
     const response = await fetch(
-      `${process.env.REACT_APP_API_URL}/auth/login`,
+      `${import.meta.env.VITE_API_URL}/auth/login`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
