@@ -74,7 +74,6 @@ export default function usePlannerSync({
     };
 
     setUser(updatedUser);
-
     localStorage.setItem(
       "courseCompassUser",
       JSON.stringify({ user: updatedUser })
@@ -85,15 +84,14 @@ export default function usePlannerSync({
     const plan = buildPlanFromSlots(slots);
 
     const codCount = plan.reduce(
-      (acc, sem) =>
-        acc + sem.courses.filter((code) => code === "COD").length,
+      (a, sem) => a + sem.courses.filter((code) => code === "COD").length,
       0
     );
 
     const currentRow = currentSemester || 1;
     const currentSlot = slots.find((s) => s.originalRow === currentRow);
     const currentCourses = currentSlot
-      ? (currentSlot.courses || []).map((c) => c.code)
+      ? currentSlot.courses.map((c) => c.code)
       : [];
 
     await fetch(`${API_BASE}/planner/save-plan`, {

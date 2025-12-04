@@ -1,106 +1,117 @@
-/**
- * =========================================================================
- * usePlannerState.js
- * =========================================================================
- * PURPOSE:
- *   React hook responsible for:
- *     - Loading initial semesterSlots from stream/custom plan
- *     - Reactively updating slots when stream/customPlan/allCourses change
- *
- * RESPONSIBILITY:
- *   - Detect whether user has a custom plan
- *   - If not → load default plan from the selected stream (streamsConfig)
- *   - If yes → rebuild UI plan from DB saved plan
- *   - Automatically fall back to default plan if the custom plan
- *     becomes invalid or incomplete
- *   - Automatically rebuild slots when:
- *       user.stream changes
- *       user.customPlan changes
- *       allCourses are loaded
- *
- * WHY THIS FILE EXISTS:
- *   The logic for correctly building semesterSlots is non-trivial
- *   and used in many places. This hook centralizes it to ensure:
- *     - Consistency
- *     - Correct fallbacks
- *     - Clean component code in index.js
- *
- * INPUT:
- *   { user, allCourses }
- *
- * OUTPUT:
- *   {
- *     semesterSlots,     // array of semester objects
- *     setSemesterSlots   // state setter used elsewhere
- *   }
- *
- * USED BY:
- *   - CoursePlanner/index.js
- * =========================================================================
- */
-
-// src/components/Planner/CoursePlanner/usePlannerState.js
 import { useState, useEffect } from "react";
-import {
-  getBasePlanForStream,
-  buildSlotsFromFlatPlan,
-  buildSlotsFromCustomPlan,
-} from "./plannerUtils";
+import thesisPlan from "../../../data/thesisPlan.json";
+import streamsConfig, { DEFAULT_STREAM_ID } from "../../../data/streamsConfig";
 
-export default function usePlannerState({ user, allCourses }) {
-  const [semesterSlots, setSemesterSlots] = useState(() => {
-    const hasCustom =
-      Array.isArray(user.customPlan) && user.customPlan.length > 0;
+const getBasePlanForStream = (streamId) => {
+  const id = streamsConfig[streamId] ? streamId : DEFAULT_STREAM_ID;
+  return streamsConfig[id].plan || [];
+};
 
-    if (!hasCustom) {
-      return buildSlotsFromFlatPlan(getBasePlanForStream(user.stream));
-    }
+const buildSlotsFromFlatPlan = (flat = []) => {
+  const bySem = {};
 
-    if (!Array.isArray(allCourses) || allCourses.length === 0) {
-      return [];
-    }
-
-    const { slots, matchRatio } = buildSlotsFromCustomPlan(
-      user.customPlan,
-      allCourses
-    );
-
-    if (matchRatio < 0.5) {
-      return buildSlotsFromFlatPlan(getBasePlanForStream(user.stream));
-    }
-
-    return slots;
+  flat.forEach((course) => {
+    const row = course.semester_row;
+    if (row == null) return;
+    if (!bySem[row]) bySem[row] = [];
+    bySem[row].push({ ...course });
   });
 
+  return Object.keys(bySem)
+    .sort((a, b) => a - b)
+    .map((row) => {
+      const sem = Number(row);
+      const courses = bySem[row].map((c) => ({ ...c }));
+      return {
+        id: `sem-${sem}`,
+        originalRow: sem,
+        courses,
+        isTarc: courses.some((c) => c.is_tarc),
+        thesis: thesisPlan.find((t) => t.semester_row === sem) || null,
+      };
+    });
+};
+
+const buildSlotsFromCustomPlan = (customPlan = [], allCourses) => {
+  let desired = 0,
+    matched = 0;
+
+  const slots = customPlan.map((p) => {
+    const codes = Array.isArray(p.courses) ? p.courses : [];
+    desired += codes.length;
+
+    const rowCourses = allCourses.filter((c) => codes.includes(c.code));
+    matched += rowCourses.length;
+
+    return {
+      id: `sem-${p.semester}`,
+      originalRow: p.semester,
+      courses: rowCourses.map((c) => ({ ...c })),
+      isTarc: rowCourses.some((c) => c.is_tarc),
+      thesis: thesisPlan.find((t) => t.semester_row === p.semester) || null,
+    };
+  });
+
+  return { slots, matchRatio: desired === 0 ? 1 : matched / desired };
+};
+
+const applySemesterOrder = (slots, semesterOrder) => {
+  if (!Array.isArray(semesterOrder) || !semesterOrder.length) return slots;
+
+  const map = new Map();
+  slots.forEach((s) => map.set(s.originalRow, s));
+
+  const ordered = [];
+
+  semesterOrder.forEach((row) => {
+    if (map.has(row)) {
+      ordered.push(map.get(row));
+      map.delete(row);
+    }
+  });
+
+  map.forEach((s) => ordered.push(s));
+
+  return ordered;
+};
+
+export default function usePlannerState({ user, allCourses }) {
+  const [semesterSlots, setSemesterSlots] = useState([]);
+
+  const stream = user?.stream;
+  const customPlan = user?.customPlan;
+  const semesterOrder = user?.semesterOrder;
+
   useEffect(() => {
-    const hasCustom =
-      Array.isArray(user.customPlan) && user.customPlan.length > 0;
-
-    if (!hasCustom) return;
-    if (!Array.isArray(allCourses) || allCourses.length === 0) return;
-
-    const { slots, matchRatio } = buildSlotsFromCustomPlan(
-      user.customPlan,
-      allCourses
-    );
-
-    if (matchRatio < 0.5) {
-      setSemesterSlots(buildSlotsFromFlatPlan(getBasePlanForStream(user.stream)));
+    if (!stream) {
+      setSemesterSlots([]);
       return;
     }
 
-    setSemesterSlots(slots);
-  }, [user.customPlan, allCourses, user.stream]);
+    const hasCustom = Array.isArray(customPlan) && customPlan.length > 0;
 
-  useEffect(() => {
-    if (!user.stream) return;
-    const hasCustom =
-      Array.isArray(user.customPlan) && user.customPlan.length > 0;
+    let baseSlots = [];
 
     if (!hasCustom) {
-      setSemesterSlots(buildSlotsFromFlatPlan(getBasePlanForStream(user.stream)));
+      // first login
+      baseSlots = buildSlotsFromFlatPlan(getBasePlanForStream(stream));
+    } else {
+      if (!Array.isArray(allCourses) || allCourses.length === 0) return;
+
+      const { slots, matchRatio } = buildSlotsFromCustomPlan(
+        customPlan,
+        allCourses
+      );
+
+      baseSlots =
+        matchRatio < 0.5
+          ? buildSlotsFromFlatPlan(getBasePlanForStream(stream))
+          : slots;
     }
-  }, [user.stream, user.customPlan]);
+
+    const finalSlots = applySemesterOrder(baseSlots, semesterOrder);
+    setSemesterSlots(finalSlots);
+  }, [stream, customPlan, semesterOrder, allCourses]);
 
   return { semesterSlots, setSemesterSlots };
 }

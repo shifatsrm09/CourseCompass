@@ -1,43 +1,3 @@
-
-/**
- * ---------------------------------------------------------------------
- * SemesterList.js
- * ---------------------------------------------------------------------
- * PURPOSE:
- *  Displays the list of semesters in order, along with:
- *   - Drag & drop functionality for moving TARC semester
- *   - Rendering each semester using <SemesterRow>
- *   - Auto-Balance button
- *
- * RESPONSIBILITY:
- *  - Hosts the entire vertical list of semester rows.
- *  - Implements drag-and-drop using @hello-pangea/dnd.
- *  - Enforces TARC movement rules:
- *       › Only TARC semester can move
- *       › Cannot move into completed zone
- *       › Cannot be placed before semester 3
- *
- * HOW IT FITS INTO COURSE COMPASS:
- *  The planner view is a list of semesters.
- *  This component manages the visual list + reordering logic.
- *
- * SERVER SYNC:
- *  When user drags TARC to a new position, the updated order is saved to DB.
- *
- * KEY PROPS:
- *  - semesterSlots       → array of semester objects
- *  - setSemesterSlots    → update state
- *  - getStatus           → current/completed/recommended/locked
- *  - openPrompt          → open “complete semester” modal
- *  - openAddCourseModal  → open add-course modal
- *  - openReplaceCourseModal → open replace modal
- *  - onBalance           → triggers Auto-Balance engine
- *  - user                → needed for saving drag order
- *
- * USED BY:
- *  - CoursePlanner/index.js
- * ---------------------------------------------------------------------
- */
 import React from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import SemesterRow from "./SemesterRow";
@@ -51,9 +11,8 @@ export default function SemesterList({
   openPrompt,
   openAddCourseModal,
   openReplaceCourseModal,
-  handleDropCourse,
   user,
-  onBalance, // NEW
+  onBalance,
 }) {
   const onDragEnd = async (result) => {
     if (!result.destination) return;
@@ -62,44 +21,69 @@ export default function SemesterList({
     const to = result.destination.index;
 
     const tarcIndex = semesterSlots.findIndex((s) => s.isTarc);
+    if (tarcIndex === -1) return;
     if (from !== tarcIndex) return;
+    if (getStatus(tarcIndex) === "completed") return;
 
-    const tarcStatus = getStatus(tarcIndex);
-    if (tarcStatus === "completed") return;
-    if (to < 2) return;
+    if (to < 2) return; // cannot move before SEM 3
 
     const updated = [...semesterSlots];
     const [moved] = updated.splice(from, 1);
     updated.splice(to, 0, moved);
 
+    // ⬆ Update UI
     setSemesterSlots(updated);
 
-    await fetch(`${API_BASE}/planner/save-order`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: user.studentId,
-        order: updated.map((s) => s.originalRow),
-      }),
-    });
+    const newOrder = updated.map((s) => s.originalRow);
+
+    // ⬆ Save to backend
+    try {
+      const res = await fetch(`${API_BASE}/planner/save-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: user.studentId,
+          order: newOrder,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        console.error("TARC reorder failed:", data.error);
+      } else {
+        localStorage.setItem(
+          "courseCompassUser",
+          JSON.stringify({ user: data.user })
+        );
+      }
+    } catch (err) {
+      console.error("Network error save-order:", err);
+    }
   };
 
   return (
     <div className="dark-container">
-      {/* BALANCE BUTTON */}
-      
-      <div className="balance-section">
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
         <button
           onClick={onBalance}
-          className="balance-button"
+          className="balance-btn"
+          style={{
+            padding: "8px 14px",
+            background: "#3a86ff",
+            borderRadius: 6,
+            border: "none",
+            color: "white",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
         >
-          <span className="balance-icon">⚖</span>
-          Balance Engine
+          ⚖ Auto Balance
         </button>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="semesters" direction="vertical">
+        <Droppable droppableId="semesters">
           {(provided) => (
             <div
               className="planner-grid"
@@ -111,9 +95,7 @@ export default function SemesterList({
                   key={slot.id}
                   draggableId={slot.id}
                   index={index}
-                  isDragDisabled={
-                    !slot.isTarc || getStatus(index) === "completed"
-                  }
+                  isDragDisabled={!slot.isTarc || getStatus(index) === "completed"}
                 >
                   {(dragProvided, snapshot) => (
                     <SemesterRow
@@ -125,7 +107,6 @@ export default function SemesterList({
                       openPrompt={openPrompt}
                       openAddCourseModal={openAddCourseModal}
                       openReplaceCourseModal={openReplaceCourseModal}
-                      handleDropCourse={handleDropCourse}
                     />
                   )}
                 </Draggable>
