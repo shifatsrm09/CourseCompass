@@ -13,6 +13,9 @@ export default function SemesterList({
   openReplaceCourseModal,
   handleDropCourse,
   user,
+  setUser,
+  updateUserPlanInState,
+  syncPlanToServer,
   onBalance, // NEW
 }) {
   const onDragEnd = async (result) => {
@@ -33,6 +36,25 @@ export default function SemesterList({
     updated.splice(to, 0, moved);
 
     setSemesterSlots(updated);
+
+    if (typeof updateUserPlanInState === "function") {
+      updateUserPlanInState(updated);
+    } else if (typeof setUser === "function") {
+      const updatedUser = {
+        ...user,
+        semesterOrder: updated.map((s) => s.originalRow),
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem(
+        "courseCompassUser",
+        JSON.stringify({ user: updatedUser })
+      );
+    }
+
+    if (typeof syncPlanToServer === "function") {
+      await syncPlanToServer(updated);
+    }
 
     await fetch(`${API_BASE}/planner/save-order`, {
       method: "POST",

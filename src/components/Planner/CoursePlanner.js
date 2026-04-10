@@ -195,10 +195,12 @@ export default function CoursePlanner({
 
   const updateUserPlanInState = (slots) => {
     const newCustomPlan = buildPlanFromSlots(slots);
+    const newSemesterOrder = slots.map((slot) => slot.originalRow);
 
     const updatedUser = {
       ...user,
       customPlan: newCustomPlan,
+      semesterOrder: newSemesterOrder,
       firstLogin: false,
     };
 
@@ -585,6 +587,9 @@ export default function CoursePlanner({
         openReplaceCourseModal={openReplaceCourseModal}
         currentSemester={currentSemester}
         user={user}
+        setUser={setUser}
+        updateUserPlanInState={updateUserPlanInState}
+        syncPlanToServer={syncPlanToServer}
         onBalance={handleBalance}
       />
 
