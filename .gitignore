@@ -53,3 +53,5 @@ yarn-debug.log*
 .DS_Store
 
 transition
+MEMORY.md
+
