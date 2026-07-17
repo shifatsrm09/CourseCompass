@@ -1,0 +1,373 @@
+[
+  {
+    "code": "CSE110",
+    "title": "Introduction to Computer Programming",
+    "semester_row": 1,
+    "type": "Program Core",
+    "hp": [],
+    "sp": []
+  },
+  {
+    "code": "MAT110",
+    "title": "Calculus I",
+    "semester_row": 1,
+    "type": "GenEd",
+    "hp": [],
+    "sp": []
+  },
+  {
+    "code": "ENG101",
+    "title": "English I",
+    "semester_row": 1,
+    "type": "GenEd",
+    "hp": [],
+    "sp": []
+  },
+  {
+    "code": "PHY111",
+    "title": "Physics I",
+    "semester_row": 1,
+    "type": "GenEd",
+    "hp": [],
+    "sp": []
+  },
+
+  {
+    "code": "CSE111",
+    "title": "Structured Programming",
+    "semester_row": 2,
+    "type": "Program Core",
+    "hp": ["CSE110"],
+    "sp": []
+  },
+  {
+    "code": "CSE230",
+    "title": "Discrete Mathematics",
+    "semester_row": 2,
+    "type": "Program Core",
+    "hp": ["CSE110"],
+    "sp": []
+  },
+  {
+    "code": "STA201",
+    "title": "Statistics",
+    "semester_row": 2,
+    "type": "GenEd",
+    "hp": [],
+    "sp": []
+  },
+  {
+    "code": "PHY112",
+    "title": "Physics I Lab",
+    "semester_row": 2,
+    "type": "School Core",
+    "hp": ["PHY111"],
+    "sp": []
+  },
+
+  {
+    "code": "BNG103",
+    "title": "Bangla",
+    "semester_row": 3,
+    "type": "GenEd",
+    "hp": [],
+    "sp": [],
+    "is_tarc": true
+
+  },
+  {
+    "code": "EMB101",
+    "title": "Development of Bangladesh",
+    "semester_row": 3,
+    "type": "GenEd",
+    "hp": [],
+    "sp": [],
+    "is_tarc": true
+    
+  },
+  {
+    "code": "ENG102",
+    "title": "English II",
+    "semester_row": 3,
+    "type": "GenEd",
+    "hp": ["ENG101"],
+    "sp": [],
+    "is_tarc": true
+  },
+  {
+    "code": "HUM103",
+    "title": "Humanities Elective",
+    "semester_row": 3,
+    "type": "GenEd",
+    "hp": [],
+    "sp": [],
+    "is_tarc": true
+  },
+
+  {
+    "code": "CSE220",
+    "title": "Data Structures",
+    "semester_row": 4,
+    "type": "Program Core",
+    "hp": ["CSE111", "CSE230"],
+    "sp": []
+  },
+  {
+    "code": "MAT120",
+    "title": "Calculus II",
+    "semester_row": 4,
+    "type": "School Core",
+    "hp": ["MAT110"],
+    "sp": []
+  },
+  {
+    "code": "CSE250",
+    "title": "Circuits & Electronics",
+    "semester_row": 4,
+    "type": "Program Core",
+    "hp": [],
+    "sp": ["PHY112"]
+  },
+
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 4,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+
+  {
+    "code": "CSE221",
+    "title": "Algorithms",
+    "semester_row": 5,
+    "type": "Program Core",
+    "hp": ["CSE220"],
+    "sp": []
+  },
+  {
+    "code": "MAT216",
+    "title": "Linear Algebra",
+    "semester_row": 5,
+    "type": "School Core",
+    "hp": ["MAT120"],
+    "sp": []
+  },
+  {
+    "code": "CSE251",
+    "title": "Electronic Devices & Circuits",
+    "semester_row": 5,
+    "type": "Program Core",
+    "hp": ["CSE250"],
+    "sp": []
+  },
+
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 5,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+
+  {
+    "code": "CSE321",
+    "title": "Database Systems",
+    "semester_row": 6,
+    "type": "Program Core",
+    "hp": ["CSE221"],
+    "sp": []
+  },
+  {
+    "code": "CSE330",
+    "title": "Operating Systems",
+    "semester_row": 6,
+    "type": "Program Core",
+    "hp": ["MAT216"],
+    "sp": []
+  },
+  {
+    "code": "CSE260",
+    "title": "Digital Logic Design",
+    "semester_row": 6,
+    "type": "Program Core",
+    "hp": ["CSE251"],
+    "sp": []
+  },
+
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 6,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+
+  {
+    "code": "CSE370",
+    "title": "Software Engineering",
+    "semester_row": 7,
+    "type": "Program Core",
+    "hp": ["CSE221"],
+    "sp": []
+  },
+  {
+    "code": "MAT215",
+    "title": "Differential Equations",
+    "semester_row": 7,
+    "type": "School Core",
+    "hp": ["MAT216"],
+    "sp": []
+  },
+  {
+    "code": "CSE340",
+    "title": "Computer Architecture",
+    "semester_row": 7,
+    "type": "Program Core",
+    "hp": ["CSE260"],
+    "sp": []
+  },
+  {
+    "code": "CSE350",
+    "title": "Computer Architecture",
+    "semester_row": 7,
+    "type": "Program Core",
+    "hp": ["CSE251"],
+    "sp": []
+  },
+  {
+    "code": "CSE422",
+    "title": "Computer Networks",
+    "semester_row": 8,
+    "type": "Program Core",
+    "hp": ["CSE321"],
+    "sp": []
+  },
+  {
+    "code": "CSE320",
+    "title": "Numerical Methods",
+    "semester_row": 8,
+    "type": "Program Core",
+    "hp": [],
+    "sp": []
+  },
+  {
+    "code": "CSE341",
+    "title": "Theory of Computation",
+    "semester_row": 8,
+    "type": "Program Core",
+    "hp": ["CSE221", "MAT216"],
+    "sp": []
+  },
+     {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 8,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+  {
+    "code": "CSE331",
+    "title": "Computer Organization",
+    "semester_row": 9,
+    "type": "Program Core",
+    "hp": ["CSE321"],
+    "sp": []
+  },
+  {
+    "code": "CSE360",
+    "title": "Compiler Design",
+    "semester_row": 9,
+    "type": "Program Core",
+    "hp": ["CSE341"],
+    "sp": []
+  },
+  {
+    "code": "CSE460",
+    "title": "Machine Learning",
+    "semester_row": 9,
+    "type": "Program Core",
+    "hp": ["CSE260"],
+    "sp": []
+  },
+
+   {
+    "code": "COD",
+    "title": "Computer Organization",
+    "semester_row": 9,
+    "type": "GenEd/COD",
+    "hp": [""],
+    "sp": []
+  },
+
+  {
+    "code": "CSE420",
+    "title": "Artificial Intelligence",
+    "semester_row": 10,
+    "type": "Program Core",
+    "hp": ["CSE370", "CSE331", "CSE340"],
+    "sp": []
+  },
+  {
+    "code": "CSE421",
+    "title": "Operating Systems II",
+    "semester_row": 10,
+    "type": "Program Core",
+    "hp": ["CSE320", "CSE330"],
+    "sp": []
+  },
+  {
+    "code": "CSE423",
+    "title": "Numerical Analysis",
+    "semester_row": 10,
+    "type": "Program Core",
+    "hp": ["MAT216"],
+    "sp": []
+  },
+
+  {
+    "code": "CSE470",
+    "title": "Internship/Project I",
+    "semester_row": 11,
+    "type": "Program Core",
+    "hp": ["CSE370"],
+    "sp": []
+  },
+  {
+    "code": "CSE471",
+    "title": "Internship/Project II",
+    "semester_row": 11,
+    "type": "Program Core",
+    "hp": ["CSE370"],
+    "sp": []
+  },
+  {
+    "code": "CSE461",
+    "title": "Advanced Machine Learning",
+    "semester_row": 11,
+    "type": "Program Core",
+    "hp": ["CSE260"],
+    "sp": []
+  },
+
+  {
+    "code": "ELCTV1",
+    "title": null,
+    "semester_row": 12,
+    "type": "Elective",
+    "hp": [],
+    "sp": []
+  },
+  {
+    "code": "ELCTV2",
+    "title": null,
+    "semester_row": 12,
+    "type": "Elective",
+    "hp": [],
+    "sp": []
+  }
+]
