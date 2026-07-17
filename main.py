@@ -1,49 +1,64 @@
 import json
-from pathlib import Path
 
-json_file = Path(__file__).parent / "ENG101-MAT110.json"
-
-with open(json_file, "r", encoding="utf-8") as f:
-    courses = json.load(f)
+# Load JSON
+with open("ENG101-MAT110.json", "r") as file:
+    courses = json.load(file)
 
 # Group courses by semester
 semesters = {}
+
 for course in courses:
     sem = course["semester_row"]
-    semesters.setdefault(sem, []).append(course["code"])
 
-semester_list = sorted(semesters.keys())
+    if sem not in semesters:
+        semesters[sem] = []
 
-# Maximum number of courses in any semester
-max_courses = max(len(v) for v in semesters.values())
+    semesters[sem].append(course["code"])
 
+# Find the maximum number of courses in any semester
+max_courses = 0
+for sem in semesters:
+    if len(semesters[sem]) > max_courses:
+        max_courses = len(semesters[sem])
+
+# Fixed column widths
 sl_width = 4
 course_width = 10
 
-def border():
-    print("+" + "-" * (sl_width + 2), end="+")
-    for _ in range(max_courses):
-        print("-" * (course_width + 2), end="+")
-    print()
+# Top border
+print("+" + "-" * (sl_width + 2), end="+")
+for i in range(max_courses):
+    print("-" * (course_width + 2), end="+")
+print()
 
 # Header
-border()
 print(f"| {'Sl':<{sl_width}} ", end="|")
 for i in range(max_courses):
     print(f" {'C'+str(i+1):<{course_width}} ", end="|")
 print()
-border()
 
-# Rows
-for sem in semester_list:
+# Middle border
+print("+" + "-" * (sl_width + 2), end="+")
+for i in range(max_courses):
+    print("-" * (course_width + 2), end="+")
+print()
+
+# Print semesters
+for sem in sorted(semesters):
+
     print(f"| {sem:<{sl_width}} ", end="|")
-    for code in semesters[sem]:
-        print(f" {code:<{course_width}} ", end="|")
 
-    # Fill remaining empty cells
-    for _ in range(max_courses - len(semesters[sem])):
+    for course in semesters[sem]:
+        print(f" {course:<{course_width}} ", end="|")
+
+    # Fill empty cells
+    for i in range(max_courses - len(semesters[sem])):
         print(f" {'':<{course_width}} ", end="|")
 
     print()
 
-border()
+# Bottom border
+print("+" + "-" * (sl_width + 2), end="+")
+for i in range(max_courses):
+    print("-" * (course_width + 2), end="+")
+print()
