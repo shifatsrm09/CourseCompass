@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { API_BASE } from "../api";
 import "../styles/card.css";
 
 
@@ -25,7 +26,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
     }
 
     const res = await fetch(
-      `${process.env.REACT_APP_API_URL}/auth/set-stream`,
+      `${API_BASE}/auth/set-stream`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

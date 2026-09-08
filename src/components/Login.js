@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE } from "../api";
 import "../styles/login.css";
 import "../styles/card.css";
 
@@ -9,7 +10,7 @@ export default function Login({ onLogin }) {
     e.preventDefault();
 
     const response = await fetch(
-      `${process.env.REACT_APP_API_URL}/auth/login`,
+      `${API_BASE}/auth/login`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

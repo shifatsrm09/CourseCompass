@@ -1,35 +1,29 @@
-require("dotenv").config({ path: require("node:path").join(__dirname, ".env") });
+require("dotenv").config({
+  path: require("node:path").join(__dirname, ".env"),
+  quiet: true,
+});
 const dns = require("node:dns");
 
 if (process.env.MONGO_DNS_SERVERS) {
   dns.setServers(
-    process.env.MONGO_DNS_SERVERS.split(",").map((server) => server.trim()).filter(Boolean)
+    process.env.MONGO_DNS_SERVERS.split(",")
+      .map((server) => server.trim())
+      .filter(Boolean)
   );
 }
 
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+const app = require("./app");
+const { connectDatabase } = require("./db");
 
-const authRoutes = require("./routes/auth");
+const port = process.env.PORT || 5000;
 
-const app = express();
-
-
-app.use(cors());
-app.use(express.json());
-app.use("/api/planner", require("./routes/planner"));
-
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Error:", err));
-
-
-app.use("/api/auth", authRoutes);
-
-
-app.listen(process.env.PORT, () => {
-  console.log(`Backend running on port ${process.env.PORT}`);
-});
+connectDatabase()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Backend running on port ${port}; MongoDB connected`);
+    });
+  })
+  .catch((error) => {
+    console.error("Backend startup failed:", error.name);
+    process.exitCode = 1;
+  });

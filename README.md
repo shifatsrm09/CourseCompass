@@ -1,1 +1,0 @@
-A Course guiding platform for a seamless ride to your Open-Credit System

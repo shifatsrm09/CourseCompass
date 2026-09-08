@@ -18,8 +18,7 @@ import {
 
 import { reinsertRemovedCourse } from "../../engine/removeEngine";
 import { balanceFutureSemesters } from "../../engine/balanceEngine";
-
-const API_BASE = process.env.REACT_APP_API_URL;
+import { API_BASE } from "../../api";
 
 
 

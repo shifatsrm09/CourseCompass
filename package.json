@@ -2,6 +2,9 @@
   "name": "course-compass",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@testing-library/dom": "^10.4.1",
@@ -16,8 +19,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:api": "npm --prefix backend start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:api": "npm --prefix backend test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

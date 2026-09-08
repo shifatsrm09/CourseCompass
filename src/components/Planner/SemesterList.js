@@ -1,8 +1,7 @@
 import React from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import SemesterRow from "./SemesterRow";
-
-const API_BASE = process.env.REACT_APP_API_URL;
+import { API_BASE } from "../../api";
 
 export default function SemesterList({
   semesterSlots,
