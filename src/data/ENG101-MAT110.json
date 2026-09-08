@@ -20,7 +20,7 @@
     "title": "English I",
     "semester_row": 1,
     "type": "GenEd",
-    "hp": [],
+    "hp": ["ENG091"],
     "sp": []
   },
   {
@@ -45,7 +45,7 @@
     "title": "Discrete Mathematics",
     "semester_row": 2,
     "type": "Program Core",
-    "hp": ["CSE110"],
+    "hp": [],
     "sp": []
   },
   {
@@ -76,7 +76,7 @@
 
   },
   {
-    "code": "EMB101",
+    "code": "DEV/EMB101",
     "title": "Development of Bangladesh",
     "semester_row": 3,
     "type": "GenEd",
@@ -131,10 +131,10 @@
 
      {
     "code": "COD",
-    "title": "Computer Organization",
+    "title": "GenEd Course",
     "semester_row": 4,
-    "type": "GenEd/COD",
-    "hp": [""],
+    "type": "GenEd",
+    "hp": [],
     "sp": []
   },
 
@@ -165,10 +165,10 @@
 
      {
     "code": "COD",
-    "title": "Computer Organization",
+    "title": "GenEd Course",
     "semester_row": 5,
-    "type": "GenEd/COD",
-    "hp": [""],
+    "type": "GenEd",
+    "hp": [],
     "sp": []
   },
 
@@ -199,10 +199,10 @@
 
      {
     "code": "COD",
-    "title": "Computer Organization",
+    "title": "GenEd Course",
     "semester_row": 6,
-    "type": "GenEd/COD",
-    "hp": [""],
+    "type": "GenEd",
+    "hp": [],
     "sp": []
   },
 
@@ -227,8 +227,8 @@
     "title": "Computer Architecture",
     "semester_row": 7,
     "type": "Program Core",
-    "hp": ["CSE260"],
-    "sp": []
+    "hp": [],
+    "sp": ["CSE260"]
   },
   {
     "code": "CSE350",
@@ -243,7 +243,7 @@
     "title": "Computer Networks",
     "semester_row": 8,
     "type": "Program Core",
-    "hp": ["CSE321"],
+    "hp": ["CSE221"],
     "sp": []
   },
   {
@@ -259,15 +259,15 @@
     "title": "Theory of Computation",
     "semester_row": 8,
     "type": "Program Core",
-    "hp": ["CSE221", "MAT216"],
-    "sp": []
+    "hp": [],
+    "sp": ["CSE321", "CSE340"]
   },
      {
     "code": "COD",
-    "title": "Computer Organization",
+    "title": "GenEd Course",
     "semester_row": 8,
-    "type": "GenEd/COD",
-    "hp": [""],
+    "type": "GenEd",
+    "hp": [],
     "sp": []
   },
   {
@@ -275,7 +275,7 @@
     "title": "Computer Organization",
     "semester_row": 9,
     "type": "Program Core",
-    "hp": ["CSE321"],
+    "hp": ["CSE221"],
     "sp": []
   },
   {
@@ -297,10 +297,10 @@
 
    {
     "code": "COD",
-    "title": "Computer Organization",
+    "title": "GenEd Course",
     "semester_row": 9,
-    "type": "GenEd/COD",
-    "hp": [""],
+    "type": "GenEd",
+    "hp": [],
     "sp": []
   },
 
@@ -309,7 +309,7 @@
     "title": "Artificial Intelligence",
     "semester_row": 10,
     "type": "Program Core",
-    "hp": ["CSE370", "CSE331", "CSE340"],
+    "hp": ["CSE321", "CSE331", "CSE340"],
     "sp": []
   },
   {
@@ -317,8 +317,8 @@
     "title": "Operating Systems II",
     "semester_row": 10,
     "type": "Program Core",
-    "hp": ["CSE320", "CSE330"],
-    "sp": []
+    "hp": [],
+    "sp": ["CSE320"]
   },
   {
     "code": "CSE423",
@@ -358,7 +358,7 @@
     "code": "CSE Elective I",
     "title": null,
     "semester_row": 12,
-    "type": "Elective",
+    "type": "Program Elective",
     "hp": [],
     "sp": []
   },
@@ -366,7 +366,7 @@
     "code": "CSE Elective II",
     "title": null,
     "semester_row": 12,
-    "type": "Elective",
+    "type": "Program Elective",
     "hp": [],
     "sp": []
   }
