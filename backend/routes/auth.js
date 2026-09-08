@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 
-// LOGIN — check if user exists only
+
 router.post("/login", async (req, res) => {
   const { studentId } = req.body;
 
@@ -12,7 +12,7 @@ router.post("/login", async (req, res) => {
 
   let user = await User.findOne({ studentId });
 
-  // User does NOT exist → first login → DO NOT CREATE USER YET
+
   if (!user) {
     return res.json({
       firstLogin: true,
@@ -20,14 +20,14 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  // User exists → return user
+
   return res.json({
     firstLogin: false,
     user
   });
 });
 
-// SET STREAM — create user OR update existing one
+
 router.post("/set-stream", async (req, res) => {
   const { studentId, stream } = req.body;
 
@@ -38,7 +38,7 @@ router.post("/set-stream", async (req, res) => {
   let user = await User.findOne({ studentId });
 
   if (!user) {
-    // Create new user on first-time stream selection
+
     user = new User({
       studentId,
       stream,

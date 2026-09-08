@@ -7,9 +7,9 @@ export default function Dashboard({ user, setUser, onLogout }) {
   const [orderedCourses, setOrderedCourses] = useState(null);
   const [allCourses, setAllCourses] = useState([]);
 
-  /* ──────────────────────────────────────────────
-     LOAD STREAM JSON
-  ─────────────────────────────────────────────── */
+
+
+
   useEffect(() => {
     if (!user.stream) return;
 
@@ -19,13 +19,13 @@ export default function Dashboard({ user, setUser, onLogout }) {
 
         setCourses(streamCourses);
 
-        // Build unique course list — first appearance wins
+
         const byCode = {};
         streamCourses.forEach((c) => {
           if (!byCode[c.code]) byCode[c.code] = c;
         });
 
-        // Make COD appear FIRST
+
         const list = Object.values(byCode);
         const cod = list.find((c) => c.code === "COD");
         const others = list.filter((c) => c.code !== "COD");
@@ -35,15 +35,15 @@ export default function Dashboard({ user, setUser, onLogout }) {
       .catch(() => console.error("STREAM JSON IS MISSING"));
   }, [user.stream]);
 
-  /* ──────────────────────────────────────────────
-     LOAD ORDERED PLAN
-     1) If user.customPlan == null → use default JSON
-     2) If user.customPlan != null → convert DB plan to UI plan
-  ─────────────────────────────────────────────── */
+
+
+
+
+
   useEffect(() => {
     if (!courses) return;
 
-    // CASE 1: No custom plan → use default JSON-based plan
+
     if (!user.customPlan) {
       const order =
         user.semesterOrder || [1,2,3,4,5,6,7,8,9,10,11,12];
@@ -64,29 +64,29 @@ export default function Dashboard({ user, setUser, onLogout }) {
       return;
     }
 
-    // CASE 2: customPlan exists → reconstruct planner from DB
-    const planFromDB = user.customPlan;  // [{ semester, courses:[codes] }]
 
-    // map codes → course objects (lookup from allCourses)
+    const planFromDB = user.customPlan;
+
+
     const byCode = {};
     allCourses.forEach((course) => {
       byCode[course.code] = course;
     });
 
-    // Convert DB plan → UI format
+
     const rebuilt = planFromDB.map((sem) => ({
       semester_row: sem.semester,
       courses: sem.courses
         .map((code) => byCode[code])
-        .filter(Boolean), // remove missing ones
+        .filter(Boolean),
     }));
 
     setOrderedCourses(rebuilt);
   }, [courses, user, allCourses]);
 
-  /* ──────────────────────────────────────────────
-     UPDATE CURRENT SEMESTER LOCALLY
-  ─────────────────────────────────────────────── */
+
+
+
   const setCurrentSemester = (newVal, updatedUser = null) => {
     const userToStore = updatedUser || { ...user, currentSemester: newVal };
 

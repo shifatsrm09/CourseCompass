@@ -3,8 +3,6 @@
   margin: 0 auto;
   padding: 25px 20px;
 }
-
-/* HEADER */
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -28,8 +26,6 @@
   margin-top: 4px;
   font-size: 15px;
 }
-
-/* LOGOUT BUTTON */
 .logout-btn {
   padding: 9px 18px;
   background: #dc2626;
@@ -45,8 +41,6 @@
 .logout-btn:hover {
   background: #b91c1c;
 }
-
-/* NOT CONFIGURED */
 .not-configured {
   margin-top: 20px;
   padding: 20px;

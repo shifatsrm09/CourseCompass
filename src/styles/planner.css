@@ -1,4 +1,3 @@
-/* MAIN LAYOUT */
 .planner-container {
   max-width: 900px;
   margin: 0 auto;
@@ -12,15 +11,11 @@
   margin-bottom: 25px;
   color: #fafafa;
 }
-
-/* GRID */
 .planner-grid {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-
-/* ROW */
 .planner-row {
   display: flex;
   align-items: flex-start;
@@ -36,8 +31,6 @@
   transform: scale(1.02);
   box-shadow: 0 14px 32px rgba(0,0,0,0.55);
 }
-
-/* DRAG HANDLE */
 .drag-handle {
   font-size: 20px;
   padding-right: 12px;
@@ -54,15 +47,11 @@
 .drag-handle:active {
   cursor: grabbing;
 }
-
-/* ROW MAIN — Ensures full width so badges can align right */
 .row-main {
   width: 100%;
   display: flex;
   flex-direction: column;
 }
-
-/* HEADER AREA — Badges on far right */
 .row-header {
   width: 100%;
   display: flex;
@@ -76,16 +65,12 @@
   font-weight: 600;
   color: #f0f0f0;
 }
-
-/* BADGE CONTAINER */
 .row-badges {
   margin-left: auto !important;
   display: flex;
   gap: 8px;
   align-items: center;
 }
-
-/* STATUS BADGES */
 .tarc-pill {
   padding: 4px 10px;
   border-radius: 999px;
@@ -123,8 +108,6 @@
   background: #2c2c2c;
   color: #999;
 }
-
-/* CLICKABLE STATUS (CURRENT) */
 .status-clickable {
   cursor: pointer;
   background-color: #1c7cff !important;
@@ -138,15 +121,11 @@
 .status-clickable:hover {
   background-color: #005cdc !important;
 }
-
-/* COURSE LIST */
 .courses-col {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
-
-/* COURSE TILE */
 .course-box {
   background: #222;
   padding: 10px 16px;
@@ -170,8 +149,6 @@
   font-weight: 600;
   color: #f0f0f0;
 }
-
-/* DROP BUTTON (X) */
 .course-drop-btn {
   margin-left: 0.35rem;
   border: none;
@@ -185,8 +162,6 @@
 .course-drop-btn:hover {
   color: #f87171;
 }
-
-/* ADD COURSE BUTTON */
 .add-course-btn {
   padding: 0.35rem 0.6rem;
   border-radius: 6px;
@@ -201,20 +176,14 @@
 .add-course-btn:hover {
   background: #1f1f1f;
 }
-
-/* MODAL BACKDROP */
 .modal-backdrop {
   background: rgba(0,0,0,0.65);
 }
-
-/* MODAL PANEL */
 .modal-panel {
   background: #1c1c1c;
   border: 1px solid #333;
   border-radius: 8px;
 }
-
-/* COURSE SELECT BUTTONS */
 .course-select-btn {
   background: #161616;
   border: 1px solid #333;
@@ -231,8 +200,6 @@
 .course-select-btn:hover {
   background: #242424;
 }
-
-/* CANCEL BUTTON */
 .modal-cancel-btn {
   background: #2c2c2c;
   color: #ccc;
@@ -245,9 +212,6 @@
 .modal-cancel-btn:hover {
   background: #3a3a3a;
 }
-/*THESIS BLOCK*/
-
-/* === THESIS ROW LAYOUT === */
 
 .courses-row-flex {
   display: flex;
@@ -255,16 +219,12 @@
   width: 100%;
   gap: 12px;
 }
-
-/* Allow course chips to push thesis + locked right */
 .thesis-courses-col {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
-
-/* Thesis badge */
 .thesis-right-pill {
   background: #2b0000;
   color: #ff6767;
@@ -274,8 +234,6 @@
   border: 1px solid #ff6b6b;
   white-space: nowrap;
 }
-
-/* LOCKED pill aligned far right */
 .lock-pill-right {
   margin-left: 10px;
 }

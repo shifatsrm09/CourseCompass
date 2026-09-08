@@ -1,15 +1,15 @@
-// src/components/StreamSelect.js
+
 import { useState } from "react";
 import "../styles/card.css";
 
-// Import the central stream config
+
 import streamsConfig from "../data/streamsConfig";
 
 export default function StreamSelect({ studentId, onUpdate }) {
   const [stream, setStream] = useState("");
   const [error, setError] = useState("");
 
-  // Convert config object → array for select rendering
+
   const streamOptions = Object.values(streamsConfig);
 
   const saveStream = async () => {
@@ -18,7 +18,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
       return;
     }
 
-    // Validate stream ID from config
+
     if (!streamsConfig[stream]) {
       setError("Invalid stream selected. Please try again.");
       return;
@@ -31,7 +31,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentId,
-          stream, // Save EXACT stream ID
+          stream,
         }),
       }
     );

@@ -16,7 +16,7 @@ export default function SemesterList({
   setUser,
   updateUserPlanInState,
   syncPlanToServer,
-  onBalance, // NEW
+  onBalance,
 }) {
   const onDragEnd = async (result) => {
     if (!result.destination) return;
@@ -68,7 +68,7 @@ export default function SemesterList({
 
   return (
     <div className="dark-container">
-      {/* BALANCE BUTTON */}
+      {                    }
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
         <button
           onClick={onBalance}

@@ -1,13 +1,13 @@
-// engine/balanceEngine.js
+
 
 import {
   hardPrereqsSatisfied,
   buildCompletedUpTo,
 } from "./removeEngine";
 
-/**
- * Collect all future NON-TARC courses from recommended onward.
- */
+
+
+
 function collectFutureCourses(slots, startIndex) {
   const list = [];
 
@@ -24,13 +24,13 @@ function collectFutureCourses(slots, startIndex) {
   return list;
 }
 
-/**
- * A SAFE placement helper for auto-balance:
- * - NEVER creates new semesters
- * - Tries to keep per-semester cap (maxCoursesPerSemester)
- * - Respects HP when possible
- * Returns true if placed, false if no valid slot found.
- */
+
+
+
+
+
+
+
 function safePlaceCourse({
   slots,
   course,
@@ -54,16 +54,16 @@ function safePlaceCourse({
   return false;
 }
 
-/**
- * MAIN BALANCE ENGINE
- *
- * Goals:
- *  - Never lose a course.
- *  - Try to keep <=4 courses per normal semester.
- *  - Sem 10 & 11: <=3 courses.
- *  - Never create infinite extra semesters.
- *  - TARC stays untouched.
- */
+
+
+
+
+
+
+
+
+
+
 export function balanceFutureSemesters({
   semesterSlots,
   currentSemester,
@@ -73,7 +73,7 @@ export function balanceFutureSemesters({
     return semesterSlots;
   }
 
-  // Clone slots shallowly, courses as arrays (course objects by ref)
+
   const slots = semesterSlots.map((s) => ({
     ...s,
     courses: Array.isArray(s.courses) ? [...s.courses] : [],
@@ -81,14 +81,14 @@ export function balanceFutureSemesters({
 
   const safeCurrent = currentSemester || 1;
   const currentIndex = safeCurrent - 1;
-  const startBalanceIndex = currentIndex + 1; // recommended semester index
+  const startBalanceIndex = currentIndex + 1;
 
   if (startBalanceIndex >= slots.length) return slots;
 
-  // 1) Collect all future NON-TARC courses
+
   const allFuture = collectFutureCourses(slots, startBalanceIndex);
 
-  // 2) Clear NON-TARC future semesters
+
   for (let i = startBalanceIndex; i < slots.length; i++) {
     const slot = slots[i];
     if (slot && !slot.isTarc) {
@@ -96,7 +96,7 @@ export function balanceFutureSemesters({
     }
   }
 
-  // 3) First-pass global repack using safePlaceCourse (no new semesters)
+
   const unplaced = [];
 
   for (const course of allFuture) {
@@ -113,7 +113,7 @@ export function balanceFutureSemesters({
     }
   }
 
-  // 4) Special rule: semesters with originalRow 10 & 11 → max 3 courses
+
   const SPECIAL = new Set([10, 11]);
 
   for (let i = 0; i < slots.length; i++) {
@@ -126,7 +126,7 @@ export function balanceFutureSemesters({
 
       let placed = false;
 
-      // try backward first
+
       for (let b = i - 1; b >= startBalanceIndex; b--) {
         const back = slots[b];
         if (!back || back.isTarc) continue;
@@ -140,7 +140,7 @@ export function balanceFutureSemesters({
         break;
       }
 
-      // if still not placed, try forward within existing slots
+
       if (!placed) {
         const fPlaced = safePlaceCourse({
           slots,
@@ -151,8 +151,8 @@ export function balanceFutureSemesters({
         });
 
         if (!fPlaced) {
-          // As an extreme fallback, attach back to this slot.
-          // This should be very rare and only in heavily corrupted states.
+
+
           slot.courses.push(extra);
           break;
         }
@@ -160,7 +160,7 @@ export function balanceFutureSemesters({
     }
   }
 
-  // 5) Trim strictly empty trailing non-TARC semesters
+
   while (
     slots.length > startBalanceIndex &&
     slots[slots.length - 1].courses.length === 0 &&
@@ -169,7 +169,7 @@ export function balanceFutureSemesters({
     slots.pop();
   }
 
-  // 6) Last semester single-course fix
+
   if (slots.length > startBalanceIndex) {
     const lastIndex = slots.length - 1;
     const last = slots[lastIndex];
@@ -178,7 +178,7 @@ export function balanceFutureSemesters({
       for (let i = lastIndex - 1; i >= startBalanceIndex; i--) {
         const slot = slots[i];
         if (!slot || slot.isTarc) continue;
-        if (slot.courses.length <= 2) continue; // avoid starving earlier semester
+        if (slot.courses.length <= 2) continue;
 
         const candidate = slot.courses[slot.courses.length - 1];
 
@@ -196,9 +196,9 @@ export function balanceFutureSemesters({
     }
   }
 
-  // 7) FINAL FAILSAFE:
-  //    Ensure every course from allFuture exists in some future slot.
-  //    We match by CODE (not by object identity) to avoid clone issues.
+
+
+
   const existingCodes = new Set();
   for (let i = startBalanceIndex; i < slots.length; i++) {
     const s = slots[i];
@@ -208,20 +208,20 @@ export function balanceFutureSemesters({
     }
   }
 
-  // First, if some allFuture course is missed entirely, treat it as unplaced.
+
   for (const c of allFuture) {
     if (!existingCodes.has(c.code)) {
       unplaced.push(c);
     }
   }
 
-  // 8) Insert all unplaced courses, trying to respect the 4-course cap.
-  //    If absolutely no slot has space, we allow last non-TARC semester
-  //    to overflow past 4 as a last resort rather than losing the course.
+
+
+
   for (const course of unplaced) {
     let placed = false;
 
-    // Try to fit into a future semester with < 4 courses
+
     for (let i = startBalanceIndex; i < slots.length; i++) {
       const slot = slots[i];
       if (!slot || slot.isTarc) continue;
@@ -233,8 +233,8 @@ export function balanceFutureSemesters({
     }
 
     if (!placed) {
-      // All future non-TARC slots already have ≥ 4 courses.
-      // As an extreme, preserve course by putting it in the LAST non-TARC slot.
+
+
       for (let i = slots.length - 1; i >= startBalanceIndex; i--) {
         const slot = slots[i];
         if (!slot || slot.isTarc) continue;

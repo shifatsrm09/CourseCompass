@@ -1,4 +1,4 @@
-// src/components/Planner/SemesterRow.js
+
 import React from "react";
 import CourseBox from "./CourseBox";
 
@@ -30,7 +30,7 @@ export default function SemesterRow({
       ref={dragProvided.innerRef}
       {...dragProvided.draggableProps}
     >
-      {/* DRAG HANDLE */}
+      {                 }
       <div
         className={`drag-handle ${
           !isTarc || status === "completed" ? "drag-disabled" : ""
@@ -43,14 +43,14 @@ export default function SemesterRow({
       </div>
 
       <div className="row-main">
-        {/* HEADER */}
+        {            }
         <div className="row-header">
           <div className="semester-col">Semester {index + 1}</div>
 
           <div className="row-badges">
             {isTarc && <span className="tarc-pill">TARC</span>}
 
-            {/* Status pill (non-thesis only) */}
+            {                                   }
             {!hasThesis && (
               <div
                 className={`status-col status-${status} ${
@@ -64,10 +64,10 @@ export default function SemesterRow({
           </div>
         </div>
 
-        {/* CONTENT */}
+        {             }
         {hasThesis ? (
           <div className="courses-row-flex">
-            {/* Courses left */}
+            {                  }
             <div className="courses-col thesis-courses-col">
               {slot.courses.map((course, cIndex) => (
                 <CourseBox
@@ -79,12 +79,12 @@ export default function SemesterRow({
               ))}
             </div>
 
-            {/* Thesis badge */}
+            {                  }
             <span className="thesis-right-pill">
               {slot.thesis.title}
             </span>
 
-            {/* Right LOCKED pill */}
+            {                       }
             <div className={`status-col status-${status} lock-pill-right`}>
               {status.toUpperCase()}
             </div>

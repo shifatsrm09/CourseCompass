@@ -1,4 +1,4 @@
-// src/components/Planner/CoursePlanner.js
+
 import React, { useState, useEffect } from "react";
 import "../../styles/planner.css";
 import thesisPlan from "../../data/thesisPlan.json";
@@ -13,7 +13,7 @@ import SemesterList from "./SemesterList";
 
 import {
   validateAddCourse,
-  validateCourseForSemester,   // ✅ NEW IMPORT
+  validateCourseForSemester,
 } from "../../engine/engine";
 
 import { reinsertRemovedCourse } from "../../engine/removeEngine";
@@ -21,16 +21,16 @@ import { balanceFutureSemesters } from "../../engine/balanceEngine";
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
-/* ------------------------------------------------------------------
-   STREAM SUPPORT HELPERS
--------------------------------------------------------------------*/
+
+
+
 
 const getBasePlanForStream = (streamId) => {
   const id = streamsConfig[streamId] ? streamId : DEFAULT_STREAM_ID;
   return streamsConfig[id].plan;
 };
 
-/* Group flat JSON into semester slots */
+
 const buildSlotsFromFlatPlan = (flat = []) => {
   const bySemester = {};
 
@@ -58,7 +58,7 @@ const buildSlotsFromFlatPlan = (flat = []) => {
     });
 };
 
-/* Build slots from customPlan + allCourses */
+
 const buildSlotsFromCustomPlan = (customPlan = [], allCourses = []) => {
   if (!Array.isArray(customPlan) || !Array.isArray(allCourses)) {
     return { slots: [], matchRatio: 0 };
@@ -92,9 +92,9 @@ const buildSlotsFromCustomPlan = (customPlan = [], allCourses = []) => {
   return { slots, matchRatio };
 };
 
-/* ------------------------------------------------------------------
-   MAIN COMPONENT
--------------------------------------------------------------------*/
+
+
+
 
 export default function CoursePlanner({
   user,
@@ -109,9 +109,9 @@ export default function CoursePlanner({
   const [modalCourses, setModalCourses] = useState([]);
   const [modalContext, setModalContext] = useState(null);
 
-  /* ----------------------------------------------------------------
-     INITIAL LOAD
-  -----------------------------------------------------------------*/
+
+
+
   const [semesterSlots, setSemesterSlots] = useState(() => {
     const hasCustom =
       Array.isArray(user.customPlan) && user.customPlan.length > 0;
@@ -136,9 +136,9 @@ export default function CoursePlanner({
     return slots;
   });
 
-  /* ----------------------------------------------------------------
-     HYDRATE WHEN customPlan/allCourses/stream CHANGES
-  -----------------------------------------------------------------*/
+
+
+
   useEffect(() => {
     const hasCustom =
       Array.isArray(user.customPlan) && user.customPlan.length > 0;
@@ -159,9 +159,9 @@ export default function CoursePlanner({
     setSemesterSlots(slots);
   }, [user.customPlan, allCourses, user.stream]);
 
-  /* ----------------------------------------------------------------
-     STREAM SWITCH
-  -----------------------------------------------------------------*/
+
+
+
   useEffect(() => {
     if (!user.stream) return;
 
@@ -173,9 +173,9 @@ export default function CoursePlanner({
     }
   }, [user.stream, user.customPlan]);
 
-  /* ----------------------------------------------------------------
-     STATUS
-  -----------------------------------------------------------------*/
+
+
+
   const getStatus = (index) => {
     const safe = currentSemester || 1;
     if (index < safe - 1) return "completed";
@@ -184,9 +184,9 @@ export default function CoursePlanner({
     return "locked";
   };
 
-  /* ----------------------------------------------------------------
-     SYNC HELPERS
-  -----------------------------------------------------------------*/
+
+
+
   const buildPlanFromSlots = (slots) =>
     slots.map((slot) => ({
       semester: slot.originalRow,
@@ -239,9 +239,9 @@ export default function CoursePlanner({
     });
   };
 
-  /* ----------------------------------------------------------------
-     AUTO BALANCE
-  -----------------------------------------------------------------*/
+
+
+
   const handleBalance = () => {
     if (!user.customPlan || user.firstLogin) {
       alert(
@@ -263,9 +263,9 @@ export default function CoursePlanner({
     });
   };
 
-  /* ----------------------------------------------------------------
-     COMPLETE SEMESTER
-  -----------------------------------------------------------------*/
+
+
+
   const openPrompt = () => setShowModal(true);
   const cancelComplete = () => setShowModal(false);
 
@@ -287,9 +287,9 @@ export default function CoursePlanner({
     setCurrentSemester(data.user.currentSemester, data.user);
   };
 
-  /* ----------------------------------------------------------------
-     MODIFICATION RULES
-  -----------------------------------------------------------------*/
+
+
+
   const canModify = (index, slot) => {
     const status = getStatus(index);
     if (slot.isTarc) return false;
@@ -302,9 +302,9 @@ export default function CoursePlanner({
     return status === "current" || status === "recommended";
   };
 
-  /* ----------------------------------------------------------------
-     MODALS (ADD / REPLACE / REMOVE)
-  -----------------------------------------------------------------*/
+
+
+
 
   const openAddCourseModal = (semesterIndex) => {
     const slot = semesterSlots[semesterIndex];
@@ -386,9 +386,9 @@ export default function CoursePlanner({
     closeEditModal();
   };
 
-  /* ----------------------------------------------------------------
-     ADD / REPLACE (SELECTION APPLY)
-  -----------------------------------------------------------------*/
+
+
+
   const handleCourseSelected = (course) => {
     if (!modalContext) return;
 
@@ -398,9 +398,9 @@ export default function CoursePlanner({
 
     const isCod = course.code === "COD";
 
-    // ---------------------------------------------
-    // VALIDATE ADD
-    // ---------------------------------------------
+
+
+
     if (mode === "add") {
       const result = validateAddCourse({
         semesterIndex,
@@ -418,9 +418,9 @@ export default function CoursePlanner({
       }
     }
 
-    // ---------------------------------------------
-    // ✅ NEW: VALIDATE REPLACE (HP + COD + rules)
-    // ---------------------------------------------
+
+
+
     if (mode === "replace") {
       const result = validateCourseForSemester({
         semesterIndex,
@@ -439,9 +439,9 @@ export default function CoursePlanner({
       }
     }
 
-    // ---------------------------------------------
-    // MUTATE PLAN
-    // ---------------------------------------------
+
+
+
     setSemesterSlots((prev) => {
       const slots = prev.map((s) => ({
         ...s,
@@ -521,9 +521,9 @@ export default function CoursePlanner({
     setModalCourses([]);
   };
 
-  /* ----------------------------------------------------------------
-     COURSE COUNTER DEBUGGER (NEW)
-  -----------------------------------------------------------------*/
+
+
+
 
   const totalCoursesDisplayed = semesterSlots.reduce(
     (sum, sem) => sum + (sem.courses?.length || 0),
@@ -534,16 +534,16 @@ export default function CoursePlanner({
     streamsConfig[user.stream]?.expectedCount ??
     streamsConfig[DEFAULT_STREAM_ID].expectedCount;
 
-  /* ----------------------------------------------------------------
-     RENDER
-  -----------------------------------------------------------------*/
+
+
+
   return (
     <div className="planner-container dark-container">
       <h2 className="planner-title">Course Planner</h2>
 
-      {/* ----------------------------------------------- */}
-      {/* COURSE COUNTER BLOCK (NEW) */}
-      {/* ----------------------------------------------- */}
+      {                                                     }
+      {                                }
+      {                                                     }
       <div
         style={{
           marginBottom: "12px",

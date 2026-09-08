@@ -1,10 +1,10 @@
-// engine/removeEngine.js
 
-/**
- * Strict HP:
- * A prerequisite counts as satisfied ONLY if it appears
- * in a STRICTLY EARLIER semester — not the same semester.
- */
+
+
+
+
+
+
 function hardPrereqsSatisfied(course, completedSet) {
   if (!course) return true;
 
@@ -15,14 +15,14 @@ function hardPrereqsSatisfied(course, completedSet) {
   return cleanHp.every((code) => completedSet.has(code));
 }
 
-/**
- * Build a strict completed set up to index `uptoIndex`.
- * Count ONLY courses in strictly earlier semesters.
- */
+
+
+
+
 function buildCompletedUpTo(slots, uptoIndex, completedCourses = []) {
   const set = new Set(completedCourses || []);
 
-  // earlier semesters only
+
   for (let i = 0; i < uptoIndex; i++) {
     const s = slots[i];
     if (!s || !Array.isArray(s.courses)) continue;
@@ -35,10 +35,10 @@ function buildCompletedUpTo(slots, uptoIndex, completedCourses = []) {
   return set;
 }
 
-/**
- * True if placing `course` into the SAME semester violates HP.
- * i.e., if course.hp includes a code also inside slot.courses.
- */
+
+
+
+
 function violatesSameSemesterHP(course, slot) {
   if (!course || !slot || !Array.isArray(slot.courses)) return false;
 
@@ -51,10 +51,10 @@ function violatesSameSemesterHP(course, slot) {
   return cleanHp.some((needed) => codesInSameSem.has(needed));
 }
 
-/**
- * Try placing a course into earliest valid semester.
- * Now prevents SAME-semester HP violations.
- */
+
+
+
+
 function placeCourse({
   slots,
   course,
@@ -77,10 +77,10 @@ function placeCourse({
     if (slot.isTarc) continue;
     if ((slot.courses || []).length >= maxCoursesPerSemester) continue;
 
-    // block COD duplicate
+
     if (course.code === "COD" && slotHasCod(slot)) continue;
 
-    // ❌ STRICT same-semester HP block
+
     if (violatesSameSemesterHP(course, slot)) continue;
 
     const completedSet = buildCompletedUpTo(slots, idx, completedCourses);
@@ -90,7 +90,7 @@ function placeCourse({
     return;
   }
 
-  // No spot found → create new semester at end
+
   const last = slots[slots.length - 1];
   const newOriginalRow =
     last && typeof last.originalRow === "number"
@@ -105,9 +105,9 @@ function placeCourse({
   });
 }
 
-/**
- * Rebalance invalid HP while respecting strict same-semester rules.
- */
+
+
+
 function rebalanceAllPrereqs({
   slots,
   completedCourses = [],
@@ -118,7 +118,7 @@ function rebalanceAllPrereqs({
 
   const pending = [];
 
-  // 1) Remove invalid courses
+
   for (let idx = 0; idx < slots.length; idx++) {
     const slot = slots[idx];
     if (!slot || !Array.isArray(slot.courses) || slot.courses.length === 0)
@@ -147,7 +147,7 @@ function rebalanceAllPrereqs({
     slot.courses = keep;
   }
 
-  // 2) Reinsert pending courses
+
   for (const course of pending) {
     placeCourse({
       slots,
@@ -162,9 +162,9 @@ function rebalanceAllPrereqs({
   return slots;
 }
 
-/**
- * Trim empty semesters.
- */
+
+
+
 function trimTrailingEmptySemesters(slots) {
   if (!Array.isArray(slots)) return slots;
 
@@ -188,9 +188,9 @@ function trimTrailingEmptySemesters(slots) {
   return slots.slice(0, end);
 }
 
-/**
- * Reinsertion after REMOVE.
- */
+
+
+
 export function reinsertRemovedCourse({
   semesterSlots,
   removedCourse,
@@ -219,7 +219,7 @@ export function reinsertRemovedCourse({
     return trimTrailingEmptySemesters(slots);
   }
 
-  // 1) Try place into future
+
   placeCourse({
     slots,
     course: removedCourse,
@@ -229,7 +229,7 @@ export function reinsertRemovedCourse({
     maxCodPerSemester,
   });
 
-  // 2) Rebalance HP fully
+
   let rebalanced = rebalanceAllPrereqs({
     slots,
     completedCourses,
@@ -237,10 +237,10 @@ export function reinsertRemovedCourse({
     maxCodPerSemester,
   });
 
-  // 3) Trim empty rows
+
   rebalanced = trimTrailingEmptySemesters(rebalanced);
 
-  // 4) HARD failsafe: course must exist by reference
+
   let found = false;
   for (const s of rebalanced) {
     if (s.courses.includes(removedCourse)) {

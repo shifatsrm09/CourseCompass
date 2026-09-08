@@ -8,7 +8,7 @@ function App() {
   const [needsStream, setNeedsStream] = useState(false);
   const [tempStudentId, setTempStudentId] = useState("");
 
-  // Load from localStorage
+
   useEffect(() => {
     const saved = localStorage.getItem("courseCompassUser");
     if (saved) {
@@ -20,14 +20,14 @@ function App() {
     }
   }, []);
 
-  // Save to storage
+
   useEffect(() => {
     if (user) {
       localStorage.setItem("courseCompassUser", JSON.stringify({ user }));
     }
   }, [user]);
 
-  // LOGIN
+
   const handleLogin = (data, studentId) => {
     if (data.firstLogin) {
       setTempStudentId(studentId);
@@ -38,7 +38,7 @@ function App() {
     }
   };
 
-  // STREAM SAVED
+
   const handleStreamSaved = (savedUser) => {
     setUser(savedUser);
     setNeedsStream(false);
@@ -49,7 +49,7 @@ function App() {
     );
   };
 
-  // LOGOUT
+
   const handleLogout = () => {
     localStorage.removeItem("courseCompassUser");
     setUser(null);
@@ -57,7 +57,7 @@ function App() {
     setTempStudentId("");
   };
 
-  // FLOW CONTROL
+
   if (!user && !needsStream) {
     return <Login onLogin={handleLogin} />;
   }

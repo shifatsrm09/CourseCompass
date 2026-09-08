@@ -1,6 +1,6 @@
-// src/data/streamsConfig.js
 
-// Import all 6 stream JSON files (hyphens, not underscores)
+
+
 import ENG101_MAT110 from "./ENG101-MAT110.json";
 import ENG101_MAT092 from "./ENG101-MAT092.json";
 import ENG102_MAT110 from "./ENG102-MAT110.json";
@@ -8,7 +8,7 @@ import ENG102_MAT092 from "./ENG102-MAT092.json";
 import ENG091_MAT110 from "./ENG091-MAT110.json";
 import ENG091_MAT092 from "./ENG091-MAT092.json";
 
-// Configure all streams here
+
 const streamsConfig = {
   "ENG101 + MAT110": {
     id: "ENG101 + MAT110",

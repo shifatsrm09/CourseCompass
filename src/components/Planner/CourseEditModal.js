@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "../../styles/courseEditModal.css";
 
-// ✅ FIX: GROUP_ORDER moved below imports but still outside component
+
 const GROUP_ORDER = [
   "COD",
   "TARC",
@@ -41,20 +41,20 @@ export default function CourseEditModal({
     }
   };
 
-  /* ──────────────────────────────────────────────
-     REMOVE BUTTON LOGIC
-  ─────────────────────────────────────────────── */
+
+
+
   const disableRemove =
-    modalContext?.isTarc || // TARC cannot delete
-    modalContext?.semesterIndex === 0 || // first semester cannot delete
+    modalContext?.isTarc ||
+    modalContext?.semesterIndex === 0 ||
     !(
       modalContext?.status === "current" ||
       modalContext?.status === "recommended"
-    ); // completed/locked cannot delete
+    );
 
-  /* ──────────────────────────────────────────────
-     GROUPING & SEARCH
-  ─────────────────────────────────────────────── */
+
+
+
 
   const groupLabelFromCourse = (course) => {
     if (course.code === "COD") return "COD";
@@ -101,9 +101,9 @@ export default function CourseEditModal({
     }))
     .filter((g) => g.courses.length > 0);
 
-  /* ──────────────────────────────────────────────
-     RENDER
-  ─────────────────────────────────────────────── */
+
+
+
   return !visible ? null : (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
       <div className="modal-panel">
