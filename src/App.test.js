@@ -4,6 +4,27 @@ import App from './App';
 beforeEach(() => { localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => jest.restoreAllMocks());
 
+test.each([200, 500])('login handles a non-JSON HTTP %s response without advancing', async (status) => {
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: status === 200,
+    status,
+    json: async () => { throw new SyntaxError('Unexpected token'); },
+  });
+  try {
+    render(<App />);
+    fireEvent.change(screen.getByPlaceholderText('Enter Student ID'), {
+      target: { value: 'test-student' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(`invalid server response (HTTP ${status})`);
+    expect(screen.queryByRole('heading', { name: 'Select Your Stream' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Login' })).toBeEnabled();
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('renders the Course Compass login', () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: 'Course Compass' })).toBeInTheDocument();

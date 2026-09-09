@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_BASE } from "./api";
+import { API_BASE, readApiResponse } from "./api";
 import Login from "./components/Login";
 import StreamSelect from "./components/StreamSelect";
 import Dashboard from "./components/Dashboard";
@@ -30,7 +30,7 @@ function App() {
           body: JSON.stringify({ studentId: cached.user.studentId }),
           signal: controller.signal,
         });
-        const data = await response.json();
+        const data = await readApiResponse(response);
         if (!response.ok || !data.user) {
           throw new Error(data.error || "Your saved account could not be loaded. Your local plan has been preserved.");
         }

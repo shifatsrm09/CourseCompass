@@ -34,7 +34,7 @@ router.post("/login", async (req, res) => {
 router.post("/set-stream", async (req, res) => {
   const { studentId, stream } = req.body || {};
 
-  if (!validStudentId(studentId) || typeof stream !== "string" || !getCurriculum(stream)) {
+  if (!validStudentId(studentId) || typeof stream !== "string" || !await getCurriculum(stream)) {
     return res.status(400).json({ error: "studentId and stream required" });
   }
 

@@ -5,13 +5,14 @@ const { once } = require("node:events");
 const database = require("../db");
 const User = require("../models/User");
 const app = require("../../api");
-const { createDefaultState } = require("../../src/engine/plannerState.mjs");
+let createDefaultState;
 const { getCurriculum } = require("../plannerState");
 
 let server;
 let baseUrl;
 
 before(async () => {
+  ({ createDefaultState } = await import("../../src/engine/plannerState.mjs"));
   server = http.createServer(app).listen(0, "127.0.0.1");
   await once(server, "listening");
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -71,7 +72,7 @@ test("a saved personalized plan is returned on a later login", async () => {
     return user;
   });
   mock.method(User, "findOne", async () => user);
-  const plannerState = createDefaultState(getCurriculum(user.stream));
+  const plannerState = createDefaultState(await getCurriculum(user.stream));
   plannerState.personalized = true;
   const saved = await post("/api/planner/save-plan", {
     studentId: user.studentId, plannerState, expectedVersion: 0, mutationId: "first-save",

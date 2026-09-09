@@ -5,16 +5,18 @@ const { once } = require("node:events");
 const database = require("../db");
 const User = require("../models/User");
 const app = require("../../api");
-const { createDefaultState } = require("../../src/engine/plannerState.mjs");
+let createDefaultState;
 const { getCurriculum, deriveLegacyFields } = require("../plannerState");
 
 const stream = "ENG101 + MAT110";
-const curriculum = getCurriculum(stream);
+let curriculum;
 const clone = (value) => JSON.parse(JSON.stringify(value));
 let server;
 let baseUrl;
 
 before(async () => {
+  ({ createDefaultState } = await import("../../src/engine/plannerState.mjs"));
+  curriculum = await getCurriculum(stream);
   server = http.createServer(app).listen(0, "127.0.0.1");
   await once(server, "listening");
   baseUrl = `http://127.0.0.1:${server.address().port}`;

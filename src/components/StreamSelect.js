@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { API_BASE } from "../api";
+import { API_BASE, readApiResponse } from "../api";
 import "../styles/card.css";
 import streamsConfig from "../data/streamsConfig";
 
@@ -29,7 +29,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, stream }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!mounted.current) return;
       if (response.ok && data.user) onUpdate(data.user);
       else setError(data.error || "Could not save stream. Please try again.");

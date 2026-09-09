@@ -1,5 +1,4 @@
 const { isDeepStrictEqual } = require("node:util");
-const { buildCurriculum } = require("../src/engine/plannerState.mjs");
 
 const plans = {
   "ENG101 + MAT110": require("../src/data/ENG101-MAT110.json"),
@@ -11,8 +10,9 @@ const plans = {
 };
 const curricula = new Map();
 
-function getCurriculum(stream) {
+async function getCurriculum(stream) {
   if (!Object.hasOwn(plans, stream)) return null;
+  const { buildCurriculum } = await import("../src/engine/plannerState.mjs");
   if (!curricula.has(stream)) curricula.set(stream, buildCurriculum(plans[stream], stream));
   return curricula.get(stream);
 }

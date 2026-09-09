@@ -1,7 +1,5 @@
 const express = require("express");
 const User = require("../models/User");
-const { restorePlannerState } = require("../../src/engine/plannerState.mjs");
-const { validatePlannerState } = require("../../src/engine/validator.mjs");
 const { getCurriculum, deriveLegacyFields, samePlannerState } = require("../plannerState");
 
 const router = express.Router();
@@ -56,10 +54,12 @@ router.post("/save-plan", async (req, res) => {
   }
   if (versionOf(user) !== expectedVersion) return conflict(res, user);
 
-  const curriculum = getCurriculum(user.stream);
+  const curriculum = await getCurriculum(user.stream);
   if (!curriculum) {
     return res.status(422).json({ code: "UNSUPPORTED_STREAM", error: "The saved stream has no supported curriculum. Your existing plan has been preserved." });
   }
+  const { restorePlannerState } = await import("../../src/engine/plannerState.mjs");
+  const { validatePlannerState } = await import("../../src/engine/validator.mjs");
   const restored = restorePlannerState(user, curriculum);
   if (!restored.ok) {
     return res.status(422).json({ code: "INVALID_SAVED_PLAN", error: restored.error?.message || "The saved plan cannot be restored safely. Existing data has been preserved." });

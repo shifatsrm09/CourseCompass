@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --no-experimental-require-module --test"
   },
   "keywords": [],
   "author": "",

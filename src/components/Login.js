@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { API_BASE } from "../api";
+import { API_BASE, readApiResponse } from "../api";
 import "../styles/login.css";
 import "../styles/card.css";
 
@@ -26,7 +26,7 @@ export default function Login({ onLogin }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId: studentId.trim() }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!mounted.current) return;
       if (!response.ok || (!data.firstLogin && !data.user)) {
         throw new Error(data.error || "Your account could not be loaded. Please retry.");
