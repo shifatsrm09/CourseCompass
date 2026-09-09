@@ -17,6 +17,8 @@ export default function SemesterRow({
   canEdit,
   blocked,
   onComplete,
+  canUndo,
+  onUndoMenu,
   onAdd,
   onReplace,
   onCourseContextMenu,
@@ -63,6 +65,17 @@ export default function SemesterRow({
                 aria-label={`Complete Semester ${index + 1}`}
               >
                 CURRENT
+              </button>
+            ) : canUndo ? (
+              <button
+                type="button"
+                onClick={onUndoMenu}
+                disabled={blocked}
+                aria-label={`Completed Semester ${index + 1} options`}
+                aria-haspopup="menu"
+                className="cursor-pointer select-none rounded-full bg-emerald-950/60 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-900/60 disabled:cursor-default disabled:opacity-60"
+              >
+                COMPLETED
               </button>
             ) : (
               <span className={`select-none rounded-full px-3.5 py-1.5 text-xs font-semibold ${STATUS_STYLES[status] || STATUS_STYLES.locked}`}>

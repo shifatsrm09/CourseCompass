@@ -1,11 +1,11 @@
 import { cloneState, isCompletedInstance } from "./plannerState.mjs";
-import { validatePlannerState, allInstances } from "./validator.mjs";
+import { validatePlannerState, allInstances, completedAfterUndo } from "./validator.mjs";
 import { scheduleFuture, planningError } from "./scheduler.mjs";
 
 function editableSemester(state, semesterId) {
   const index = state.semesters.findIndex(semester => semester.id === semesterId);
   if (index < 0) planningError("SEMESTER_NOT_FOUND", "The selected semester is no longer in this plan.");
-  if (index < state.currentSemester) planningError("FROZEN_SEMESTER", "Current and completed semesters are protected. Edit an upcoming semester instead.");
+  if (index < state.currentSemester - 1) planningError("FROZEN_SEMESTER", "Completed semesters are protected. Undo the most recent completion before editing it.");
   if (state.semesters[index].isTarc) planningError("TARC_NOT_ALLOWED", "Courses cannot be added, replaced, or removed in TARC.");
   return index;
 }
@@ -55,7 +55,7 @@ function insertCourse(state, index, occurrenceId, curriculum, excludedId) {
       const semester = state.semesters[position];
       source = semester.courses.find(course => course.occurrenceId === occurrenceId && course.instanceId !== excludedId);
       if (source) {
-        if (position < state.currentSemester) planningError("FROZEN_SEMESTER", `${definition.code} is in a current or completed semester and cannot be moved.`);
+        if (position < state.currentSemester - 1) planningError("FROZEN_SEMESTER", `${definition.code} is in a completed semester and cannot be moved.`);
         sourceList = semester.courses;
         break;
       }
@@ -84,7 +84,7 @@ function describeChanges(before, after, curriculum) {
       changes.push({ instanceId: course.instanceId, code: curriculum.byId.get(course.occurrenceId).code, from: previous.get(course.instanceId) || null, to: next.get(course.instanceId) });
     }
   }
-  if (before.currentSemester !== after.currentSemester) changes.push({ type: "COMPLETE_SEMESTER", semester: before.currentSemester });
+  if (before.currentSemester !== after.currentSemester) changes.push({ type: after.currentSemester < before.currentSemester ? "UNDO_COMPLETE_SEMESTER" : "COMPLETE_SEMESTER", semester: Math.min(before.currentSemester, after.currentSemester) });
   return changes;
 }
 
@@ -129,6 +129,13 @@ function applyAction(state, action, curriculum) {
         scheduleFuture(next, curriculum);
         next.completedCourses = [...new Set([...next.completedCourses, ...current.courses.map(course => curriculum.byId.get(course.occurrenceId).code)])];
         next.currentSemester++;
+        break;
+      }
+      case "UNDO_COMPLETE_SEMESTER": {
+        const latest = next.semesters[next.currentSemester - 2];
+        if (!latest || latest.id !== action.semesterId) planningError("STALE_ACTION", "Only the most recently completed semester can be undone.");
+        next.completedCourses = completedAfterUndo(next, curriculum);
+        next.currentSemester--;
         break;
       }
       case "REBALANCE":

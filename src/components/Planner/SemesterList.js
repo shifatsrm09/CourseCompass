@@ -9,6 +9,7 @@ export default function SemesterList({
   canEdit,
   blocked,
   onComplete,
+  onUndoComplete,
   onAdd,
   onReplace,
   onRemove,
@@ -64,6 +65,12 @@ export default function SemesterList({
                         canEdit={canEdit(index, slot)}
                         blocked={blocked}
                         onComplete={onComplete}
+                        canUndo={status === "completed" && (index === semesterSlots.length - 1 || getStatus(index + 1) !== "completed")}
+                        onUndoMenu={(event) => {
+                          const target = event.currentTarget;
+                          const rect = target.getBoundingClientRect();
+                          setContextMenu({ action: "undo", semesterId: slot.id, code: `Semester ${index + 1}`, target, x: rect.left, y: rect.bottom + 6 });
+                        }}
                         onAdd={onAdd}
                         onReplace={onReplace}
                         onCourseContextMenu={openContextMenu}
@@ -81,7 +88,8 @@ export default function SemesterList({
         <CourseContextMenu
           context={contextMenu}
           onClose={() => setContextMenu(null)}
-          onRemove={() => onRemove(contextMenu.semesterId, contextMenu.instanceId)}
+          label={contextMenu.action === "undo" ? "Undo completion" : "Remove course"}
+          onRemove={() => contextMenu.action === "undo" ? onUndoComplete(contextMenu.semesterId) : onRemove(contextMenu.semesterId, contextMenu.instanceId)}
         />
       )}
     </div>

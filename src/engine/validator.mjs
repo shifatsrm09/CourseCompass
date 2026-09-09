@@ -6,6 +6,13 @@ function allInstances(state) {
   return [...state.semesters.flatMap(semester => semester.courses), ...state.unplaced];
 }
 
+function completedAfterUndo(state, curriculum) {
+  const latest = state.semesters[state.currentSemester - 2];
+  const undoneCodes = new Set((latest?.courses || []).map(course => curriculum.byId.get(course.occurrenceId).code));
+  const earlierCodes = new Set(state.semesters.slice(0, Math.max(0, state.currentSemester - 2)).flatMap(semester => semester.courses.map(course => curriculum.byId.get(course.occurrenceId).code)));
+  return state.completedCourses.filter(code => !undoneCodes.has(code) || earlierCodes.has(code));
+}
+
 function validateTransition(state, previous, curriculum, errors) {
   const add = (code, message) => errors.push({ code, message });
   const before = new Map(allInstances(previous).map(course => [course.instanceId, course.occurrenceId]));
@@ -18,8 +25,25 @@ function validateTransition(state, previous, curriculum, errors) {
       add("UNEXPECTED_COURSE", `An unexpected course instance ${course.instanceId} was added.`);
     }
   }
-  for (let index = 0; index < Math.min(previous.currentSemester, previous.semesters.length); index++) {
-    if (!same(previous.semesters[index], state.semesters[index])) add("FROZEN_SEMESTER", `Semester ${index + 1} is current or completed and cannot be rearranged.`);
+  const frozenCount = previous.currentSemester - (state.currentSemester > previous.currentSemester ? 0 : 1);
+  for (let index = 0; index < Math.min(frozenCount, previous.semesters.length); index++) {
+    if (!same(previous.semesters[index], state.semesters[index])) add("FROZEN_SEMESTER", `Semester ${index + 1} is completed and cannot be rearranged.`);
+  }
+  const currentIndex = previous.currentSemester - 1;
+  const oldCurrent = previous.semesters[currentIndex];
+  const newCurrent = state.semesters[currentIndex];
+  if (oldCurrent && (!newCurrent || oldCurrent.id !== newCurrent.id || oldCurrent.originalRow !== newCurrent.originalRow || oldCurrent.isTarc !== newCurrent.isTarc)) {
+    add("FROZEN_SEMESTER", "The current semester cannot be reordered.");
+  }
+  if (state.currentSemester === previous.currentSemester && oldCurrent && newCurrent) {
+    const existing = new Set(oldCurrent.courses.map(course => course.instanceId));
+    const available = new Set(previous.completedCourses);
+    state.semesters.slice(0, currentIndex).forEach(semester => semester.courses.forEach(course => available.add(curriculum.byId.get(course.occurrenceId).code)));
+    for (const course of newCurrent.courses) {
+      if (existing.has(course.instanceId)) continue;
+      const definition = curriculum.byId.get(course.occurrenceId);
+      if (!definition.hp.every(code => available.has(code))) add("PREREQUISITE_NOT_SATISFIED", `${definition.code} requires ${definition.hp.filter(code => !available.has(code)).join(", ")} before the current semester.`);
+    }
   }
   const afterLocations = new Map(state.semesters.flatMap((semester, index) => semester.courses.map(course => [course.instanceId, { semester, index }])));
   previous.semesters.forEach((semester, index) => semester.courses.forEach(course => {
@@ -35,8 +59,8 @@ function validateTransition(state, previous, curriculum, errors) {
     if (!same(oldTarc, state.semesters[nextIndex])) add("INVALID_TARC", "TARC must move as one unchanged semester with all its courses.");
     if (nextIndex < 2 && nextIndex !== previous.semesters.indexOf(oldTarc)) add("TARC_NOT_ALLOWED", "TARC cannot move before semester 3.");
   }
-  if (![previous.currentSemester, previous.currentSemester + 1].includes(state.currentSemester)) add("INVALID_PROGRESSION", "Only the current semester can be completed, one semester at a time.");
-  const expectedCompleted = new Set(previous.completedCourses);
+  if (![previous.currentSemester - 1, previous.currentSemester, previous.currentSemester + 1].includes(state.currentSemester)) add("INVALID_PROGRESSION", "Complete or undo only one semester at a time.");
+  const expectedCompleted = new Set(state.currentSemester === previous.currentSemester - 1 ? completedAfterUndo(previous, curriculum) : previous.completedCourses);
   if (state.currentSemester === previous.currentSemester + 1) {
     const current = previous.semesters[previous.currentSemester - 1];
     if (!current) add("DEGREE_COMPLETED", "Every semester has already been completed.");
@@ -123,4 +147,4 @@ function validatePlannerState(state, curriculum, options = {}) {
   return { ok: errors.length === 0, errors };
 }
 
-export { validatePlannerState, allInstances };
+export { validatePlannerState, allInstances, completedAfterUndo };

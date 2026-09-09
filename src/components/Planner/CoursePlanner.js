@@ -29,7 +29,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
     if (!selectedSlot) return [];
     const usedIds = new Set(selectedSlot.courses.map((course) => course.occurrenceId));
     const hasCod = selectedSlot.courses.some((course) => course.code === "COD");
-    const frozenIds = new Set(state.semesters.slice(0, state.currentSemester).flatMap((semester) => semester.courses.map((course) => course.occurrenceId)));
+    const frozenIds = new Set(state.semesters.slice(0, state.currentSemester - 1).flatMap((semester) => semester.courses.map((course) => course.occurrenceId)));
     const firstCod = curriculum.byCode.get("COD")?.[0]?.occurrenceId;
     return Array.from(curriculum.byId.values()).filter((course) => {
       if (course.code === "COD") return course.occurrenceId === firstCod && !hasCod;
@@ -38,7 +38,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   }, [selectedSlot, curriculum, state]);
 
   const getStatus = (index) => getSemesterStatus(state, index);
-  const canEdit = (index, slot) => !blocked && index >= state.currentSemester && !slot.isTarc;
+  const canEdit = (index, slot) => !blocked && index >= state.currentSemester - 1 && !slot.isTarc;
   const closeEditModal = () => setModalContext(null);
 
   const openAdd = (semesterId) => {
@@ -160,6 +160,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
           canEdit={canEdit}
           blocked={blocked}
           onComplete={(semesterId) => { planner.clearError(); setCompletionSemester(semesterId); }}
+          onUndoComplete={(semesterId) => dispatch({ type: "UNDO_COMPLETE_SEMESTER", semesterId })}
           onAdd={openAdd}
           onReplace={openReplace}
           onRemove={removeCourse}

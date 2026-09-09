@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-export default function CourseContextMenu({ context, onClose, onRemove }) {
+export default function CourseContextMenu({ context, onClose, onRemove, label = "Remove course" }) {
   const menuRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -63,7 +63,7 @@ export default function CourseContextMenu({ context, onClose, onRemove }) {
           onRemove();
         }}
       >
-        Remove course
+        {label}
       </button>
     </div>,
     document.body
