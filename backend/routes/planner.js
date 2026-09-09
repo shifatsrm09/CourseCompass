@@ -95,4 +95,29 @@ router.post("/save-plan", async (req, res) => {
   return conflict(res, latest);
 });
 
+router.post("/reset", async (req, res) => {
+  const { studentId } = req.body || {};
+  if (!validStudentId(studentId)) {
+    return res.status(400).json({ code: "INVALID_STUDENT_ID", error: "A student ID is required." });
+  }
+
+  const user = await User.findOne({ studentId });
+  if (!user) return res.status(404).json({ code: "USER_NOT_FOUND", error: "Student account not found. Log in again." });
+
+  // Reset every planner/progress field back to its fresh-account default.
+  // studentId, stream, and firstLogin are intentionally left untouched.
+  user.currentSemester = 1;
+  user.semesterOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  user.completedCourses = [];
+  user.currentCourses = [];
+  user.customPlan = null;
+  user.codCount = 0;
+  user.plannerState = null;
+  user.plannerVersion = 0;
+  user.lastPlannerMutationId = null;
+
+  await user.save();
+  return res.json({ success: true, user });
+});
+
 module.exports = router;
