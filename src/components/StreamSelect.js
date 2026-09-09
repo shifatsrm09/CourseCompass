@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE, readApiResponse } from "../api";
 import streamsConfig from "../data/streamsConfig";
 
+const SEASONS = ["Spring", "Summer", "Fall"];
+
 export default function StreamSelect({ studentId, onUpdate }) {
   const [stream, setStream] = useState("");
+  const [season, setSeason] = useState("");
+  const [year, setYear] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
@@ -13,10 +17,21 @@ export default function StreamSelect({ studentId, onUpdate }) {
     return () => { mounted.current = false; };
   }, []);
 
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    const years = [];
+    for (let y = current + 1; y >= current - 6; y -= 1) years.push(y);
+    return years;
+  }, []);
+
   const saveStream = async () => {
     if (pending.current) return;
     if (!streamsConfig[stream]) {
       setError("Please select a valid stream.");
+      return;
+    }
+    if (!SEASONS.includes(season) || !year) {
+      setError("Please select the season and year of your first semester.");
       return;
     }
     pending.current = true;
@@ -26,7 +41,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
       const response = await fetch(`${API_BASE}/auth/set-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, stream }),
+        body: JSON.stringify({ studentId, stream, startTerm: { season, year: Number(year) } }),
       });
       const data = await readApiResponse(response);
       if (!mounted.current) return;
@@ -78,11 +93,12 @@ export default function StreamSelect({ studentId, onUpdate }) {
                 value={stream}
                 disabled={busy}
                 onChange={(event) => { setStream(event.target.value); setError(""); }}
+                style={{ colorScheme: "dark" }}
                 className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
               >
                 <option value="">Choose Stream</option>
                 {Object.values(streamsConfig).map((option) => (
-                  <option key={option.id} value={option.id} style={{ backgroundColor: "#0a0a0a", color: "#f5f5f5" }}>{option.label}</option>
+                  <option key={option.id} value={option.id}>{option.label}</option>
                 ))}
               </select>
               <svg
@@ -101,6 +117,71 @@ export default function StreamSelect({ studentId, onUpdate }) {
             </div>
           </div>
 
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-300">
+              Your first semester
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <select
+                  aria-label="First semester season"
+                  value={season}
+                  disabled={busy}
+                  onChange={(event) => { setSeason(event.target.value); setError(""); }}
+                  style={{ colorScheme: "dark" }}
+                  className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
+                >
+                  <option value="">Season</option>
+                  {SEASONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+                  aria-hidden="true"
+                >
+                  <path d="m5 7.5 5 5 5-5" />
+                </svg>
+              </div>
+              <div className="relative">
+                <select
+                  aria-label="First semester year"
+                  value={year}
+                  disabled={busy}
+                  onChange={(event) => { setYear(event.target.value); setError(""); }}
+                  style={{ colorScheme: "dark" }}
+                  className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
+                >
+                  <option value="">Year</option>
+                  {yearOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+                  aria-hidden="true"
+                >
+                  <path d="m5 7.5 5 5 5-5" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-neutral-500">Used to label each semester card with its real term, e.g. Spring 2024.</p>
+          </div>
+
           {error && (
             <p role="alert" className="rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-sm text-red-300">
               {error}
@@ -110,7 +191,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
           <button
             type="button"
             onClick={saveStream}
-            disabled={!stream || busy}
+            disabled={!stream || !season || !year || busy}
             className="mt-1 inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-indigo-600"
           >
             {busy ? "Saving…" : "Save Stream"}

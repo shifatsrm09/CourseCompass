@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import thesisPlan from "../../data/thesisPlan.json";
 import { getSemesterStatus } from "../../engine/plannerState.mjs";
 import usePlanner from "../../engine/usePlanner";
+import { advanceTerm, formatTermLabel } from "../../engine/academicTerm";
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
@@ -12,7 +13,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   const [completionSemester, setCompletionSemester] = useState(null);
   const [modalContext, setModalContext] = useState(null);
 
-  const slots = useMemo(() => (state?.semesters || []).map((semester) => ({
+  const slots = useMemo(() => (state?.semesters || []).map((semester, index) => ({
     ...semester,
     courses: semester.courses.map((instance) => ({
       ...curriculum.byId.get(instance.occurrenceId),
@@ -20,7 +21,8 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
       completed: curriculum.byId.get(instance.occurrenceId)?.code !== "COD" && state.completedCourses.includes(curriculum.byId.get(instance.occurrenceId)?.code),
     })),
     thesis: thesisPlan.find((item) => item.semester_row === semester.originalRow) || null,
-  })), [state, curriculum]);
+    termLabel: formatTermLabel(advanceTerm(user.startTerm, index)),
+  })), [state, curriculum, user.startTerm]);
 
   const selectedSlot = slots.find((slot) => slot.id === modalContext?.semesterId);
   const modalCourses = useMemo(() => {
@@ -85,7 +87,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
 
   return (
     <div className="mx-auto max-w-3xl px-1 pb-10">
-      <h2 className="mb-5 text-center text-2xl font-bold text-neutral-50 sm:text-3xl">Course Planner</h2>
+      <h2 className="mb-5 text-center text-2xl font-bold text-neutral-50 sm:text-3xl">CSE Course Planner</h2>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="inline-block rounded-lg bg-neutral-800 px-3 py-1.5 text-sm font-semibold text-neutral-200">

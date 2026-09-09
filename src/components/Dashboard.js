@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CoursePlanner from "./Planner/CoursePlanner";
 import streamsConfig from "../data/streamsConfig";
 import { buildCurriculum } from "../engine/plannerState.mjs";
@@ -11,15 +11,40 @@ export default function Dashboard({ user, setUser, onLogout }) {
     return stream ? buildCurriculum(stream.plan, user.stream) : null;
   }, [user.stream]);
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const gearButtonRef = useRef(null);
+
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState("");
   const [resetToken, setResetToken] = useState(0);
-  const pending = useRef(false);
+  const resetPending = useRef(false);
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const deletePending = useRef(false);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const handlePointer = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target) && !gearButtonRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKey = (event) => { if (event.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [menuOpen]);
 
   const handleReset = async () => {
-    if (pending.current) return;
-    pending.current = true;
+    if (resetPending.current) return;
+    resetPending.current = true;
     setResetBusy(true);
     setResetError("");
     try {
@@ -39,8 +64,33 @@ export default function Dashboard({ user, setUser, onLogout }) {
     } catch (failure) {
       setResetError(failure.message || "Could not connect to Course Compass. Please retry.");
     } finally {
-      pending.current = false;
+      resetPending.current = false;
       setResetBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deletePending.current) return;
+    deletePending.current = true;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      const response = await fetch(`${API_BASE}/auth/delete-account`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: user.studentId }),
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Your account could not be deleted. Please retry.");
+      }
+      sessionStorage.removeItem(draftKey(user.studentId));
+      onLogout();
+    } catch (failure) {
+      setDeleteError(failure.message || "Could not connect to Course Compass. Please retry.");
+    } finally {
+      deletePending.current = false;
+      setDeleteBusy(false);
     }
   };
 
@@ -77,52 +127,115 @@ export default function Dashboard({ user, setUser, onLogout }) {
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+
+          <div className="relative shrink-0">
             <button
               type="button"
-              onClick={() => { setResetError(""); setConfirmingReset(true); }}
-              aria-label="Reset plan"
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-neutral-800 px-2.5 py-2 text-sm font-semibold text-neutral-200 ring-1 ring-inset ring-neutral-700 transition-colors hover:bg-neutral-700 sm:px-4"
+              ref={gearButtonRef}
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-label="Account settings"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-colors sm:h-10 sm:w-10 ${
+                menuOpen ? "bg-neutral-700 text-neutral-100 ring-neutral-600" : "bg-neutral-800 text-neutral-300 ring-neutral-700 hover:bg-neutral-700"
+              }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-4 w-4"
+                className="h-5 w-5"
                 aria-hidden="true"
               >
-                <path d="M3 12a9 9 0 1 0 3-6.7" />
-                <path d="M3 4v5h5" />
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
               </svg>
-              <span className="hidden sm:inline">Reset</span>
             </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              aria-label="Logout"
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 sm:px-4"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-                aria-hidden="true"
+
+            {menuOpen && (
+              <div
+                ref={menuRef}
+                role="menu"
+                aria-label="Account settings menu"
+                className="absolute right-0 top-full z-30 mt-2 w-48 animate-fadeIn rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/50"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <path d="M16 17 21 12 16 7" />
-                <path d="M21 12H9" />
-              </svg>
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); setResetError(""); setConfirmingReset(true); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-800"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                    <path d="M3 4v5h5" />
+                  </svg>
+                  Reset account
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); setDeleteError(""); setConfirmingDelete(true); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-950/40"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                  Delete account
+                </button>
+                <div className="my-1.5 h-px bg-neutral-800" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); onLogout(); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-800"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <path d="M16 17 21 12 16 7" />
+                    <path d="M21 12H9" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -161,6 +274,46 @@ export default function Dashboard({ user, setUser, onLogout }) {
                 className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
               >
                 {resetBusy ? "Resetting…" : "Yes, reset"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmingDelete && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4"
+          onClick={(event) => { if (event.target === event.currentTarget && !deleteBusy) setConfirmingDelete(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            className="w-full max-w-sm animate-fadeIn rounded-xl border border-red-900/60 bg-neutral-900 p-5 shadow-xl"
+          >
+            <h3 id="delete-account-title" className="text-base font-semibold text-neutral-50">
+              Delete your account?
+            </h3>
+            <p className="mt-2 text-sm text-neutral-400">
+              This permanently deletes your account and everything tied to it — your stream, plan, and progress — from our database. This cannot be undone.
+            </p>
+            {deleteError && <p role="alert" className="mt-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-sm text-red-300">{deleteError}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleteBusy}
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteBusy}
+                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleteBusy ? "Deleting…" : "Yes, delete my account"}
               </button>
             </div>
           </div>

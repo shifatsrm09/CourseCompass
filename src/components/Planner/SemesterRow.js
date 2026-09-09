@@ -42,7 +42,12 @@ export default function SemesterRow({
       </div>
       <div className="flex w-full min-w-0 flex-col">
         <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2">
-          <div className="text-base font-semibold text-neutral-100 sm:text-lg">Semester {index + 1}</div>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-base font-semibold text-neutral-100 sm:text-lg">Semester {index + 1}</span>
+            {slot.termLabel && (
+              <span className="text-xs font-medium tracking-wide text-neutral-500">{slot.termLabel}</span>
+            )}
+          </div>
           <div className="ml-auto flex items-center gap-2">
             {slot.isTarc && (
               <span className="rounded-full border border-emerald-800 bg-emerald-950/60 px-2.5 py-1 text-xs font-semibold text-emerald-400">

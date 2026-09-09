@@ -16,6 +16,15 @@ const userSchema = new mongoose.Schema({
   stream: { type: String, required: true },
 
 
+  startTerm: {
+    type: new mongoose.Schema({
+      season: { type: String, enum: ["Spring", "Summer", "Fall"], required: true },
+      year: { type: Number, required: true, min: 2000, max: 2100 },
+    }, { _id: false }),
+    default: null,
+  },
+
+
   currentSemester: {
     type: Number,
     default: 1,
