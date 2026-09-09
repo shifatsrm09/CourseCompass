@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function CourseBox({ course, isLocked, onReplace }) {
+export default function CourseBox({ course, isLocked, onReplace, hideCompletedLabel }) {
   return (
     <button
       type="button"
@@ -10,7 +10,7 @@ export default function CourseBox({ course, isLocked, onReplace }) {
       aria-label={isLocked ? course.code : `Edit ${course.code}`}
     >
       <span className="course-box-main"><span className="course-code">{course.code}</span></span>
-      {course.completed && <span className="course-completed-label">COMPLETED</span>}
+      {course.completed && !hideCompletedLabel && <span className="course-completed-label">COMPLETED</span>}
     </button>
   );
 }

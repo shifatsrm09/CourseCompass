@@ -50,6 +50,7 @@ export default function SemesterRow({
                 course={course}
                 isLocked={!canEdit || course.completed}
                 onReplace={() => onReplace(slot.id, course.instanceId)}
+                hideCompletedLabel={status === "completed"}
               />
             ))}
             {canEdit && <button type="button" className="add-course-btn" onClick={() => onAdd(slot.id)}>+ Add Course</button>}
