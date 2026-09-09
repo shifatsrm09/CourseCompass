@@ -101,6 +101,21 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
         </p>
       )}
 
+      {user.gradesheetImport?.records?.length > 0 && (
+        <details className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-xs text-neutral-400">
+          <summary className="cursor-pointer font-medium text-neutral-200">Imported grade history</summary>
+          <p className="mt-2">Original grades are retained here. Planner edits and undoing completion do not change the uploaded academic record.</p>
+          <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
+            {user.gradesheetImport.records.map(record => (
+              <li key={record.id} className="flex flex-wrap justify-between gap-x-2">
+                <span>{record.term.season} {record.term.year} · {record.code}{record.occurrenceId && curriculum.byId.get(record.occurrenceId)?.code === "COD" ? " → COD" : ""}</span>
+                <span>{record.grade} · {record.credits} credits</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
       {planner.warnings.length > 0 && (
         <div role="status" className="mb-3 space-y-1 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
           {planner.warnings.map((warning, index) => (

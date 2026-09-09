@@ -4,6 +4,7 @@ import streamsConfig from "../data/streamsConfig";
 import { buildCurriculum } from "../engine/plannerState.mjs";
 import { API_BASE, readApiResponse } from "../api";
 import { draftKey } from "../engine/plannerPersistence";
+import GradesheetSync from "./GradesheetSync";
 
 export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
   const curriculum = useMemo(() => {
@@ -12,6 +13,7 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
   }, [user.stream]);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [syncingGradesheet, setSyncingGradesheet] = useState(false);
   const menuRef = useRef(null);
   const gearButtonRef = useRef(null);
 
@@ -94,6 +96,15 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
     }
   };
 
+  if (syncingGradesheet && curriculum) return (
+    <GradesheetSync user={user} curriculum={curriculum} onCancel={() => setSyncingGradesheet(false)} onImported={(savedUser) => {
+      try { sessionStorage.removeItem(draftKey(user.studentId)); } catch {}
+      setUser(savedUser);
+      setResetToken(token => token + 1);
+      setSyncingGradesheet(false);
+    }} />
+  );
+
   return (
     <div className="min-h-screen bg-neutral-950">
       <header className="sticky top-0 z-20 border-b border-white/10 bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70">
@@ -162,6 +173,14 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
                 aria-label="Account settings menu"
                 className="absolute right-0 top-full z-30 mt-2 w-48 animate-fadeIn rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/50"
               >
+                <button type="button" role="menuitem" disabled={!curriculum}
+                  onClick={() => { setMenuOpen(false); setSyncingGradesheet(true); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-800 disabled:opacity-50">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+                    <path d="M20 7a8 8 0 0 0-14-2L3 8m0-5v5h5M4 17a8 8 0 0 0 14 2l3-3m0 5v-5h-5" />
+                  </svg>
+                  Sync gradesheet
+                </button>
                 <button
                   type="button"
                   role="menuitem"

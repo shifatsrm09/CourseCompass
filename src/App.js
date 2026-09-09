@@ -4,11 +4,13 @@ import Login from "./components/Login";
 import StreamSelect from "./components/StreamSelect";
 import Dashboard from "./components/Dashboard";
 import { draftKey } from "./engine/plannerPersistence";
+import GradesheetSync from "./components/GradesheetSync";
 
 function App() {
   const [user, setUser] = useState(null);
   const [needsStream, setNeedsStream] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
+  const [importingGradesheet, setImportingGradesheet] = useState(false);
   const [tempStudentId, setTempStudentId] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
@@ -117,7 +119,13 @@ function App() {
       </div>
     </div>
   );
-  if (!user && !needsStream) return <Login onLogin={handleLogin} />;
+  if (importingGradesheet) return <GradesheetSync onCancel={() => setImportingGradesheet(false)} onImported={savedUser => {
+    try { sessionStorage.removeItem(draftKey(savedUser.studentId)); } catch {}
+    setUser(savedUser);
+    setNeedsStream(false);
+    setImportingGradesheet(false);
+  }} />;
+  if (!user && !needsStream) return <Login onLogin={handleLogin} onImportGradesheet={() => setImportingGradesheet(true)} />;
   if (needsStream || changingPlan) return (
     <StreamSelect
       studentId={changingPlan ? user.studentId : tempStudentId}

@@ -95,6 +95,58 @@ router.post("/save-plan", async (req, res) => {
   return conflict(res, latest);
 });
 
+router.post("/import-gradesheet", async (req, res) => {
+  const { studentId, expectedVersion, mutationId, plannerState, startTerm, records, currentTerm, createAccount, stream } = req.body || {};
+  if (!validStudentId(studentId) || !Number.isSafeInteger(expectedVersion) || expectedVersion < 0 || typeof mutationId !== "string" || !mutationId.trim() || mutationId.length > 200) {
+    return res.status(400).json({ error: "Invalid grade-sheet save request." });
+  }
+  const user = await User.findOne({ studentId });
+  if (!user && createAccount !== true) return res.status(404).json({ error: "Student account not found. Log in again." });
+  if (user?.lastPlannerMutationId === mutationId) {
+    if (samePlannerState(user.plannerState, plannerState) && samePlannerState(user.gradesheetImport?.records, records) && samePlannerState(user.startTerm?.toObject?.() || user.startTerm, startTerm)) return success(res, user);
+    return res.status(409).json({ error: "This import ID has already been used. Reopen the importer." });
+  }
+  if (user && createAccount === true) return res.status(409).json({ error: "This account was created in another session. Reload and import into the existing account." });
+  if (!user && (expectedVersion !== 0 || typeof stream !== "string")) return res.status(400).json({ error: "Choose a starting stream for the new account." });
+  if (user && versionOf(user) !== expectedVersion) return conflict(res, user);
+  const curriculum = await getCurriculum(user ? user.stream : stream);
+  if (!curriculum) return res.status(422).json({ error: "Choose a supported stream before importing." });
+  let normalized;
+  try {
+    const { validateGradesheetImport } = await import("../../src/engine/gradesheet.mjs");
+    normalized = validateGradesheetImport({ plannerState, startTerm, records, currentTerm }, curriculum);
+  } catch (error) {
+    return res.status(422).json({ error: error.message || "Invalid grade-sheet data." });
+  }
+  if (!user) {
+    try {
+      const created = await User.create({ studentId, stream, ...deriveLegacyFields(plannerState, curriculum),
+        plannerState, startTerm: normalized.startTerm, gradesheetImport: { records: normalized.records },
+        lastPlannerMutationId: mutationId, plannerVersion: 1 });
+      return success(res, created);
+    } catch (error) {
+      if (error.code !== 11000) throw error;
+      const existing = await User.findOne({ studentId });
+      if (existing?.lastPlannerMutationId === mutationId && samePlannerState(existing.plannerState, plannerState) && samePlannerState(existing.gradesheetImport?.records, normalized.records)) return success(res, existing);
+      return res.status(409).json({ error: "This account now exists. Reload before importing again." });
+    }
+  }
+  const versionFilter = expectedVersion === 0
+    ? { $or: [{ plannerVersion: 0 }, { plannerVersion: { $exists: false } }] }
+    : { plannerVersion: expectedVersion };
+  const saved = await User.findOneAndUpdate(
+    { studentId, stream: user.stream, ...versionFilter },
+    { $set: { ...deriveLegacyFields(plannerState, curriculum), plannerState, startTerm: normalized.startTerm,
+      gradesheetImport: { records: normalized.records }, lastPlannerMutationId: mutationId }, $inc: { plannerVersion: 1 } },
+    { new: true, runValidators: true }
+  );
+  if (saved) return success(res, saved);
+  const latest = await User.findOne({ studentId });
+  if (!latest) return res.status(404).json({ error: "Student account no longer exists." });
+  if (latest.lastPlannerMutationId === mutationId && samePlannerState(latest.plannerState, plannerState) && samePlannerState(latest.gradesheetImport?.records, normalized.records)) return success(res, latest);
+  return conflict(res, latest);
+});
+
 router.post("/reset", async (req, res) => {
   const { studentId } = req.body || {};
   if (!validStudentId(studentId)) {
@@ -104,8 +156,6 @@ router.post("/reset", async (req, res) => {
   const user = await User.findOne({ studentId });
   if (!user) return res.status(404).json({ code: "USER_NOT_FOUND", error: "Student account not found. Log in again." });
 
-  // Reset every planner/progress field back to its fresh-account default.
-  // studentId, stream, and firstLogin are intentionally left untouched.
   user.currentSemester = 1;
   user.semesterOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   user.completedCourses = [];
@@ -115,6 +165,7 @@ router.post("/reset", async (req, res) => {
   user.plannerState = null;
   user.plannerVersion = 0;
   user.lastPlannerMutationId = null;
+  user.gradesheetImport = null;
 
   await user.save();
   return res.json({ success: true, user });

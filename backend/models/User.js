@@ -72,6 +72,7 @@ const userSchema = new mongoose.Schema({
   plannerState: { type: mongoose.Schema.Types.Mixed, default: null },
   plannerVersion: { type: Number, default: 0, min: 0 },
   lastPlannerMutationId: { type: String, default: null },
+  gradesheetImport: { type: mongoose.Schema.Types.Mixed, default: null },
 });
 
 module.exports = mongoose.model("User", userSchema);

@@ -88,6 +88,7 @@ router.post("/set-stream", async (req, res) => {
           codCount: 0,
           plannerState: null,
           lastPlannerMutationId: null,
+          gradesheetImport: null,
         },
         $inc: { plannerVersion: 1 },
       },
