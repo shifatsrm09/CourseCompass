@@ -44,10 +44,17 @@ test("default cards render without saves and protect current and TARC courses", 
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
-test("removing a prerequisite updates the complete dependency chain in the visible cards", async () => {
+test.each(["modal", "context menu"])("removing a prerequisite through %s updates the dependency chain", async (method) => {
   mount();
-  fireEvent.click(within(row(2)).getByRole("button", { name: "Edit B" }));
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remove Course" }));
+  const course = within(row(2)).getByRole("button", { name: "Edit B" });
+  if (method === "modal") {
+    fireEvent.click(course);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remove Course" }));
+  } else {
+    fireEvent.contextMenu(course, { clientX: 100, clientY: 100 });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remove course" }));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  }
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(within(row(4)).getByRole("button", { name: "Edit B" })).toBeInTheDocument();
   expect(within(row(5)).getByRole("button", { name: "Edit C" })).toBeInTheDocument();
@@ -56,6 +63,30 @@ test("removing a prerequisite updates the complete dependency chain in the visib
   expect(screen.getByText("Total Courses: 11")).toBeInTheDocument();
   await waitFor(() => expect(screen.getByText("All changes saved")).toBeInTheDocument());
   expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+test("course context menu switches targets and dismisses without changing the plan", () => {
+  mount();
+  const first = within(row(2)).getByRole("button", { name: "Edit B" });
+  const second = within(row(4)).getByRole("button", { name: "Edit C" });
+  fireEvent.contextMenu(first);
+  expect(screen.getByRole("menu", { name: "B actions" })).toBeInTheDocument();
+  fireEvent.contextMenu(second);
+  expect(screen.getAllByRole("menu")).toHaveLength(1);
+  expect(screen.getByRole("menu", { name: "C actions" })).toBeInTheDocument();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  expect(second).toHaveFocus();
+  fireEvent.contextMenu(first);
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  fireEvent.contextMenu(first);
+  fireEvent.scroll(window);
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  fireEvent.contextMenu(within(row(1)).getByRole("button", { name: "A" }));
+  fireEvent.contextMenu(within(row(3)).getByRole("button", { name: "T" }));
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  expect(global.fetch).not.toHaveBeenCalled();
 });
 
 test("COD search stays compact and selecting it relocates the closest future occurrence", async () => {

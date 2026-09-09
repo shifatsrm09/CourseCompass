@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import SemesterRow from "./SemesterRow";
+import CourseContextMenu from "./CourseContextMenu";
 
 export default function SemesterList({
   semesterSlots,
@@ -10,9 +11,22 @@ export default function SemesterList({
   onComplete,
   onAdd,
   onReplace,
+  onRemove,
   onMoveTarc,
   onBalance,
 }) {
+  const [contextMenu, setContextMenu] = useState(null);
+  const openContextMenu = (event, semesterId, instanceId, code) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (blocked) return;
+    const target = event.currentTarget;
+    const rect = target.getBoundingClientRect();
+    setContextMenu({ semesterId, instanceId, code, target,
+      x: event.clientX || rect.left,
+      y: event.clientY || rect.bottom,
+    });
+  };
   const onDragEnd = (result) => {
     if (!result.destination || blocked || result.source.index === result.destination.index) return;
     onMoveTarc(result.draggableId, result.destination.index);
@@ -52,6 +66,7 @@ export default function SemesterList({
                         onComplete={onComplete}
                         onAdd={onAdd}
                         onReplace={onReplace}
+                        onCourseContextMenu={openContextMenu}
                       />
                     )}
                   </Draggable>
@@ -62,6 +77,13 @@ export default function SemesterList({
           )}
         </Droppable>
       </DragDropContext>
+      {contextMenu && !blocked && (
+        <CourseContextMenu
+          context={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onRemove={() => onRemove(contextMenu.semesterId, contextMenu.instanceId)}
+        />
+      )}
     </div>
   );
 }

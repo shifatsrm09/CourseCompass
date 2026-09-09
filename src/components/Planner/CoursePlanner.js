@@ -65,11 +65,12 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
     })) closeEditModal();
   };
 
-  const removeCourse = () => {
-    if (modalContext && dispatch({
+  const removeCourse = (semesterId, instanceId) => {
+    if (!semesterId || !instanceId) return;
+    if (dispatch({
       type: "REMOVE_COURSE",
-      semesterId: modalContext.semesterId,
-      instanceId: modalContext.instanceId,
+      semesterId,
+      instanceId,
     })) closeEditModal();
   };
 
@@ -159,6 +160,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
           onComplete={(semesterId) => { planner.clearError(); setCompletionSemester(semesterId); }}
           onAdd={openAdd}
           onReplace={openReplace}
+          onRemove={removeCourse}
           onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
           onBalance={() => dispatch({ type: "REBALANCE" })}
         />
@@ -176,7 +178,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
         visible={Boolean(modalContext)}
         onClose={closeEditModal}
         onSelect={selectCourse}
-        onRemove={removeCourse}
+        onRemove={() => removeCourse(modalContext?.semesterId, modalContext?.instanceId)}
         courses={modalCourses}
         modalContext={modalContext}
         disabled={blocked}

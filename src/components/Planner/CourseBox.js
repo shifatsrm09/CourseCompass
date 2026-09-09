@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function CourseBox({ course, isLocked, onReplace, hideCompletedLabel }) {
+export default function CourseBox({ course, isLocked, onReplace, onContextMenu, hideCompletedLabel }) {
   return (
     <button
       type="button"
@@ -10,6 +10,7 @@ export default function CourseBox({ course, isLocked, onReplace, hideCompletedLa
           : "cursor-pointer border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
       }`}
       onClick={onReplace}
+      onContextMenu={isLocked ? undefined : onContextMenu}
       disabled={isLocked}
       aria-label={isLocked ? course.code : `Edit ${course.code}`}
     >

@@ -19,6 +19,7 @@ export default function SemesterRow({
   onComplete,
   onAdd,
   onReplace,
+  onCourseContextMenu,
 }) {
   const isCurrent = status === "current";
 
@@ -73,6 +74,7 @@ export default function SemesterRow({
                 course={course}
                 isLocked={!canEdit || course.completed}
                 onReplace={() => onReplace(slot.id, course.instanceId)}
+                onContextMenu={(event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code)}
                 hideCompletedLabel={status === "completed"}
               />
             ))}
