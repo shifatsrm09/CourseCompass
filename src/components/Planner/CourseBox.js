@@ -4,13 +4,19 @@ export default function CourseBox({ course, isLocked, onReplace, hideCompletedLa
   return (
     <button
       type="button"
-      className={`course-box ${isLocked ? "course-box-locked" : ""}`}
+      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+        isLocked
+          ? "cursor-default border-neutral-800 bg-neutral-900 text-neutral-200"
+          : "cursor-pointer border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
+      }`}
       onClick={onReplace}
       disabled={isLocked}
       aria-label={isLocked ? course.code : `Edit ${course.code}`}
     >
-      <span className="course-box-main"><span className="course-code">{course.code}</span></span>
-      {course.completed && !hideCompletedLabel && <span className="course-completed-label">COMPLETED</span>}
+      <span>{course.code}</span>
+      {course.completed && !hideCompletedLabel && (
+        <span className="text-[11px] font-bold tracking-wide text-emerald-400">COMPLETED</span>
+      )}
     </button>
   );
 }

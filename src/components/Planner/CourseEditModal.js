@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import "../../styles/courseEditModal.css";
-
 
 const GROUP_ORDER = [
   "COD",
@@ -37,20 +35,7 @@ export default function CourseEditModal({
     return () => document.removeEventListener("keydown", h);
   }, [visible, onClose]);
 
-  const handleBackdropClick = (e) => {
-    if (e.target.classList.contains("modal-backdrop")) {
-      onClose();
-    }
-  };
-
-
-
-
   const disableRemove = disabled || !modalContext?.canRemove;
-
-
-
-
 
   const groupLabelFromCourse = (course) => {
     if (course.code === "COD") return "COD";
@@ -97,63 +82,84 @@ export default function CourseEditModal({
     }))
     .filter((g) => g.courses.length > 0);
 
-
-
-
   return !visible ? null : (
-    <div className="modal-backdrop" onClick={handleBackdropClick}>
-      <div className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="course-edit-title">
-        <div className="modal-header">
-          <h3 className="modal-title" id="course-edit-title">{title}</h3>
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/65 px-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="course-edit-title"
+        className="flex max-h-[85vh] w-full max-w-lg animate-fadeIn flex-col rounded-xl border border-neutral-800 bg-neutral-900 p-4 shadow-2xl shadow-black/50 sm:p-5"
+      >
+        <div className="mb-3">
+          <h3 id="course-edit-title" className="text-lg font-bold text-neutral-100 sm:text-xl">
+            {title}
+          </h3>
         </div>
 
         <input
-          className="course-search"
+          className="mb-3.5 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 text-base text-neutral-100 placeholder:text-neutral-500 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
           placeholder="Search by course code..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {error && <p role="alert" className="planner-error">{error}</p>}
-        <div className="modal-body scrollable">
+        {error && (
+          <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-sm text-red-300">
+            {error}
+          </p>
+        )}
+
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1.5">
           {filteredGroups.length > 0 ? (
             filteredGroups.map((group) => (
-              <div key={group.label} className="course-group">
-                <div className="course-group-title">{group.label}</div>
+              <div key={group.label} className="mb-3">
+                <div className="mb-1.5 text-xs font-bold uppercase tracking-wide text-indigo-300/90">
+                  {group.label}
+                </div>
 
-                {group.courses.map((course) => (
-                  <button
-                    key={course.occurrenceId}
-                    className="course-select-btn"
-                    onClick={() => onSelect(course)}
-                    disabled={disabled || course.is_tarc}
-                  >
-                    <span className="course-select-code">{course.code}</span>
-
-                    {course.hp &&
-                      course.hp.length > 0 &&
-                      course.hp[0] !== "" && (
-                        <span className="course-prereq">
+                <div className="flex flex-col gap-1.5">
+                  {group.courses.map((course) => (
+                    <button
+                      key={course.occurrenceId}
+                      className="w-full rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-2.5 text-left text-sm text-neutral-100 transition-colors hover:bg-neutral-800 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-neutral-800/60"
+                      onClick={() => onSelect(course)}
+                      disabled={disabled || course.is_tarc}
+                    >
+                      <span className="font-semibold">{course.code}</span>
+                      {course.hp && course.hp.length > 0 && course.hp[0] !== "" && (
+                        <span className="ml-2 text-xs font-semibold text-red-400">
                           HP: {course.hp.join(", ")}
                         </span>
                       )}
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
             ))
           ) : (
-            <p className="modal-empty-text">No matching courses.</p>
+            <p className="py-6 text-center text-sm text-neutral-500">No matching courses.</p>
           )}
         </div>
 
-        <div className="modal-footer">
-          {modalContext?.mode === "replace" && !disableRemove && (
-            <button className="remove-btn" onClick={onRemove}>
+        <div className="mt-3.5 flex items-center justify-between gap-2">
+          {modalContext?.mode === "replace" && !disableRemove ? (
+            <button
+              type="button"
+              className="rounded-lg border border-red-800 bg-red-950/40 px-4 py-2 text-sm font-semibold text-red-400 transition-colors hover:bg-red-950/70"
+              onClick={onRemove}
+            >
               Remove Course
             </button>
-          )}
+          ) : <span />}
 
-          <button className="cancel-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-semibold text-neutral-200 transition-colors hover:bg-neutral-700"
+            onClick={onClose}
+          >
             Cancel
           </button>
         </div>

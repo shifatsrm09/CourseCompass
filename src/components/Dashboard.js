@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import "../styles/dashboard.css";
 import CoursePlanner from "./Planner/CoursePlanner";
 import streamsConfig from "../data/streamsConfig";
 import { buildCurriculum } from "../engine/plannerState.mjs";
@@ -137,7 +136,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="reset-plan-title"
-            className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 shadow-xl"
+            className="w-full max-w-sm animate-fadeIn rounded-xl border border-neutral-800 bg-neutral-900 p-5 shadow-xl"
           >
             <h3 id="reset-plan-title" className="text-base font-semibold text-neutral-50">
               Reset your plan?
@@ -145,7 +144,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
             <p className="mt-2 text-sm text-neutral-400">
               This clears your progress and personalized plan and starts over from the default curriculum, just like a brand-new account. Your stream ({user.stream}) will stay the same. This can't be undone.
             </p>
-            {resetError && <p role="alert" className="mt-3 text-sm text-red-400">{resetError}</p>}
+            {resetError && <p role="alert" className="mt-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-sm text-red-300">{resetError}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -168,7 +167,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
         </div>
       )}
 
-      <div className="dashboard-container">
+      <div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8">
         {curriculum ? (
           <CoursePlanner
             key={`${user.studentId}:${user.stream}:${resetToken}`}
@@ -177,7 +176,7 @@ export default function Dashboard({ user, setUser, onLogout }) {
             curriculum={curriculum}
           />
         ) : (
-          <p role="alert" className="not-configured">
+          <p role="alert" className="rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-4 text-center text-sm font-medium text-amber-200">
             The curriculum for your saved stream is unavailable. Your saved plan has been preserved.
           </p>
         )}

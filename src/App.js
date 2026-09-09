@@ -82,13 +82,33 @@ function App() {
     setSession({ loading: false, error: "" });
   };
 
-  if (session.loading) return <div className="center" role="status">Loading your saved plan…</div>;
+  if (session.loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4" role="status">
+        <p className="text-sm font-medium text-neutral-400">Loading your saved plan…</p>
+      </div>
+    );
+  }
   if (session.error) return (
-    <div className="center">
-      <div className="card">
-        <p role="alert">{session.error}</p>
-        <button type="button" onClick={() => setRefreshAttempt((attempt) => attempt + 1)}>Retry loading</button>
-        <button type="button" onClick={handleLogout}>Return to login</button>
+    <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-800 bg-neutral-900 p-6 shadow-xl shadow-black/40 sm:max-w-md sm:p-8">
+        <p role="alert" className="mb-4 rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-sm text-red-300">{session.error}</p>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setRefreshAttempt((attempt) => attempt + 1)}
+            className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 active:bg-indigo-700"
+          >
+            Retry loading
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition-colors hover:bg-neutral-700"
+          >
+            Return to login
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import "../../styles/planner.css";
 import thesisPlan from "../../data/thesisPlan.json";
 import { getSemesterStatus } from "../../engine/plannerState.mjs";
 import usePlanner from "../../engine/usePlanner";
@@ -84,37 +83,73 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
   return (
-    <div className="planner-container dark-container">
-      <h2 className="planner-title">Course Planner</h2>
-      <div className="planner-summary">Total Courses: {totalCourses}</div>
-      {planner.error && <p role="alert" className="planner-error">{planner.error}</p>}
+    <div className="mx-auto max-w-3xl px-1 pb-10">
+      <h2 className="mb-5 text-center text-2xl font-bold text-neutral-50 sm:text-3xl">Course Planner</h2>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="inline-block rounded-lg bg-neutral-800 px-3 py-1.5 text-sm font-semibold text-neutral-200">
+          Total Courses: {totalCourses}
+        </span>
+      </div>
+
+      {planner.error && (
+        <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
+          {planner.error}
+        </p>
+      )}
+
       {planner.warnings.length > 0 && (
-        <div className="planner-notice" role="status">
-          {planner.warnings.map((warning, index) => <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>)}
+        <div role="status" className="mb-3 space-y-1 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
+          {planner.warnings.map((warning, index) => (
+            <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>
+          ))}
         </div>
       )}
-      <div className="planner-save-state" role={recoveryNeeded ? "alert" : "status"} aria-live="polite">
+
+      <div
+        role={recoveryNeeded ? "alert" : "status"}
+        aria-live="polite"
+        className="mb-3 flex flex-wrap items-center gap-2.5 text-sm text-neutral-400"
+      >
         {saveStatus.message && <span>{saveStatus.message}</span>}
         {["error", "pending"].includes(saveStatus.kind) && (
-          <button type="button" className="cancel-btn" onClick={planner.retrySave}>Retry save</button>
+          <button
+            type="button"
+            onClick={planner.retrySave}
+            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700"
+          >
+            Retry save
+          </button>
         )}
         {(recoveryNeeded || (blocked && !planner.reloadBusy)) && (
-          <button type="button" className="cancel-btn" onClick={planner.reloadSavedPlan} disabled={planner.reloadBusy}>
+          <button
+            type="button"
+            onClick={planner.reloadSavedPlan}
+            disabled={planner.reloadBusy}
+            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-default disabled:opacity-50"
+          >
             Load saved plan (discard unsaved changes)
           </button>
         )}
         {planner.reloadBusy && <span>Loading saved plan…</span>}
       </div>
+
       {state?.unplaced?.length > 0 && (
-        <div className="planner-notice" role="status">
-          <p>Courses awaiting a valid semester. Use Auto Balance to place them.</p>
-          <div className="courses-col">
-            {state.unplaced.map((instance) => <span className="course-box" key={instance.instanceId}>
-              {curriculum.byId.get(instance.occurrenceId)?.code || instance.occurrenceId}
-            </span>)}
+        <div role="status" className="mb-3 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
+          <p className="mb-2">Courses awaiting a valid semester. Use Auto Balance to place them.</p>
+          <div className="flex flex-wrap gap-2">
+            {state.unplaced.map((instance) => (
+              <span
+                key={instance.instanceId}
+                className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-neutral-100"
+              >
+                {curriculum.byId.get(instance.occurrenceId)?.code || instance.occurrenceId}
+              </span>
+            ))}
           </div>
         </div>
       )}
+
       {state && (
         <SemesterList
           semesterSlots={slots}
@@ -128,6 +163,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
           onBalance={() => dispatch({ type: "REBALANCE" })}
         />
       )}
+
       <ConfirmModal
         visible={Boolean(completionSemester)}
         onConfirm={completeSemester}

@@ -9,19 +9,6 @@ body {
   background: #0f0f0f;
   color: #e5e5e5;
 }
-.center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.dark-container {
-  background: #0f0f0f;
-  width: 100%;
-}
-
-.container {
-  padding: 20px;
-}
 ::-webkit-scrollbar {
   width: 8px;
 }

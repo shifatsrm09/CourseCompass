@@ -19,14 +19,21 @@ export default function SemesterList({
   };
 
   return (
-    <div className="dark-container">
-      <div className="planner-toolbar">
-        <button type="button" onClick={onBalance} className="balance-btn" disabled={blocked}>⚖ Auto Balance</button>
+    <div>
+      <div className="mb-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onBalance}
+          disabled={blocked}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-default disabled:opacity-50"
+        >
+          ⚖ Auto Balance
+        </button>
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="semesters" direction="vertical">
           {(provided) => (
-            <div className="planner-grid" ref={provided.innerRef} {...provided.droppableProps}>
+            <div className="flex flex-col gap-3 sm:gap-4" ref={provided.innerRef} {...provided.droppableProps}>
               {semesterSlots.map((slot, index) => {
                 const status = getStatus(index);
                 const canDrag = !blocked && slot.isTarc && ["recommended", "locked"].includes(status);
