@@ -2,13 +2,15 @@ import React from "react";
 
 export default function CourseBox({ course, isLocked, onReplace }) {
   return (
-    <div
+    <button
+      type="button"
       className={`course-box ${isLocked ? "course-box-locked" : ""}`}
-      onClick={isLocked ? undefined : onReplace}
+      onClick={onReplace}
+      disabled={isLocked}
+      aria-label={isLocked ? course.code : `Edit ${course.code}`}
     >
-      <div className="course-box-main">
-        <span className="course-code">{course.code}</span>
-      </div>
-    </div>
+      <span className="course-box-main"><span className="course-code">{course.code}</span></span>
+      {course.completed && <span className="course-completed-label">COMPLETED</span>}
+    </button>
   );
 }

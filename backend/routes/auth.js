@@ -1,12 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const { getCurriculum } = require("../plannerState");
+
+const validStudentId = (value) => typeof value === "string" && value.trim().length > 0 && value.length <= 100;
 
 
 router.post("/login", async (req, res) => {
-  const { studentId } = req.body;
+  const { studentId } = req.body || {};
 
-  if (!studentId) {
+  if (!validStudentId(studentId)) {
     return res.status(400).json({ error: "Student ID required" });
   }
 
@@ -29,9 +32,9 @@ router.post("/login", async (req, res) => {
 
 
 router.post("/set-stream", async (req, res) => {
-  const { studentId, stream } = req.body;
+  const { studentId, stream } = req.body || {};
 
-  if (!studentId || !stream) {
+  if (!validStudentId(studentId) || typeof stream !== "string" || !getCurriculum(stream)) {
     return res.status(400).json({ error: "studentId and stream required" });
   }
 
@@ -45,6 +48,9 @@ router.post("/set-stream", async (req, res) => {
       firstLogin: false,
     });
   } else {
+    if (user.stream !== stream) {
+      return res.status(409).json({ code: "STREAM_ALREADY_SELECTED", error: "Your saved plan belongs to a different stream. Changing an existing stream requires an explicit plan migration." });
+    }
     user.stream = stream;
     user.firstLogin = false;
   }

@@ -21,6 +21,8 @@ export default function CourseEditModal({
   onRemove,
   courses = [],
   modalContext,
+  disabled = false,
+  error = "",
   title = "Select a course",
 }) {
   const [search, setSearch] = useState("");
@@ -44,13 +46,7 @@ export default function CourseEditModal({
 
 
 
-  const disableRemove =
-    modalContext?.isTarc ||
-    modalContext?.semesterIndex === 0 ||
-    !(
-      modalContext?.status === "current" ||
-      modalContext?.status === "recommended"
-    );
+  const disableRemove = disabled || !modalContext?.canRemove;
 
 
 
@@ -106,9 +102,9 @@ export default function CourseEditModal({
 
   return !visible ? null : (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
-      <div className="modal-panel">
+      <div className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="course-edit-title">
         <div className="modal-header">
-          <h3 className="modal-title">{title}</h3>
+          <h3 className="modal-title" id="course-edit-title">{title}</h3>
         </div>
 
         <input
@@ -118,6 +114,7 @@ export default function CourseEditModal({
           onChange={(e) => setSearch(e.target.value)}
         />
 
+        {error && <p role="alert" className="planner-error">{error}</p>}
         <div className="modal-body scrollable">
           {filteredGroups.length > 0 ? (
             filteredGroups.map((group) => (
@@ -126,9 +123,10 @@ export default function CourseEditModal({
 
                 {group.courses.map((course) => (
                   <button
-                    key={course.code}
+                    key={course.occurrenceId}
                     className="course-select-btn"
                     onClick={() => onSelect(course)}
+                    disabled={disabled || course.is_tarc}
                   >
                     <span className="course-select-code">{course.code}</span>
 

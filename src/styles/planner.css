@@ -237,3 +237,84 @@
 .lock-pill-right {
   margin-left: 10px;
 }
+
+.planner-summary {
+  display: inline-block;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: #222;
+  color: #ddd;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.planner-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.balance-btn {
+  padding: 8px 14px;
+  background: #3a86ff;
+  border-radius: 6px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.planner-error {
+  color: #ff9696;
+  background: #321b1b;
+  border: 1px solid #643333;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.planner-notice {
+  color: #eed499;
+  background: #302a1b;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.planner-save-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: #b7c4d4;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.planner-container button:disabled,
+.modal-panel button:disabled,
+.confirm-box button:disabled {
+  cursor: default;
+}
+
+.planner-container button:disabled:not(.course-box),
+.modal-panel button:disabled,
+.confirm-box button:disabled {
+  opacity: 0.5;
+}
+
+.course-box,
+.status-col {
+  font-family: inherit;
+}
+
+button.status-col {
+  border: none;
+}
+
+.course-completed-label {
+  margin-left: 8px;
+  color: #63ff7a;
+  font-size: 10px;
+  font-weight: 600;
+}

@@ -5,6 +5,8 @@ const { once } = require("node:events");
 const database = require("../db");
 const User = require("../models/User");
 const app = require("../../api");
+const { createDefaultState } = require("../../src/engine/plannerState.mjs");
+const { getCurriculum } = require("../plannerState");
 
 let server;
 let baseUrl;
@@ -60,23 +62,27 @@ test("first login and stream selection retain the default-plan behavior", async 
 });
 
 test("a saved personalized plan is returned on a later login", async () => {
-  const user = { studentId: "test-student", currentSemester: 2, customPlan: null };
+  const user = { studentId: "test-student", stream: "ENG101 + MAT110", currentSemester: 1, customPlan: null, plannerVersion: 0 };
   mock.method(User, "findOneAndUpdate", async (filter, update) => {
-    assert.deepEqual(filter, { studentId: user.studentId });
+    assert.equal(filter.studentId, user.studentId);
+    assert.deepEqual(filter.$or, [{ plannerVersion: 0 }, { plannerVersion: { $exists: false } }]);
     Object.assign(user, update.$set);
+    user.plannerVersion += update.$inc.plannerVersion;
     return user;
   });
   mock.method(User, "findOne", async () => user);
-  const plan = [{ semester: 1, courses: ["CSE110"] }, { semester: 2, courses: ["COD"] }];
+  const plannerState = createDefaultState(getCurriculum(user.stream));
+  plannerState.personalized = true;
   const saved = await post("/api/planner/save-plan", {
-    studentId: user.studentId, plan, codCount: 1, currentCourses: ["COD"],
+    studentId: user.studentId, plannerState, expectedVersion: 0, mutationId: "first-save",
   });
   assert.equal(saved.status, 200);
   const login = await post("/api/auth/login", { studentId: user.studentId });
   const result = await login.json();
-  assert.deepEqual(result.user.customPlan, plan);
-  assert.equal(result.user.codCount, 1);
-  assert.deepEqual(result.user.currentCourses, ["COD"]);
+  assert.deepEqual(result.user.plannerState, plannerState);
+  assert.equal(result.user.plannerVersion, 1);
+  assert.equal(result.user.codCount, 5);
+  assert.deepEqual(result.user.currentCourses, ["CSE110", "MAT110", "ENG101", "PHY111"]);
 });
 
 test("database failures return retryable JSON without querying user data", async () => {

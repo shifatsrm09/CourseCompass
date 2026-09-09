@@ -1,607 +1,151 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import "../../styles/planner.css";
 import thesisPlan from "../../data/thesisPlan.json";
-
-import streamsConfig, {
-  DEFAULT_STREAM_ID,
-} from "../../data/streamsConfig";
-
+import { getSemesterStatus } from "../../engine/plannerState.mjs";
+import usePlanner from "../../engine/usePlanner";
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
 
-import {
-  validateAddCourse,
-  validateCourseForSemester,
-} from "../../engine/engine";
-
-import { reinsertRemovedCourse } from "../../engine/removeEngine";
-import { balanceFutureSemesters } from "../../engine/balanceEngine";
-import { API_BASE } from "../../api";
-
-
-
-
-
-const getBasePlanForStream = (streamId) => {
-  const id = streamsConfig[streamId] ? streamId : DEFAULT_STREAM_ID;
-  return streamsConfig[id].plan;
-};
-
-
-const buildSlotsFromFlatPlan = (flat = []) => {
-  const bySemester = {};
-
-  flat.forEach((course) => {
-    const sem = course.semester_row;
-    if (sem == null) return;
-    if (!bySemester[sem]) bySemester[sem] = [];
-    bySemester[sem].push({ ...course });
-  });
-
-  return Object.keys(bySemester)
-    .sort((a, b) => Number(a) - Number(b))
-    .map((semStr) => {
-      const sem = Number(semStr);
-      const semesterCourses = bySemester[sem].map((c) => ({ ...c }));
-      const thesis = thesisPlan.find((t) => t.semester_row === sem) || null;
-
-      return {
-        id: `sem-${sem}`,
-        originalRow: sem,
-        courses: semesterCourses,
-        isTarc: semesterCourses.some((c) => c.is_tarc),
-        thesis,
-      };
-    });
-};
-
-
-const buildSlotsFromCustomPlan = (customPlan = [], allCourses = []) => {
-  if (!Array.isArray(customPlan) || !Array.isArray(allCourses)) {
-    return { slots: [], matchRatio: 0 };
-  }
-
-  let totalRequested = 0;
-  let totalMatched = 0;
-
-  const slots = customPlan.map((p) => {
-    const desiredCodes = Array.isArray(p.courses) ? p.courses : [];
-    totalRequested += desiredCodes.length;
-
-    const rowCourses = allCourses.filter((c) => desiredCodes.includes(c.code));
-    totalMatched += rowCourses.length;
-
-    const deepCourses = rowCourses.map((c) => ({ ...c }));
-    const thesis = thesisPlan.find((t) => t.semester_row === p.semester) || null;
-
-    return {
-      id: `sem-${p.semester}`,
-      originalRow: p.semester,
-      courses: deepCourses,
-      isTarc: deepCourses.some((c) => c.is_tarc),
-      thesis,
-    };
-  });
-
-  const matchRatio =
-    totalRequested === 0 ? 1 : totalMatched / totalRequested;
-
-  return { slots, matchRatio };
-};
-
-
-
-
-
-export default function CoursePlanner({
-  user,
-  setUser,
-  orderedCourses,
-  currentSemester,
-  setCurrentSemester,
-  allCourses = [],
-}) {
-  const [showModal, setShowModal] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [modalCourses, setModalCourses] = useState([]);
+export default function CoursePlanner({ user, setUser, curriculum }) {
+  const planner = usePlanner({ user, setUser, curriculum });
+  const { state, dispatch, blocked, saveStatus } = planner;
+  const [completionSemester, setCompletionSemester] = useState(null);
   const [modalContext, setModalContext] = useState(null);
 
+  const slots = useMemo(() => (state?.semesters || []).map((semester) => ({
+    ...semester,
+    courses: semester.courses.map((instance) => ({
+      ...curriculum.byId.get(instance.occurrenceId),
+      ...instance,
+      completed: curriculum.byId.get(instance.occurrenceId)?.code !== "COD" && state.completedCourses.includes(curriculum.byId.get(instance.occurrenceId)?.code),
+    })),
+    thesis: thesisPlan.find((item) => item.semester_row === semester.originalRow) || null,
+  })), [state, curriculum]);
 
-
-
-  const [semesterSlots, setSemesterSlots] = useState(() => {
-    const hasCustom =
-      Array.isArray(user.customPlan) && user.customPlan.length > 0;
-
-    if (!hasCustom) {
-      return buildSlotsFromFlatPlan(getBasePlanForStream(user.stream));
-    }
-
-    if (!Array.isArray(allCourses) || allCourses.length === 0) {
-      return [];
-    }
-
-    const { slots, matchRatio } = buildSlotsFromCustomPlan(
-      user.customPlan,
-      allCourses
-    );
-
-    if (matchRatio < 0.5) {
-      return buildSlotsFromFlatPlan(getBasePlanForStream(user.stream));
-    }
-
-    return slots;
-  });
-
-
-
-
-  useEffect(() => {
-    const hasCustom =
-      Array.isArray(user.customPlan) && user.customPlan.length > 0;
-
-    if (!hasCustom) return;
-    if (!Array.isArray(allCourses) || allCourses.length === 0) return;
-
-    const { slots, matchRatio } = buildSlotsFromCustomPlan(
-      user.customPlan,
-      allCourses
-    );
-
-    if (matchRatio < 0.5) {
-      setSemesterSlots(buildSlotsFromFlatPlan(getBasePlanForStream(user.stream)));
-      return;
-    }
-
-    setSemesterSlots(slots);
-  }, [user.customPlan, allCourses, user.stream]);
-
-
-
-
-  useEffect(() => {
-    if (!user.stream) return;
-
-    const hasCustom =
-      Array.isArray(user.customPlan) && user.customPlan.length > 0;
-
-    if (!hasCustom) {
-      setSemesterSlots(buildSlotsFromFlatPlan(getBasePlanForStream(user.stream)));
-    }
-  }, [user.stream, user.customPlan]);
-
-
-
-
-  const getStatus = (index) => {
-    const safe = currentSemester || 1;
-    if (index < safe - 1) return "completed";
-    if (index === safe - 1) return "current";
-    if (index === safe) return "recommended";
-    return "locked";
-  };
-
-
-
-
-  const buildPlanFromSlots = (slots) =>
-    slots.map((slot) => ({
-      semester: slot.originalRow,
-      courses: (slot.courses || []).map((c) => c.code),
-    }));
-
-  const updateUserPlanInState = (slots) => {
-    const newCustomPlan = buildPlanFromSlots(slots);
-    const newSemesterOrder = slots.map((slot) => slot.originalRow);
-
-    const updatedUser = {
-      ...user,
-      customPlan: newCustomPlan,
-      semesterOrder: newSemesterOrder,
-      firstLogin: false,
-    };
-
-    setUser(updatedUser);
-
-    localStorage.setItem(
-      "courseCompassUser",
-      JSON.stringify({ user: updatedUser })
-    );
-  };
-
-  const syncPlanToServer = async (slots) => {
-    const plan = buildPlanFromSlots(slots);
-
-    const codCount = plan.reduce(
-      (acc, sem) =>
-        acc + sem.courses.filter((code) => code === "COD").length,
-      0
-    );
-
-    const currentRow = currentSemester || 1;
-    const currentSlot = slots.find((s) => s.originalRow === currentRow);
-    const currentCourses = currentSlot
-      ? (currentSlot.courses || []).map((c) => c.code)
-      : [];
-
-    await fetch(`${API_BASE}/planner/save-plan`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: user.studentId,
-        plan,
-        codCount,
-        currentCourses,
-      }),
+  const selectedSlot = slots.find((slot) => slot.id === modalContext?.semesterId);
+  const modalCourses = useMemo(() => {
+    if (!selectedSlot) return [];
+    const usedIds = new Set(selectedSlot.courses.map((course) => course.occurrenceId));
+    const hasCod = selectedSlot.courses.some((course) => course.code === "COD");
+    const frozenIds = new Set(state.semesters.slice(0, state.currentSemester).flatMap((semester) => semester.courses.map((course) => course.occurrenceId)));
+    const firstCod = curriculum.byCode.get("COD")?.[0]?.occurrenceId;
+    return Array.from(curriculum.byId.values()).filter((course) => {
+      if (course.code === "COD") return course.occurrenceId === firstCod && !hasCod;
+      return !usedIds.has(course.occurrenceId) && !frozenIds.has(course.occurrenceId) && !state.completedCourses.includes(course.code);
     });
+  }, [selectedSlot, curriculum, state]);
+
+  const getStatus = (index) => getSemesterStatus(state, index);
+  const canEdit = (index, slot) => !blocked && index >= state.currentSemester && !slot.isTarc;
+  const closeEditModal = () => setModalContext(null);
+
+  const openAdd = (semesterId) => {
+    const index = slots.findIndex((slot) => slot.id === semesterId);
+    if (index < 0 || !canEdit(index, slots[index])) return;
+    planner.clearError();
+    setModalContext({ mode: "add", semesterId, canRemove: false });
   };
 
-
-
-
-  const handleBalance = () => {
-    if (!user.customPlan || user.firstLogin) {
-      alert(
-        "This is the official BRAC sequence.\nAuto-balance becomes available after any edit or completing a semester."
-      );
-      return;
-    }
-
-    setSemesterSlots((prev) => {
-      const balanced = balanceFutureSemesters({
-        semesterSlots: prev,
-        currentSemester,
-        completedCourses: user.completedCourses || [],
-      });
-
-      syncPlanToServer(balanced);
-      updateUserPlanInState(balanced);
-      return balanced;
-    });
+  const openReplace = (semesterId, instanceId) => {
+    const index = slots.findIndex((slot) => slot.id === semesterId);
+    if (index < 0 || !canEdit(index, slots[index])) return;
+    const course = slots[index].courses.find((item) => item.instanceId === instanceId);
+    if (!course || course.completed) return;
+    planner.clearError();
+    setModalContext({ mode: "replace", semesterId, instanceId, code: course.code, canRemove: true });
   };
 
-
-
-
-  const openPrompt = () => setShowModal(true);
-  const cancelComplete = () => setShowModal(false);
-
-  const confirmComplete = async () => {
-    setShowModal(false);
-
-    const res = await fetch(`${API_BASE}/planner/complete-semester`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: user.studentId }),
-    });
-
-    const data = await res.json();
-    if (!data.success) {
-      alert("Error: " + data.error);
-      return;
-    }
-
-    setCurrentSemester(data.user.currentSemester, data.user);
-  };
-
-
-
-
-  const canModify = (index, slot) => {
-    const status = getStatus(index);
-    if (slot.isTarc) return false;
-    return status === "current" || status === "recommended";
-  };
-
-  const canRemove = (index, slot) => {
-    const status = getStatus(index);
-    if (slot.isTarc) return false;
-    return status === "current" || status === "recommended";
-  };
-
-
-
-
-
-  const openAddCourseModal = (semesterIndex) => {
-    const slot = semesterSlots[semesterIndex];
-    if (!slot || !canModify(semesterIndex, slot)) return;
-
-    const usedCodes = new Set((slot.courses || []).map((c) => c.code));
-
-    const selectable = allCourses.filter(
-      (c) => c.code === "COD" || !usedCodes.has(c.code)
-    );
-
-    setModalCourses(selectable);
-    setModalContext({
-      mode: "add",
-      semesterIndex,
-      status: getStatus(semesterIndex),
-      isTarc: slot.isTarc,
-    });
-    setEditModalVisible(true);
-  };
-
-  const openReplaceCourseModal = (semesterIndex, courseIndex) => {
-    const slot = semesterSlots[semesterIndex];
-    if (!slot || !canModify(semesterIndex, slot)) return;
-
-    const usedCodes = new Set(
-      (slot.courses || []).map((c, i) => (i === courseIndex ? null : c.code))
-    );
-
-    const selectable = allCourses.filter(
-      (c) => c.code === "COD" || !usedCodes.has(c.code)
-    );
-
-    setModalCourses(selectable);
-    setModalContext({
-      mode: "replace",
-      semesterIndex,
-      courseIndex,
-      status: getStatus(semesterIndex),
-      isTarc: slot.isTarc,
-    });
-    setEditModalVisible(true);
-  };
-
-  const handleRemoveCourse = () => {
+  const selectCourse = (course) => {
     if (!modalContext) return;
-
-    const { semesterIndex, courseIndex } = modalContext;
-    const slot = semesterSlots[semesterIndex];
-
-    if (!slot || !canRemove(semesterIndex, slot)) return;
-
-    setSemesterSlots((prev) => {
-      const slots = prev.map((s) => ({
-        ...s,
-        courses: Array.isArray(s.courses)
-          ? s.courses.map((c) => ({ ...c }))
-          : [],
-      }));
-
-      const removedCourse = slots[semesterIndex].courses[courseIndex];
-      slots[semesterIndex].courses.splice(courseIndex, 1);
-
-      const rebalanced = reinsertRemovedCourse({
-        semesterSlots: slots,
-        removedCourse,
-        fromSemesterIndex: semesterIndex,
-        completedCourses: user.completedCourses || [],
-        maxCoursesPerSemester: 5,
-        maxCodPerSemester: 1,
-      });
-
-      syncPlanToServer(rebalanced);
-      updateUserPlanInState(rebalanced);
-
-      return rebalanced;
-    });
-
-    closeEditModal();
+    if (dispatch({
+      type: modalContext.mode === "add" ? "ADD_COURSE" : "REPLACE_COURSE",
+      semesterId: modalContext.semesterId,
+      instanceId: modalContext.instanceId,
+      occurrenceId: course.occurrenceId,
+    })) closeEditModal();
   };
 
+  const removeCourse = () => {
+    if (modalContext && dispatch({
+      type: "REMOVE_COURSE",
+      semesterId: modalContext.semesterId,
+      instanceId: modalContext.instanceId,
+    })) closeEditModal();
+  };
 
-
-
-  const handleCourseSelected = (course) => {
-    if (!modalContext) return;
-
-    const { mode, semesterIndex, courseIndex } = modalContext;
-    const slot = semesterSlots[semesterIndex];
-    if (!slot) return;
-
-    const isCod = course.code === "COD";
-
-
-
-
-    if (mode === "add") {
-      const result = validateAddCourse({
-        semesterIndex,
-        courseToAdd: course,
-        semesterSlots,
-        currentSemester,
-        completedCourses: user.completedCourses || [],
-        maxCoursesPerSemester: 5,
-        maxCodAllowed: 5,
-      });
-
-      if (!result.ok) {
-        alert(result.reason || "You cannot add this course here.");
-        return;
-      }
+  const completeSemester = () => {
+    if (dispatch({ type: "COMPLETE_SEMESTER", semesterId: completionSemester })) {
+      setCompletionSemester(null);
     }
-
-
-
-
-    if (mode === "replace") {
-      const result = validateCourseForSemester({
-        semesterIndex,
-        course,
-        semesterSlots,
-        currentSemester,
-        completedCourses: user.completedCourses || [],
-        maxCoursesPerSemester: 5,
-        maxCodAllowed: 5,
-        mode: "replace",
-      });
-
-      if (!result.ok) {
-        alert(result.reason || "You cannot place this course here.");
-        return;
-      }
-    }
-
-
-
-
-    setSemesterSlots((prev) => {
-      const slots = prev.map((s) => ({
-        ...s,
-        courses: Array.isArray(s.courses)
-          ? s.courses.map((c) => ({ ...c }))
-          : [],
-      }));
-
-      const targetSlot = slots[semesterIndex];
-      if (!targetSlot) return prev;
-
-      if (mode === "add") {
-        if (isCod) {
-          if ((targetSlot.courses || []).length >= 5) return prev;
-          const hasCOD = (targetSlot.courses || []).some(
-            (c) => c.code === "COD"
-          );
-          if (hasCOD) return prev;
-
-          let futureIndex = -1;
-          for (let i = semesterIndex + 1; i < slots.length; i++) {
-            if ((slots[i].courses || []).some((c) => c.code === "COD")) {
-              futureIndex = i;
-              break;
-            }
-          }
-
-          let codToInsert = course;
-          if (futureIndex !== -1) {
-            const pos = slots[futureIndex].courses.findIndex(
-              (c) => c.code === "COD"
-            );
-            codToInsert = slots[futureIndex].courses[pos];
-            slots[futureIndex].courses.splice(pos, 1);
-          }
-
-          targetSlot.courses.push(codToInsert);
-        } else {
-          if ((targetSlot.courses || []).length >= 5) return prev;
-          targetSlot.courses.push(course);
-
-          for (let i = semesterIndex + 1; i < slots.length; i++) {
-            if (!slots[i].isTarc) {
-              slots[i].courses = slots[i].courses.filter(
-                (c) => c.code !== course.code
-              );
-            }
-          }
-        }
-      } else if (mode === "replace") {
-        const updated = [...targetSlot.courses];
-        updated[courseIndex] = course;
-        targetSlot.courses = updated;
-
-        if (!isCod) {
-          for (let i = semesterIndex + 1; i < slots.length; i++) {
-            if (!slots[i].isTarc) {
-              slots[i].courses = slots[i].courses.filter(
-                (c) => c.code !== course.code
-              );
-            }
-          }
-        }
-      }
-
-      syncPlanToServer(slots);
-      updateUserPlanInState(slots);
-      return slots;
-    });
-
-    closeEditModal();
   };
 
-  const closeEditModal = () => {
-    setEditModalVisible(false);
-    setModalContext(null);
-    setModalCourses([]);
-  };
-
-
-
-
-
-  const totalCoursesDisplayed = semesterSlots.reduce(
-    (sum, sem) => sum + (sem.courses?.length || 0),
-    0
-  );
-
-  const expectedCount =
-    streamsConfig[user.stream]?.expectedCount ??
-    streamsConfig[DEFAULT_STREAM_ID].expectedCount;
-
-
-
+  const recoveryNeeded = ["error", "conflict", "pending"].includes(saveStatus.kind);
+  const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
   return (
     <div className="planner-container dark-container">
       <h2 className="planner-title">Course Planner</h2>
-
-      {                                                     }
-      {                                }
-      {                                                     }
-      <div
-        style={{
-          marginBottom: "12px",
-          background: "#222",
-          padding: "8px 12px",
-          display: "inline-block",
-          borderRadius: "6px",
-          fontWeight: 600,
-          fontSize: "14px",
-          color: "#ddd",
-        }}
-      >
-        Total Courses:{" "}
-        <span
-          style={{
-            color:
-              totalCoursesDisplayed === expectedCount
-                ? "#4ade80"
-                : "#f87171",
-          }}
-        >
-          {totalCoursesDisplayed}
-        </span>{" "}
-        / {expectedCount}
-      </div>{" "}
-      Total : 45 (Thesis)
-
+      <div className="planner-summary">Total Courses: {totalCourses}</div>
+      {planner.error && <p role="alert" className="planner-error">{planner.error}</p>}
+      {planner.warnings.length > 0 && (
+        <div className="planner-notice" role="status">
+          {planner.warnings.map((warning, index) => <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>)}
+        </div>
+      )}
+      <div className="planner-save-state" role={recoveryNeeded ? "alert" : "status"} aria-live="polite">
+        {saveStatus.message && <span>{saveStatus.message}</span>}
+        {["error", "pending"].includes(saveStatus.kind) && (
+          <button type="button" className="cancel-btn" onClick={planner.retrySave}>Retry save</button>
+        )}
+        {(recoveryNeeded || (blocked && !planner.reloadBusy)) && (
+          <button type="button" className="cancel-btn" onClick={planner.reloadSavedPlan} disabled={planner.reloadBusy}>
+            Load saved plan (discard unsaved changes)
+          </button>
+        )}
+        {planner.reloadBusy && <span>Loading saved plan…</span>}
+      </div>
+      {state?.unplaced?.length > 0 && (
+        <div className="planner-notice" role="status">
+          <p>Courses awaiting a valid semester. Use Auto Balance to place them.</p>
+          <div className="courses-col">
+            {state.unplaced.map((instance) => <span className="course-box" key={instance.instanceId}>
+              {curriculum.byId.get(instance.occurrenceId)?.code || instance.occurrenceId}
+            </span>)}
+          </div>
+        </div>
+      )}
+      {state && (
+        <SemesterList
+          semesterSlots={slots}
+          getStatus={getStatus}
+          canEdit={canEdit}
+          blocked={blocked}
+          onComplete={(semesterId) => { planner.clearError(); setCompletionSemester(semesterId); }}
+          onAdd={openAdd}
+          onReplace={openReplace}
+          onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
+          onBalance={() => dispatch({ type: "REBALANCE" })}
+        />
+      )}
       <ConfirmModal
-        visible={showModal}
-        onConfirm={confirmComplete}
-        onCancel={cancelComplete}
-        semester={currentSemester || 1}
+        visible={Boolean(completionSemester)}
+        onConfirm={completeSemester}
+        onCancel={() => setCompletionSemester(null)}
+        semester={slots.findIndex((slot) => slot.id === completionSemester) + 1}
+        disabled={blocked}
+        error={planner.error}
       />
-
-      <SemesterList
-        semesterSlots={semesterSlots}
-        setSemesterSlots={setSemesterSlots}
-        getStatus={getStatus}
-        openPrompt={openPrompt}
-        openAddCourseModal={openAddCourseModal}
-        openReplaceCourseModal={openReplaceCourseModal}
-        currentSemester={currentSemester}
-        user={user}
-        setUser={setUser}
-        updateUserPlanInState={updateUserPlanInState}
-        syncPlanToServer={syncPlanToServer}
-        onBalance={handleBalance}
-      />
-
       <CourseEditModal
-        visible={editModalVisible}
+        visible={Boolean(modalContext)}
         onClose={closeEditModal}
-        onSelect={handleCourseSelected}
-        onRemove={handleRemoveCourse}
+        onSelect={selectCourse}
+        onRemove={removeCourse}
         courses={modalCourses}
         modalContext={modalContext}
-        title={
-          modalContext?.mode === "add" ? "Add a course" : "Replace course"
-        }
+        disabled={blocked}
+        error={planner.error}
+        title={modalContext?.mode === "add" ? "Add a course" : `Replace ${modalContext?.code || "course"}`}
       />
     </div>
   );

@@ -60,6 +60,9 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  plannerState: { type: mongoose.Schema.Types.Mixed, default: null },
+  plannerVersion: { type: Number, default: 0, min: 0 },
+  lastPlannerMutationId: { type: String, default: null },
 });
 
 module.exports = mongoose.model("User", userSchema);
