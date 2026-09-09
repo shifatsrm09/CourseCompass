@@ -24,7 +24,6 @@ export default function SemesterRow({
   onCourseContextMenu,
 }) {
   const isCurrent = status === "current";
-  const isPreThesis = slot.thesis?.title.startsWith("Pre-Thesis");
 
   return (
     <div
@@ -57,8 +56,8 @@ export default function SemesterRow({
                 TARC
               </span>
             )}
-            {isPreThesis && (
-              <span className="whitespace-nowrap rounded-full border border-red-800 bg-red-950/40 px-2 py-1 text-[10px] font-medium text-red-400 sm:hidden">
+            {slot.thesis && (
+              <span className="whitespace-nowrap rounded-full border border-red-800 bg-red-950/40 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-red-400 sm:hidden">
                 {slot.thesis.title}
               </span>
             )}
@@ -113,7 +112,7 @@ export default function SemesterRow({
             )}
           </div>
           {slot.thesis && (
-            <span className={`max-w-full self-start break-words rounded-lg border border-red-800 bg-red-950/40 px-2.5 py-1.5 text-xs text-red-400 sm:px-3 sm:text-sm ${isPreThesis ? "hidden sm:inline" : ""}`}>
+            <span className="hidden max-w-full self-start break-words rounded-lg border border-red-800 bg-red-950/40 px-3 py-1.5 text-sm text-red-400 sm:inline">
               {slot.thesis.title}
             </span>
           )}
