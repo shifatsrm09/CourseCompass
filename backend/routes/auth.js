@@ -41,7 +41,7 @@ router.post("/login", async (req, res) => {
 
 
 router.post("/set-stream", async (req, res) => {
-  const { studentId, stream, startTerm } = req.body || {};
+  const { studentId, stream, startTerm, confirmMigration } = req.body || {};
 
   if (!validStudentId(studentId) || typeof stream !== "string" || !await getCurriculum(stream)) {
     return res.status(400).json({ error: "studentId and stream required" });
@@ -54,12 +54,49 @@ router.post("/set-stream", async (req, res) => {
       return res.status(400).json({ code: "INVALID_START_TERM", error: "Please select the season and year of your first semester." });
     }
 
+    if (confirmMigration === true) {
+      return res.status(404).json({ code: "USER_NOT_FOUND", error: "Student account not found. Log in again." });
+    }
+
     user = new User({
       studentId,
       stream,
       startTerm: { season: startTerm.season, year: startTerm.year },
       firstLogin: false,
     });
+  } else if (confirmMigration === true) {
+    if (!validStartTerm(startTerm)) {
+      return res.status(400).json({ code: "INVALID_START_TERM", error: "Please select the season and year of your first semester." });
+    }
+
+    const version = user.plannerVersion ?? 0;
+    const versionFilter = version === 0
+      ? { $or: [{ plannerVersion: 0 }, { plannerVersion: { $exists: false } }] }
+      : { plannerVersion: version };
+    user = await User.findOneAndUpdate(
+      { studentId, stream: user.stream, ...versionFilter },
+      {
+        $set: {
+          stream,
+          startTerm: { season: startTerm.season, year: startTerm.year },
+          firstLogin: false,
+          currentSemester: 1,
+          semesterOrder: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+          completedCourses: [],
+          currentCourses: [],
+          customPlan: null,
+          codCount: 0,
+          plannerState: null,
+          lastPlannerMutationId: null,
+        },
+        $inc: { plannerVersion: 1 },
+      },
+      { new: true, runValidators: true }
+    );
+    if (!user) {
+      return res.status(409).json({ code: "PLANNER_VERSION_CONFLICT", error: "Your plan changed while restarting. Please retry." });
+    }
+    return res.json({ success: true, message: "Plan changed successfully", user });
   } else {
     if (user.stream !== stream) {
       return res.status(409).json({ code: "STREAM_ALREADY_SELECTED", error: "Your saved plan belongs to a different stream. Changing an existing stream requires an explicit plan migration." });

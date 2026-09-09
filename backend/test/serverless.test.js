@@ -54,6 +54,7 @@ test("first login and stream selection retain the default-plan behavior", async 
   const selection = await post("/api/auth/set-stream", {
     studentId: "test-student",
     stream: "ENG101 + MAT110",
+    startTerm: { season: "Spring", year: 2024 },
   });
   const result = await selection.json();
   assert.equal(selection.status, 200);

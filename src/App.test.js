@@ -31,6 +31,44 @@ test('renders the Course Compass login', () => {
   expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
 });
 
+test('settings change plan supports cancel, failed save, and a fresh saved plan', async () => {
+  const originalFetch = global.fetch;
+  const savedUser = { studentId: 'change-student', stream: 'ENG101 + MAT110', currentSemester: 4, plannerVersion: 6 };
+  const freshUser = { ...savedUser, stream: 'ENG091 + MAT092', currentSemester: 1, plannerState: null, customPlan: null,
+    completedCourses: [], plannerVersion: 7, startTerm: { season: 'Fall', year: 2025 } };
+  localStorage.setItem('courseCompassUser', JSON.stringify({ user: savedUser }));
+  global.fetch = jest.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ user: savedUser }) })
+    .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Please retry.' }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ user: freshUser }) });
+  try {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Account settings' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Change Plan' }));
+    expect(screen.getByRole('heading', { name: 'Change Your Plan' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Complete Semester 4' })).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Account settings' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Change Plan' }));
+    sessionStorage.setItem('courseCompassDraft:change-student', 'old draft');
+    fireEvent.change(screen.getByLabelText('Stream'), { target: { value: freshUser.stream } });
+    fireEvent.change(screen.getByLabelText('First semester season'), { target: { value: 'Fall' } });
+    fireEvent.change(screen.getByLabelText('First semester year'), { target: { value: '2025' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace my plan' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please retry.');
+    expect(sessionStorage.getItem('courseCompassDraft:change-student')).toBe('old draft');
+    fireEvent.click(screen.getByRole('button', { name: 'Replace my plan' }));
+    expect(await screen.findByRole('button', { name: 'Complete Semester 1' })).toBeInTheDocument();
+    expect(sessionStorage.getItem('courseCompassDraft:change-student')).toBeNull();
+    expect(JSON.parse(localStorage.getItem('courseCompassUser')).user).toEqual(freshUser);
+    expect(JSON.parse(global.fetch.mock.calls[2][1].body)).toMatchObject({ confirmMigration: true, stream: freshUser.stream });
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('cached sessions load the database plan before showing the dashboard', async () => {
   const originalFetch = global.fetch;
   localStorage.setItem('courseCompassUser', JSON.stringify({ user: {
@@ -41,11 +79,11 @@ test('cached sessions load the database plan before showing the dashboard', asyn
   try {
     render(<App />);
     expect(screen.getByRole('status')).toHaveTextContent('Loading your saved plan');
-    expect(screen.queryByText('Welcome, cached-student')).not.toBeInTheDocument();
+    expect(screen.queryByText('cached-student')).not.toBeInTheDocument();
     resolve({ ok: true, json: async () => ({ user: {
       studentId: 'cached-student', stream: 'ENG101 + MAT110', currentSemester: 4,
     } }) });
-    expect(await screen.findByText('Welcome, cached-student')).toBeInTheDocument();
+    expect(await screen.findByText('cached-student')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Complete Semester 4' })).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(1);
   } finally {

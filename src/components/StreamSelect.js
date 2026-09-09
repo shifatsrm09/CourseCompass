@@ -4,7 +4,8 @@ import streamsConfig from "../data/streamsConfig";
 
 const SEASONS = ["Spring", "Summer", "Fall"];
 
-export default function StreamSelect({ studentId, onUpdate }) {
+export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel }) {
+  const isChange = mode === "change";
   const [stream, setStream] = useState("");
   const [season, setSeason] = useState("");
   const [year, setYear] = useState("");
@@ -41,7 +42,12 @@ export default function StreamSelect({ studentId, onUpdate }) {
       const response = await fetch(`${API_BASE}/auth/set-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, stream, startTerm: { season, year: Number(year) } }),
+        body: JSON.stringify({
+          studentId,
+          stream,
+          startTerm: { season, year: Number(year) },
+          ...(isChange ? { confirmMigration: true } : {}),
+        }),
       });
       const data = await readApiResponse(response);
       if (!mounted.current) return;
@@ -77,10 +83,20 @@ export default function StreamSelect({ studentId, onUpdate }) {
             </svg>
           </div>
           <div>
-            <h2 className="text-xl font-bold leading-tight text-neutral-50 sm:text-2xl">Select Your Stream</h2>
-            <p className="mt-0.5 text-sm text-neutral-400">This sets the default curriculum for your plan.</p>
+            <h2 className="text-xl font-bold leading-tight text-neutral-50 sm:text-2xl">
+              {isChange ? "Change Your Plan" : "Select Your Stream"}
+            </h2>
+            <p className="mt-0.5 text-sm text-neutral-400">
+              {isChange ? "Pick a stream and starting term to restart your plan." : "This sets the default curriculum for your plan."}
+            </p>
           </div>
         </div>
+
+        {isChange && (
+          <p className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2.5 text-sm text-amber-200">
+            Saving here replaces your current stream and wipes your existing progress and plan, just like a brand-new account. This can't be undone.
+          </p>
+        )}
 
         <div className="flex flex-col gap-3">
           <div>
@@ -192,12 +208,27 @@ export default function StreamSelect({ studentId, onUpdate }) {
             type="button"
             onClick={saveStream}
             disabled={!stream || !season || !year || busy}
-            className="mt-1 inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-indigo-600"
+            className={`mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-default disabled:opacity-50 ${
+              isChange
+                ? "bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:hover:bg-red-600"
+                : "bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:hover:bg-indigo-600"
+            }`}
           >
-            {busy ? "Saving…" : "Save Stream"}
+            {busy ? "Saving…" : isChange ? "Replace my plan" : "Save Stream"}
           </button>
 
-          <p className="text-center text-xs text-neutral-500">Please choose your correct stream. This can only be changed with a plan migration later.</p>
+          {isChange ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={busy}
+              className="inline-flex w-full items-center justify-center rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-default disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          ) : (
+            <p className="text-center text-xs text-neutral-500">You can start over with another stream using Change Plan in settings.</p>
+          )}
         </div>
       </div>
     </div>

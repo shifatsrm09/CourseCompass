@@ -267,6 +267,44 @@ test("new schema fields are additive and do not create a personalized plan", () 
   assert.equal(user.customPlan, null);
 });
 
+for (const newStream of [stream, "ENG091 + MAT092"]) {
+  test(`changing plan to ${newStream} clears progress and rejects old saves`, async () => {
+    const storage = storeUser({ ...defaultUser(), plannerVersion: 6, plannerState: defaultPlan(),
+      completedCourses: ["CSE110"], currentSemester: 3, lastPlannerMutationId: "old-save" });
+    const result = await post("auth/set-stream", {
+      studentId: "planner-test", stream: newStream, confirmMigration: true,
+      startTerm: { season: "Fall", year: 2025 },
+    });
+    assert.equal(result.status, 200);
+    const saved = storage.read();
+    assert.equal(saved.stream, newStream);
+    assert.equal(saved.plannerVersion, 7);
+    assert.equal(saved.plannerState, null);
+    assert.equal(saved.customPlan, null);
+    assert.equal(saved.currentSemester, 1);
+    assert.deepEqual(saved.completedCourses, []);
+    assert.deepEqual(saved.currentCourses, []);
+    assert.deepEqual(saved.startTerm, { season: "Fall", year: 2025 });
+    assert.equal(saved.lastPlannerMutationId, null);
+    assert.equal((await save(defaultPlan(), 6)).status, 409);
+    const login = await post("auth/login", { studentId: "planner-test" });
+    assert.deepEqual(login.body.user, saved);
+  });
+}
+
+test("invalid or unconfirmed plan changes preserve the saved plan", async () => {
+  const storage = storeUser({ ...defaultUser(), plannerState: defaultPlan() });
+  const before = storage.read();
+  for (const change of [
+    { confirmMigration: true, startTerm: { season: "Winter", year: 2025 } },
+    { confirmMigration: "true", startTerm: { season: "Fall", year: 2025 } },
+  ]) {
+    const result = await post("auth/set-stream", { studentId: "planner-test", stream: "ENG091 + MAT092", ...change });
+    assert.ok([400, 409].includes(result.status));
+    assert.deepEqual(storage.read(), before);
+  }
+});
+
 test("oversized planner requests are rejected before database access", async () => {
   const find = mock.method(User, "findOne", async () => null);
   const result = await post("planner/save-plan", {

@@ -3,10 +3,12 @@ import { API_BASE, readApiResponse } from "./api";
 import Login from "./components/Login";
 import StreamSelect from "./components/StreamSelect";
 import Dashboard from "./components/Dashboard";
+import { draftKey } from "./engine/plannerPersistence";
 
 function App() {
   const [user, setUser] = useState(null);
   const [needsStream, setNeedsStream] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
   const [tempStudentId, setTempStudentId] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
@@ -70,14 +72,17 @@ function App() {
   };
 
   const handleStreamSaved = (savedUser) => {
+    if (changingPlan) sessionStorage.removeItem(draftKey(savedUser.studentId));
     setUser(savedUser);
     setNeedsStream(false);
+    setChangingPlan(false);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("courseCompassUser");
     setUser(null);
     setNeedsStream(false);
+    setChangingPlan(false);
     setTempStudentId("");
     setSession({ loading: false, error: "" });
   };
@@ -113,8 +118,15 @@ function App() {
     </div>
   );
   if (!user && !needsStream) return <Login onLogin={handleLogin} />;
-  if (needsStream) return <StreamSelect studentId={tempStudentId} onUpdate={handleStreamSaved} />;
-  return <Dashboard user={user} setUser={setUser} onLogout={handleLogout} />;
+  if (needsStream || changingPlan) return (
+    <StreamSelect
+      studentId={changingPlan ? user.studentId : tempStudentId}
+      mode={changingPlan ? "change" : "create"}
+      onUpdate={handleStreamSaved}
+      onCancel={() => setChangingPlan(false)}
+    />
+  );
+  return <Dashboard user={user} setUser={setUser} onLogout={handleLogout} onChangePlan={() => setChangingPlan(true)} />;
 }
 
 export default App;

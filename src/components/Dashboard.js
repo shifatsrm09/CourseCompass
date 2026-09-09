@@ -5,7 +5,7 @@ import { buildCurriculum } from "../engine/plannerState.mjs";
 import { API_BASE, readApiResponse } from "../api";
 import { draftKey } from "../engine/plannerPersistence";
 
-export default function Dashboard({ user, setUser, onLogout }) {
+export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
   const curriculum = useMemo(() => {
     const stream = streamsConfig[user.stream];
     return stream ? buildCurriculum(stream.plan, user.stream) : null;
@@ -163,6 +163,17 @@ export default function Dashboard({ user, setUser, onLogout }) {
                 aria-label="Account settings menu"
                 className="absolute right-0 top-full z-30 mt-2 w-48 animate-fadeIn rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/50"
               >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); onChangePlan(); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-800"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+                    <path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" />
+                  </svg>
+                  Change Plan
+                </button>
                 <button
                   type="button"
                   role="menuitem"
