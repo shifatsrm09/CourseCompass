@@ -4,7 +4,7 @@ export default function CourseBox({ course, isLocked, onReplace, onContextMenu, 
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+      className={`inline-flex min-h-9 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 text-[10px] font-semibold leading-3 transition-colors sm:min-h-0 sm:flex-row sm:justify-start sm:gap-2 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm sm:leading-5 ${
         isLocked
           ? "cursor-default border-neutral-800 bg-neutral-900 text-neutral-200"
           : "cursor-pointer border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
@@ -14,9 +14,9 @@ export default function CourseBox({ course, isLocked, onReplace, onContextMenu, 
       disabled={isLocked}
       aria-label={isLocked ? course.code : `Edit ${course.code}`}
     >
-      <span>{course.code}</span>
+      <span className={`max-w-full break-words ${course.code.length > 8 ? "text-[8px] sm:text-sm" : ""}`}>{course.code}</span>
       {course.completed && !hideCompletedLabel && (
-        <span className="text-[11px] font-bold tracking-wide text-emerald-400">COMPLETED</span>
+        <span className="text-[7px] font-bold text-emerald-400 sm:text-[11px] sm:tracking-wide">COMPLETED</span>
       )}
     </button>
   );

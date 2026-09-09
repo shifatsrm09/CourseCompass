@@ -97,7 +97,7 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
   return (
     <div className="min-h-screen bg-neutral-950">
       <header className="sticky top-0 z-20 border-b border-white/10 bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-4">
+        <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 ring-1 ring-inset ring-indigo-500/30 sm:h-10 sm:w-10 sm:rounded-xl">
               <svg
@@ -120,15 +120,14 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
                 <span className="hidden sm:inline">Welcome, </span>
                 {user.studentId}
               </p>
-              <p className="mt-0.5 truncate text-[11px] text-neutral-400 sm:text-sm">
-                <span className="inline-flex max-w-full items-center truncate rounded-full bg-neutral-800 px-2 py-0.5 text-[10px] font-medium text-neutral-300 ring-1 ring-inset ring-neutral-700 sm:text-[11px]">
-                  {user.stream}
-                </span>
-              </p>
             </div>
           </div>
 
-          <div className="relative shrink-0">
+          <span className="inline-flex max-w-full items-center truncate rounded-full bg-neutral-800 px-2 py-0.5 text-[10px] font-medium text-neutral-300 ring-1 ring-inset ring-neutral-700 sm:text-[11px]">
+            {user.stream}
+          </span>
+
+          <div className="relative justify-self-end">
             <button
               type="button"
               ref={gearButtonRef}

@@ -86,11 +86,11 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
   return (
-    <div className="mx-auto max-w-3xl px-1 pb-10">
-      <h2 className="mb-5 text-center text-2xl font-bold text-neutral-50 sm:text-3xl">CSE Course Planner</h2>
+    <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1">
+      <h2 className="mb-4 text-center text-xl font-bold text-neutral-50 sm:mb-5 sm:text-3xl">CSE Course Planner</h2>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="inline-block rounded-lg bg-neutral-800 px-3 py-1.5 text-sm font-semibold text-neutral-200">
+        <span className="inline-block rounded-lg bg-neutral-800 px-2.5 py-1.5 text-xs font-semibold text-neutral-200 sm:px-3 sm:text-sm">
           Total Courses: {totalCourses}
         </span>
       </div>
