@@ -96,7 +96,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
                 style={{ colorScheme: "dark" }}
                 className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
               >
-                <option value="">Choose Stream</option>
+                <option value="" disabled hidden>Choose Stream</option>
                 {Object.values(streamsConfig).map((option) => (
                   <option key={option.id} value={option.id}>{option.label}</option>
                 ))}
@@ -131,7 +131,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
                   style={{ colorScheme: "dark" }}
                   className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
                 >
-                  <option value="">Season</option>
+                  <option value="" disabled hidden>Season</option>
                   {SEASONS.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
@@ -159,7 +159,7 @@ export default function StreamSelect({ studentId, onUpdate }) {
                   style={{ colorScheme: "dark" }}
                   className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
                 >
-                  <option value="">Year</option>
+                  <option value="" disabled hidden>Year</option>
                   {yearOptions.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
