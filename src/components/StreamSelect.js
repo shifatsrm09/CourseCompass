@@ -4,7 +4,7 @@ import streamsConfig from "../data/streamsConfig";
 
 const SEASONS = ["Spring", "Summer", "Fall"];
 
-export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel }) {
+export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel, connectImportToken = "" }) {
   const isChange = mode === "change";
   const [stream, setStream] = useState("");
   const [season, setSeason] = useState("");
@@ -47,6 +47,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
           stream,
           startTerm: { season, year: Number(year) },
           ...(isChange ? { confirmMigration: true } : {}),
+          ...(connectImportToken ? { connectImportToken } : {}),
         }),
       });
       const data = await readApiResponse(response);
@@ -95,6 +96,12 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
         {isChange && (
           <p className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2.5 text-sm text-amber-200">
             Saving here replaces your current stream and wipes your existing progress and plan, just like a brand-new account. This can't be undone.
+          </p>
+        )}
+
+        {connectImportToken && !isChange && (
+          <p className="mb-4 rounded-lg border border-emerald-900/60 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-200">
+            Signed in with Connect. Pick your stream and we'll fill in your completed courses automatically.
           </p>
         )}
 

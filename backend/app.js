@@ -3,6 +3,7 @@ const cors = require("cors");
 const database = require("./db");
 const authRoutes = require("./routes/auth");
 const plannerRoutes = require("./routes/planner");
+const connectRoutes = require("./routes/connect");
 
 const app = express();
 
@@ -23,6 +24,7 @@ async function requireDatabase(req, res, next) {
   }
 }
 
+app.use("/api/auth/connect", requireDatabase, connectRoutes);
 app.use("/api/auth", requireDatabase, authRoutes);
 app.use("/api/planner", requireDatabase, plannerRoutes);
 

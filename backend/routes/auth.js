@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const PendingConnectImport = require("../models/PendingConnectImport");
 const { getCurriculum } = require("../plannerState");
 
 const validStudentId = (value) => typeof value === "string" && value.trim().length > 0 && value.length <= 100;
@@ -58,11 +59,21 @@ router.post("/set-stream", async (req, res) => {
       return res.status(404).json({ code: "USER_NOT_FOUND", error: "Student account not found. Log in again." });
     }
 
+    let connectImport = null;
+    if (typeof req.body.connectImportToken === "string" && req.body.connectImportToken) {
+      connectImport = await PendingConnectImport.findOneAndDelete({ token: req.body.connectImportToken, studentId });
+    }
+
     user = new User({
       studentId,
       stream,
       startTerm: { season: startTerm.season, year: startTerm.year },
       firstLogin: false,
+      ...(connectImport ? {
+        completedCourses: connectImport.completedCourses,
+        currentSemester: connectImport.currentSemester,
+        gradesheetImport: connectImport.gradesheetImport,
+      } : {}),
     });
   } else if (confirmMigration === true) {
     if (!validStartTerm(startTerm)) {

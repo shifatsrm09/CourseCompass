@@ -12,6 +12,8 @@ function App() {
   const [changingPlan, setChangingPlan] = useState(false);
   const [importingGradesheet, setImportingGradesheet] = useState(false);
   const [tempStudentId, setTempStudentId] = useState("");
+  const [connectImportToken, setConnectImportToken] = useState("");
+  const [connectNotice, setConnectNotice] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
 
@@ -21,6 +23,46 @@ function App() {
     const restoreSession = async () => {
       setSession({ loading: true, error: "" });
       try {
+        const params = new URLSearchParams(window.location.search);
+        const connectStudentId = params.get("connectStudentId");
+        const connectToken = params.get("connectImportToken");
+        const connectError = params.get("connectError");
+        if (connectStudentId || connectError) {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+        if (connectError) {
+          const messages = {
+            CONNECT_NOT_CONFIGURED: "Login with Connect isn't set up yet — it needs a registered OAuth client from BRAC University IT.",
+            INVALID_CALLBACK: "The Connect login could not be verified. Please try again.",
+            TOKEN_EXCHANGE_FAILED: "Connect rejected the login attempt. Please try again.",
+            DEGREE_PROGRESS_FAILED: "Could not read your academic record from Connect.",
+            MISSING_STUDENT_ID: "Connect did not return your student ID. Please try again or use gradesheet import instead.",
+            CONNECT_SYNC_FAILED: "Syncing with Connect failed. Please try again.",
+          };
+          if (active) setConnectNotice(messages[connectError] || "Login with Connect failed. Please try again.");
+        }
+        if (connectStudentId) {
+          const response = await fetch(`${API_BASE}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ studentId: connectStudentId }),
+            signal: controller.signal,
+          });
+          const data = await readApiResponse(response);
+          if (!active) return;
+          if (!response.ok) throw new Error(data.error || "Could not load your account after Connect login.");
+          setTempStudentId(connectStudentId);
+          if (connectToken) setConnectImportToken(connectToken);
+          if (data.firstLogin || !data.user?.stream) {
+            setNeedsStream(true);
+          } else {
+            setUser(data.user);
+            setNeedsStream(false);
+          }
+          setSession({ loading: false, error: "" });
+          return;
+        }
+
         const saved = localStorage.getItem("courseCompassUser");
         if (!saved) {
           if (active) setSession({ loading: false, error: "" });
@@ -78,6 +120,7 @@ function App() {
     setUser(savedUser);
     setNeedsStream(false);
     setChangingPlan(false);
+    setConnectImportToken("");
   };
 
   const handleLogout = () => {
@@ -125,11 +168,19 @@ function App() {
     setNeedsStream(false);
     setImportingGradesheet(false);
   }} />;
-  if (!user && !needsStream) return <Login onLogin={handleLogin} onImportGradesheet={() => setImportingGradesheet(true)} />;
+  if (!user && !needsStream) return (
+    <Login
+      onLogin={handleLogin}
+      onImportGradesheet={() => setImportingGradesheet(true)}
+      connectNotice={connectNotice}
+      onDismissConnectNotice={() => setConnectNotice("")}
+    />
+  );
   if (needsStream || changingPlan) return (
     <StreamSelect
       studentId={changingPlan ? user.studentId : tempStudentId}
       mode={changingPlan ? "change" : "create"}
+      connectImportToken={changingPlan ? "" : connectImportToken}
       onUpdate={handleStreamSaved}
       onCancel={() => setChangingPlan(false)}
     />

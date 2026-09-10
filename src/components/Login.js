@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { API_BASE, readApiResponse } from "../api";
 
-export default function Login({ onLogin, onImportGradesheet }) {
+export default function Login({ onLogin, onImportGradesheet, connectNotice, onDismissConnectNotice }) {
   const [studentId, setStudentId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -79,6 +79,13 @@ export default function Login({ onLogin, onImportGradesheet }) {
           </div>
         </div>
 
+        {connectNotice && (
+          <p role="alert" className="mb-3 flex items-start justify-between gap-2 rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-sm text-red-300">
+            <span>{connectNotice}</span>
+            <button type="button" onClick={onDismissConnectNotice} aria-label="Dismiss" className="shrink-0 text-red-400 hover:text-red-200">✕</button>
+          </p>
+        )}
+
         <form onSubmit={handleLogin} className="flex flex-col gap-3">
           <div>
             <label htmlFor="student-id" className="mb-1.5 block text-sm font-medium text-neutral-300">
@@ -132,6 +139,13 @@ export default function Login({ onLogin, onImportGradesheet }) {
             </div>}
           </div>
         </div>
+        <a
+          href={`${API_BASE}/auth/connect/start`}
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 py-2.5 text-sm font-semibold text-neutral-200 hover:bg-neutral-700"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 12h6M12 9v6" /></svg>
+          Login with Connect
+        </a>
       </div>
     </div>
   );
