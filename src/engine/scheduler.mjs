@@ -131,7 +131,7 @@ function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new
       let codPlaced = false;
       for (const course of eligible) {
         const isCod = curriculum.byId.get(course.occurrenceId).code === "COD";
-        if (selected.size < 4 && !(isCod && codPlaced)) {
+        if (selected.size < 5 && !(isCod && codPlaced)) {
           selected.add(course.instanceId);
           codPlaced ||= isCod;
         } else {

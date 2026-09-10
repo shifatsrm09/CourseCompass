@@ -112,7 +112,7 @@ function validatePlannerState(state, curriculum, options = {}) {
     if (ids.has(semester.id) || rows.has(semester.originalRow)) add("INVALID_SEMESTER_ORDER", "Semester identities and original rows must be unique.");
     ids.add(semester.id);
     rows.add(semester.originalRow);
-    if (options.checkSchedule !== false && !semester.isTarc && semester.courses.length > 4) add("SEMESTER_FULL", `Semester ${index + 1} exceeds the four-course maximum.`);
+    if (options.checkSchedule !== false && !semester.isTarc && semester.courses.length > 5) add("SEMESTER_FULL", `Semester ${index + 1} exceeds the five-course maximum.`);
     let codCount = 0;
     for (const course of semester.courses) {
       inspect(course, index, semester);
