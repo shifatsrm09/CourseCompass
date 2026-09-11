@@ -126,19 +126,23 @@ export default function CourseEditModal({
                       key={course.occurrenceId}
                       className="w-full rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-2.5 text-left text-sm text-neutral-100 transition-colors hover:bg-neutral-800 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-neutral-800/60"
                       onClick={() => onSelect(course)}
-                      disabled={disabled || course.is_tarc}
+                      disabled={disabled || (course.is_tarc && !course.isRepeat)}
                     >
-                      <span className="font-semibold">{course.code}</span>
-                      {course.isRepeat && (
-                        <span className="ml-2 text-xs font-bold text-red-500">
-                          RT (retake)
+                      <span className="flex w-full items-center justify-between gap-2">
+                        <span>
+                          <span className="font-semibold">{course.code}</span>
+                          {course.hp && course.hp.length > 0 && course.hp[0] !== "" && (
+                            <span className="ml-2 text-xs font-semibold text-red-400">
+                              HP: {course.hp.join(", ")}
+                            </span>
+                          )}
                         </span>
-                      )}
-                      {course.hp && course.hp.length > 0 && course.hp[0] !== "" && (
-                        <span className="ml-2 text-xs font-semibold text-red-400">
-                          HP: {course.hp.join(", ")}
-                        </span>
-                      )}
+                        {course.isRepeat && (
+                          <span className="shrink-0 text-xs font-bold text-red-500">
+                            RT
+                          </span>
+                        )}
+                      </span>
                     </button>
                   ))}
                 </div>

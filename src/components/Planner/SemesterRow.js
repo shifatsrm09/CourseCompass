@@ -25,6 +25,8 @@ export default function SemesterRow({
   onRepeatContextMenu,
 }) {
   const isCurrent = status === "current";
+  const totalBoxes = slot.courses.length + (slot.repeats?.length || 0);
+  const canAdd = canEdit && totalBoxes < 5;
 
   return (
     <div
@@ -91,7 +93,7 @@ export default function SemesterRow({
           </div>
         </div>
         <div className={slot.thesis ? "flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3" : ""}>
-          <div className={`grid w-full min-w-0 ${canEdit ? "grid-cols-6" : "grid-cols-5"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2 ${slot.thesis ? "sm:flex-1" : ""}`}>
+          <div className={`grid w-full min-w-0 ${canAdd ? "grid-cols-6" : "grid-cols-5"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2 ${slot.thesis ? "sm:flex-1" : ""}`}>
             {slot.courses.map((course) => (
               <CourseBox
                 key={course.instanceId}
@@ -111,7 +113,7 @@ export default function SemesterRow({
                 onContextMenu={canEdit ? (event) => onRepeatContextMenu(event, slot.id, repeat.id, repeat.code) : undefined}
               />
             ))}
-            {canEdit && (
+            {canAdd && (
               <button
                 type="button"
                 className="min-h-9 min-w-0 rounded-md border border-dashed border-neutral-600 bg-neutral-950 px-1 py-1.5 text-[10px] font-medium text-neutral-400 transition-colors hover:border-neutral-500 hover:bg-neutral-900 hover:text-neutral-200 sm:min-h-0 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm"

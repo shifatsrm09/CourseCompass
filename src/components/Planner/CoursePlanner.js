@@ -70,13 +70,14 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
     });
     if (modalContext?.mode !== "add") return available;
     // A retake is the user's "extra 1" slot on top of the engine's normal 4-course
-    // fill. Only offer it while there's still room (fewer than 5 real courses
-    // already sitting in this semester) so the semester never visually implies
-    // more than 4 engine courses + 1 user extra.
-    if (selectedSlot.courses.length >= 5) return available;
+    // fill. Only offer it while there's still room — counting BOTH real courses
+    // and any retakes already sitting here — so a semester can never show more
+    // than 5 boxes total, no matter the mix of real vs. retake.
+    const repeatsHere = repeatCourses.filter((entry) => entry.semesterId === modalContext.semesterId);
+    if (selectedSlot.courses.length + repeatsHere.length >= 5) return available;
     // Retake candidates: completed courses, offered as cosmetic "RT" picks only.
     // Selecting one never touches the engine — see selectCourse below.
-    const existingRepeatCodes = new Set(repeatCourses.filter((entry) => entry.semesterId === modalContext.semesterId).map((entry) => entry.code));
+    const existingRepeatCodes = new Set(repeatsHere.map((entry) => entry.code));
     const repeatCandidates = state.completedCourses
       .filter((code) => code !== "COD" && !existingRepeatCodes.has(code))
       .map((code) => curriculum.byCode.get(code)?.[0])
@@ -92,6 +93,8 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   const openAdd = (semesterId) => {
     const index = slots.findIndex((slot) => slot.id === semesterId);
     if (index < 0 || !canEdit(index, slots[index])) return;
+    const slot = slots[index];
+    if (slot.courses.length + (slot.repeats?.length || 0) >= 5) return;
     planner.clearError();
     setModalContext({ mode: "add", semesterId, canRemove: false });
   };
@@ -146,7 +149,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
         <span className="inline-block rounded-lg bg-neutral-800 px-2.5 py-1.5 text-xs font-semibold text-neutral-200 sm:px-3 sm:text-sm">
           Total Courses: {totalCourses}
         </span>
-        <span className="inline-block rounded-lg border border-red-900/60 bg-red-950/40 px-2.5 py-1.5 text-xs font-semibold text-red-300 sm:px-3 sm:text-sm">
+        <span className={`inline-block rounded-lg border px-2.5 py-1.5 text-xs font-semibold sm:px-3 sm:text-sm ${repeatCourses.length > 0 ? "border-red-900/60 bg-red-950/40 text-red-300" : "border-emerald-900/60 bg-emerald-950/40 text-emerald-300"}`}>
           Repeat Courses: {repeatCourses.length}
         </span>
       </div>
