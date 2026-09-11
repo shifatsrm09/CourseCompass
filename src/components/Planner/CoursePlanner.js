@@ -69,6 +69,11 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
       return !usedIds.has(course.occurrenceId) && !frozenIds.has(course.occurrenceId) && !state.completedCourses.includes(course.code);
     });
     if (modalContext?.mode !== "add") return available;
+    // A retake is the user's "extra 1" slot on top of the engine's normal 4-course
+    // fill. Only offer it while there's still room (fewer than 5 real courses
+    // already sitting in this semester) so the semester never visually implies
+    // more than 4 engine courses + 1 user extra.
+    if (selectedSlot.courses.length >= 5) return available;
     // Retake candidates: completed courses, offered as cosmetic "RT" picks only.
     // Selecting one never touches the engine — see selectCourse below.
     const existingRepeatCodes = new Set(repeatCourses.filter((entry) => entry.semesterId === modalContext.semesterId).map((entry) => entry.code));
