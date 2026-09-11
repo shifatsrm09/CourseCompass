@@ -12,7 +12,7 @@ function App() {
   const [changingPlan, setChangingPlan] = useState(false);
   const [importingGradesheet, setImportingGradesheet] = useState(false);
   const [tempStudentId, setTempStudentId] = useState("");
-  const [connectImportToken, setConnectImportToken] = useState("");
+  const [connectPendingSync, setConnectPendingSync] = useState(null);
   const [connectNotice, setConnectNotice] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
@@ -23,40 +23,37 @@ function App() {
     const restoreSession = async () => {
       setSession({ loading: true, error: "" });
       try {
-        const params = new URLSearchParams(window.location.search);
-        const connectStudentId = params.get("connectStudentId");
-        const connectToken = params.get("connectImportToken");
-        const connectError = params.get("connectError");
-        if (connectStudentId || connectError) {
-          window.history.replaceState({}, "", window.location.pathname);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const hashCode = hashParams.get("code");
+        const hashState = hashParams.get("state");
+        const hashOauthError = hashParams.get("error");
+        if (hashCode || hashState || hashOauthError) {
+          window.history.replaceState({}, "", window.location.pathname + window.location.search);
         }
-        if (connectError) {
-          const messages = {
-            CONNECT_NOT_CONFIGURED: "Login with Connect isn't set up yet — it needs a registered OAuth client from BRAC University IT.",
-            INVALID_CALLBACK: "The Connect login could not be verified. Please try again.",
-            TOKEN_EXCHANGE_FAILED: "Connect rejected the login attempt. Please try again.",
-            DEGREE_PROGRESS_FAILED: "Could not read your academic record from Connect.",
-            MISSING_STUDENT_ID: "Connect did not return your student ID. Please try again or use gradesheet import instead.",
-            CONNECT_SYNC_FAILED: "Syncing with Connect failed. Please try again.",
-          };
-          if (active) setConnectNotice(messages[connectError] || "Login with Connect failed. Please try again.");
-        }
-        if (connectStudentId) {
-          const response = await fetch(`${API_BASE}/auth/login`, {
+        if (hashOauthError) {
+          if (active) setConnectNotice("Login with Connect failed: " + hashOauthError);
+        } else if (hashCode && hashState) {
+          const response = await fetch(`${API_BASE}/auth/connect/exchange`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ studentId: connectStudentId }),
+            credentials: "include",
+            body: JSON.stringify({ code: hashCode, state: hashState }),
             signal: controller.signal,
           });
           const data = await readApiResponse(response);
           if (!active) return;
-          if (!response.ok) throw new Error(data.error || "Could not load your account after Connect login.");
-          setTempStudentId(connectStudentId);
-          if (connectToken) setConnectImportToken(connectToken);
-          if (data.firstLogin || !data.user?.stream) {
+          if (!response.ok) {
+            setConnectNotice(data.error || "Login with Connect failed. Please try again.");
+            setSession({ loading: false, error: "" });
+            return;
+          }
+          if (data.firstLogin) {
+            setTempStudentId(data.studentId);
+            setConnectPendingSync(data.pendingSync || null);
             setNeedsStream(true);
           } else {
             setUser(data.user);
+            setTempStudentId(data.user.studentId);
             setNeedsStream(false);
           }
           setSession({ loading: false, error: "" });
@@ -120,7 +117,7 @@ function App() {
     setUser(savedUser);
     setNeedsStream(false);
     setChangingPlan(false);
-    setConnectImportToken("");
+    setConnectPendingSync(null);
   };
 
   const handleLogout = () => {
@@ -180,7 +177,7 @@ function App() {
     <StreamSelect
       studentId={changingPlan ? user.studentId : tempStudentId}
       mode={changingPlan ? "change" : "create"}
-      connectImportToken={changingPlan ? "" : connectImportToken}
+      connectSync={changingPlan ? null : connectPendingSync}
       onUpdate={handleStreamSaved}
       onCancel={() => setChangingPlan(false)}
     />

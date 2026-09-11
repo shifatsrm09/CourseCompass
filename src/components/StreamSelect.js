@@ -4,7 +4,7 @@ import streamsConfig from "../data/streamsConfig";
 
 const SEASONS = ["Spring", "Summer", "Fall"];
 
-export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel, connectImportToken = "" }) {
+export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel, connectSync = null }) {
   const isChange = mode === "change";
   const [stream, setStream] = useState("");
   const [season, setSeason] = useState("");
@@ -47,7 +47,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
           stream,
           startTerm: { season, year: Number(year) },
           ...(isChange ? { confirmMigration: true } : {}),
-          ...(connectImportToken ? { connectImportToken } : {}),
+          ...(connectSync ? { connectSync } : {}),
         }),
       });
       const data = await readApiResponse(response);
@@ -99,7 +99,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
           </p>
         )}
 
-        {connectImportToken && !isChange && (
+        {connectSync && !isChange && (
           <p className="mb-4 rounded-lg border border-emerald-900/60 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-200">
             Signed in with Connect. Pick your stream and we'll fill in your completed courses automatically.
           </p>
@@ -234,7 +234,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
               Cancel
             </button>
           ) : (
-            <p className="text-center text-xs text-neutral-500">You can start over with another stream using Change Plan in settings.</p>
+            <p className="text-center text-xs text-neutral-500">You can start over with another stream using Change Plan in the sidebar.</p>
           )}
         </div>
       </div>

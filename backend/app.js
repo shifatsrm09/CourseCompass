@@ -7,7 +7,16 @@ const connectRoutes = require("./routes/connect");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  // credentials:true is required so the browser will send the PKCE cookie
+  // set by /api/auth/connect/start along with the /exchange fetch call.
+  // Browsers reject wildcard '*' origins when credentials are used, so this
+  // reflects FRONTEND_URL specifically (falls back to reflecting whatever
+  // origin made the request if FRONTEND_URL isn't set, e.g. before Connect
+  // login is configured).
+  origin: process.env.FRONTEND_URL || true,
+  credentials: true,
+}));
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
