@@ -13,17 +13,18 @@ export default function SemesterList({
   onAdd,
   onReplace,
   onRemove,
+  onRemoveRepeat,
   onMoveTarc,
   onBalance,
 }) {
   const [contextMenu, setContextMenu] = useState(null);
-  const openContextMenu = (event, semesterId, instanceId, code) => {
+  const openContextMenu = (event, semesterId, instanceId, code, action) => {
     event.preventDefault();
     event.stopPropagation();
     if (blocked) return;
     const target = event.currentTarget;
     const rect = target.getBoundingClientRect();
-    setContextMenu({ semesterId, instanceId, code, target,
+    setContextMenu({ semesterId, instanceId, code, action, target,
       x: event.clientX || rect.left,
       y: event.clientY || rect.bottom,
     });
@@ -74,6 +75,7 @@ export default function SemesterList({
                         onAdd={onAdd}
                         onReplace={onReplace}
                         onCourseContextMenu={openContextMenu}
+                        onRepeatContextMenu={(event, semesterId, instanceId, code) => openContextMenu(event, semesterId, instanceId, code, "removeRepeat")}
                       />
                     )}
                   </Draggable>
@@ -89,7 +91,11 @@ export default function SemesterList({
           context={contextMenu}
           onClose={() => setContextMenu(null)}
           label={contextMenu.action === "undo" ? "Undo completion" : "Remove course"}
-          onRemove={() => contextMenu.action === "undo" ? onUndoComplete(contextMenu.semesterId) : onRemove(contextMenu.semesterId, contextMenu.instanceId)}
+          onRemove={() => {
+            if (contextMenu.action === "undo") onUndoComplete(contextMenu.semesterId);
+            else if (contextMenu.action === "removeRepeat") onRemoveRepeat(contextMenu.semesterId, contextMenu.instanceId);
+            else onRemove(contextMenu.semesterId, contextMenu.instanceId);
+          }}
         />
       )}
     </div>

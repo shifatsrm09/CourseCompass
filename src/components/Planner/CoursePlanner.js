@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import thesisPlan from "../../data/thesisPlan.json";
 import { getSemesterStatus } from "../../engine/plannerState.mjs";
 import usePlanner from "../../engine/usePlanner";
@@ -13,6 +13,38 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   const [completionSemester, setCompletionSemester] = useState(null);
   const [modalContext, setModalContext] = useState(null);
 
+  // Repeat/retake course labels are a purely cosmetic UI layer kept outside the
+  // planner engine entirely. They are never dispatched to the engine, never
+  // validated by it, and never affect scheduling, balancing, or completion
+  // logic in any way — they are just a tag rendered on top of the plan.
+  const repeatStorageKey = `courseCompass:repeatCourses:${user?.studentId || "anon"}:${curriculum?.stream || "default"}`;
+  const [repeatCourses, setRepeatCourses] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(repeatStorageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(repeatStorageKey, JSON.stringify(repeatCourses));
+    } catch {
+      // Best-effort only; repeat labels are cosmetic and never block the plan.
+    }
+  }, [repeatCourses, repeatStorageKey]);
+
+  const addRepeatCourse = (semesterId, code) => {
+    setRepeatCourses((previous) => [
+      ...previous,
+      { id: `rt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, semesterId, code },
+    ]);
+  };
+  const removeRepeatCourse = (semesterId, repeatId) => {
+    setRepeatCourses((previous) => previous.filter((entry) => !(entry.semesterId === semesterId && entry.id === repeatId)));
+  };
+
   const slots = useMemo(() => (state?.semesters || []).map((semester, index) => ({
     ...semester,
     courses: semester.courses.map((instance) => ({
@@ -20,9 +52,10 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
       ...instance,
       completed: curriculum.byId.get(instance.occurrenceId)?.code !== "COD" && state.completedCourses.includes(curriculum.byId.get(instance.occurrenceId)?.code),
     })),
+    repeats: repeatCourses.filter((entry) => entry.semesterId === semester.id),
     thesis: thesisPlan.find((item) => item.semester_row === semester.originalRow) || null,
     termLabel: formatTermLabel(advanceTerm(user.startTerm, index)),
-  })), [state, curriculum, user.startTerm]);
+  })), [state, curriculum, user.startTerm, repeatCourses]);
 
   const selectedSlot = slots.find((slot) => slot.id === modalContext?.semesterId);
   const modalCourses = useMemo(() => {
@@ -31,11 +64,26 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
     const hasCod = selectedSlot.courses.some((course) => course.code === "COD");
     const frozenIds = new Set(state.semesters.slice(0, state.currentSemester - 1).flatMap((semester) => semester.courses.map((course) => course.occurrenceId)));
     const firstCod = curriculum.byCode.get("COD")?.[0]?.occurrenceId;
-    return Array.from(curriculum.byId.values()).filter((course) => {
+    const available = Array.from(curriculum.byId.values()).filter((course) => {
       if (course.code === "COD") return course.occurrenceId === firstCod && !hasCod;
       return !usedIds.has(course.occurrenceId) && !frozenIds.has(course.occurrenceId) && !state.completedCourses.includes(course.code);
     });
-  }, [selectedSlot, curriculum, state]);
+    if (modalContext?.mode !== "add") return available;
+    // A retake is the user's "extra 1" slot on top of the engine's normal 4-course
+    // fill. Only offer it while there's still room (fewer than 5 real courses
+    // already sitting in this semester) so the semester never visually implies
+    // more than 4 engine courses + 1 user extra.
+    if (selectedSlot.courses.length >= 5) return available;
+    // Retake candidates: completed courses, offered as cosmetic "RT" picks only.
+    // Selecting one never touches the engine — see selectCourse below.
+    const existingRepeatCodes = new Set(repeatCourses.filter((entry) => entry.semesterId === modalContext.semesterId).map((entry) => entry.code));
+    const repeatCandidates = state.completedCourses
+      .filter((code) => code !== "COD" && !existingRepeatCodes.has(code))
+      .map((code) => curriculum.byCode.get(code)?.[0])
+      .filter(Boolean)
+      .map((course) => ({ ...course, isRepeat: true }));
+    return [...available, ...repeatCandidates];
+  }, [selectedSlot, curriculum, state, modalContext, repeatCourses]);
 
   const getStatus = (index) => getSemesterStatus(state, index);
   const canEdit = (index, slot) => !blocked && index >= state.currentSemester - 1 && !slot.isTarc;
@@ -59,6 +107,11 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
 
   const selectCourse = (course) => {
     if (!modalContext) return;
+    if (modalContext.mode === "add" && course.isRepeat) {
+      addRepeatCourse(modalContext.semesterId, course.code);
+      closeEditModal();
+      return;
+    }
     if (dispatch({
       type: modalContext.mode === "add" ? "ADD_COURSE" : "REPLACE_COURSE",
       semesterId: modalContext.semesterId,
@@ -92,6 +145,9 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="inline-block rounded-lg bg-neutral-800 px-2.5 py-1.5 text-xs font-semibold text-neutral-200 sm:px-3 sm:text-sm">
           Total Courses: {totalCourses}
+        </span>
+        <span className="inline-block rounded-lg border border-red-900/60 bg-red-950/40 px-2.5 py-1.5 text-xs font-semibold text-red-300 sm:px-3 sm:text-sm">
+          Repeat Courses: {repeatCourses.length}
         </span>
       </div>
 
@@ -179,6 +235,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
           onAdd={openAdd}
           onReplace={openReplace}
           onRemove={removeCourse}
+          onRemoveRepeat={removeRepeatCourse}
           onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
           onBalance={() => dispatch({ type: "REBALANCE" })}
         />

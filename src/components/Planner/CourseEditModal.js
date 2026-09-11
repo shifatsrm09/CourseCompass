@@ -129,6 +129,11 @@ export default function CourseEditModal({
                       disabled={disabled || course.is_tarc}
                     >
                       <span className="font-semibold">{course.code}</span>
+                      {course.isRepeat && (
+                        <span className="ml-2 text-xs font-bold text-red-500">
+                          RT (retake)
+                        </span>
+                      )}
                       {course.hp && course.hp.length > 0 && course.hp[0] !== "" && (
                         <span className="ml-2 text-xs font-semibold text-red-400">
                           HP: {course.hp.join(", ")}

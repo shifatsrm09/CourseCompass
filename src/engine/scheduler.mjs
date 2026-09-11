@@ -129,9 +129,17 @@ function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new
       eligible.sort((a, b) => Number(protectedCourse(b)) - Number(protectedCourse(a)) || Number((deadlines.get(b.instanceId) ?? Infinity) <= currentIndex) - Number((deadlines.get(a.instanceId) ?? Infinity) <= currentIndex) || compare(a, b));
       const selected = new Set();
       let codPlaced = false;
+      // The engine's own placement decisions (auto balance, rebalancing after an
+      // edit, filling future semesters) always target 4 courses per semester.
+      // A 5th slot is only ever available when the user explicitly pinned a
+      // course into this semester in the current action (ADD_COURSE / REPLACE_COURSE) -
+      // that is what "protectedCourse" pinning represents here. The engine itself
+      // will never grow a semester to 5 on its own.
+      const hasProtected = eligible.some((course) => protectedCourse(course));
+      const cap = hasProtected ? 5 : 4;
       for (const course of eligible) {
         const isCod = curriculum.byId.get(course.occurrenceId).code === "COD";
-        if (selected.size < 4 && !(isCod && codPlaced)) {
+        if (selected.size < cap && !(isCod && codPlaced)) {
           selected.add(course.instanceId);
           codPlaced ||= isCod;
         } else {

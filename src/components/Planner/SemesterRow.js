@@ -22,6 +22,7 @@ export default function SemesterRow({
   onAdd,
   onReplace,
   onCourseContextMenu,
+  onRepeatContextMenu,
 }) {
   const isCurrent = status === "current";
 
@@ -90,7 +91,7 @@ export default function SemesterRow({
           </div>
         </div>
         <div className={slot.thesis ? "flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3" : ""}>
-          <div className={`grid w-full min-w-0 ${canEdit ? "grid-cols-5" : "grid-cols-4"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2 ${slot.thesis ? "sm:flex-1" : ""}`}>
+          <div className={`grid w-full min-w-0 ${canEdit ? "grid-cols-6" : "grid-cols-5"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2 ${slot.thesis ? "sm:flex-1" : ""}`}>
             {slot.courses.map((course) => (
               <CourseBox
                 key={course.instanceId}
@@ -99,6 +100,15 @@ export default function SemesterRow({
                 onReplace={() => onReplace(slot.id, course.instanceId)}
                 onContextMenu={(event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code)}
                 hideCompletedLabel={status === "completed"}
+              />
+            ))}
+            {slot.repeats?.map((repeat) => (
+              <CourseBox
+                key={repeat.id}
+                course={{ instanceId: repeat.id, code: repeat.code }}
+                isRepeat
+                isLocked={false}
+                onContextMenu={canEdit ? (event) => onRepeatContextMenu(event, slot.id, repeat.id, repeat.code) : undefined}
               />
             ))}
             {canEdit && (
