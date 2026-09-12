@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Course Compass \u2014 Connect OAuth Bridge (personal use)",
+  "version": "1.0.0",
+  "description": "Personal-use dev tool. connect.bracu.ac.bd is the only redirect_uri Keycloak's 'slm' client accepts. This forwards the auth code from there back to your local Course Compass app so you can test the login flow before BRACU IT registers a real client.",
+  "host_permissions": ["https://connect.bracu.ac.bd/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://connect.bracu.ac.bd/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

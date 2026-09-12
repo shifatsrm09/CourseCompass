@@ -1,10 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API_BASE, readApiResponse } from "./api";
 import Login from "./components/Login";
 import StreamSelect from "./components/StreamSelect";
 import Dashboard from "./components/Dashboard";
 import { draftKey } from "./engine/plannerPersistence";
 import GradesheetSync from "./components/GradesheetSync";
+
+// Captured and consumed exactly once, at module-evaluation time — completely
+// outside React's render/effect lifecycle. This matters because React 18's
+// <React.StrictMode> intentionally double-invokes effects in development
+// (mount -> cleanup -> mount again) to catch missing-cleanup bugs. The OAuth
+// authorization code here is single-use: if it were read inside a normal
+// useEffect, the first invocation's cleanup would abort the in-flight
+// exchange fetch, and by the second invocation the hash would already be
+// stripped, silently dropping the whole login. Reading it once here sidesteps
+// that entirely.
+const initialConnectHash = (() => {
+  if (typeof window === "undefined") return null;
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const code = hashParams.get("code");
+  const state = hashParams.get("state");
+  const error = hashParams.get("error");
+  if (!code && !state && !error) return null;
+  window.history.replaceState({}, "", window.location.pathname + window.location.search);
+  return { code, state, error };
+})();
 
 function App() {
   const [user, setUser] = useState(null);
@@ -16,47 +36,68 @@ function App() {
   const [connectNotice, setConnectNotice] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
+  // Gates the normal session-restore effect until the one-time Connect
+  // exchange (if any) has finished, so they can't race each other.
+  const [connectExchangeDone, setConnectExchangeDone] = useState(!initialConnectHash);
+  const connectExchangeStarted = useRef(false);
+
+  // Runs the one-time Connect OAuth exchange, if a code came back in the
+  // hash. Deliberately not tied to any AbortController cleanup — a single-use
+  // code exchange must run to completion exactly once, even across
+  // StrictMode's dev-only double-invoke of this effect.
+  useEffect(() => {
+    if (!initialConnectHash || connectExchangeStarted.current) return;
+    connectExchangeStarted.current = true;
+
+    (async () => {
+      if (initialConnectHash.error) {
+        setConnectNotice("Login with Connect failed: " + initialConnectHash.error);
+        setConnectExchangeDone(true);
+        return;
+      }
+      if (!initialConnectHash.code || !initialConnectHash.state) {
+        setConnectNotice("Login with Connect returned an incomplete response (missing " + (initialConnectHash.code ? "state" : "code") + "). Please try again.");
+        setConnectExchangeDone(true);
+        return;
+      }
+      try {
+        const response = await fetch(`${API_BASE}/auth/connect/exchange`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: initialConnectHash.code, state: initialConnectHash.state }),
+        });
+        const data = await readApiResponse(response);
+        if (!response.ok) {
+          setConnectNotice(data.error || "Login with Connect failed. Please try again.");
+        } else if (data.firstLogin) {
+          setTempStudentId(data.studentId);
+          setConnectPendingSync(data.pendingSync || null);
+          setNeedsStream(true);
+        } else {
+          setUser(data.user);
+          setTempStudentId(data.user.studentId);
+          setNeedsStream(false);
+        }
+      } catch (err) {
+        setConnectNotice(err.message || "Login with Connect failed. Please try again.");
+      } finally {
+        setConnectExchangeDone(true);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
+    if (!connectExchangeDone) return undefined;
     let active = true;
     const controller = new AbortController();
     const restoreSession = async () => {
       setSession({ loading: true, error: "" });
       try {
-        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-        const hashCode = hashParams.get("code");
-        const hashState = hashParams.get("state");
-        const hashOauthError = hashParams.get("error");
-        if (hashCode || hashState || hashOauthError) {
-          window.history.replaceState({}, "", window.location.pathname + window.location.search);
-        }
-        if (hashOauthError) {
-          if (active) setConnectNotice("Login with Connect failed: " + hashOauthError);
-        } else if (hashCode && hashState) {
-          const response = await fetch(`${API_BASE}/auth/connect/exchange`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ code: hashCode, state: hashState }),
-            signal: controller.signal,
-          });
-          const data = await readApiResponse(response);
-          if (!active) return;
-          if (!response.ok) {
-            setConnectNotice(data.error || "Login with Connect failed. Please try again.");
-            setSession({ loading: false, error: "" });
-            return;
-          }
-          if (data.firstLogin) {
-            setTempStudentId(data.studentId);
-            setConnectPendingSync(data.pendingSync || null);
-            setNeedsStream(true);
-          } else {
-            setUser(data.user);
-            setTempStudentId(data.user.studentId);
-            setNeedsStream(false);
-          }
-          setSession({ loading: false, error: "" });
+        if (needsStream || user) {
+          // The Connect exchange above already established a session/pending
+          // stream selection — nothing left to restore.
+          if (active) setSession({ loading: false, error: "" });
           return;
         }
 
@@ -91,7 +132,7 @@ function App() {
     };
     restoreSession();
     return () => { active = false; controller.abort(); };
-  }, [refreshAttempt]);
+  }, [refreshAttempt, connectExchangeDone]);
 
   useEffect(() => {
     if (!user) return;
