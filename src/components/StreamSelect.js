@@ -6,7 +6,13 @@ const SEASONS = ["Spring", "Summer", "Fall"];
 
 export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel, connectSync = null }) {
   const isChange = mode === "change";
-  const [stream, setStream] = useState("");
+  const [stream, setStream] = useState(() => {
+    const codes = new Set(connectSync?.terms?.[0]?.records?.map(record => record.code) || []);
+    const english = ["ENG091", "ENG101", "ENG102"].find(code => codes.has(code));
+    const math = ["MAT092", "MAT110"].find(code => codes.has(code));
+    const detected = `${english} + ${math}`;
+    return streamsConfig[detected] ? detected : "";
+  });
   const [season, setSeason] = useState(() => (SEASONS.includes(connectSync?.startTerm?.season) ? connectSync.startTerm.season : ""));
   const [year, setYear] = useState(() => (Number.isInteger(connectSync?.startTerm?.year) ? String(connectSync.startTerm.year) : ""));
   const [error, setError] = useState("");
@@ -22,8 +28,9 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
     const current = new Date().getFullYear();
     const years = [];
     for (let y = current + 1; y >= current - 6; y -= 1) years.push(y);
-    return years;
-  }, []);
+    if (connectSync?.startTerm?.year && !years.includes(connectSync.startTerm.year)) years.push(connectSync.startTerm.year);
+    return years.sort((a, b) => b - a);
+  }, [connectSync]);
 
   const saveStream = async () => {
     if (pending.current) return;
@@ -101,7 +108,13 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
 
         {connectSync && !isChange && (
           <p className="mb-4 rounded-lg border border-emerald-900/60 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-200">
-            Signed in with Connect{connectSync.startTerm?.season && connectSync.startTerm?.year ? ` — first semester detected as ${connectSync.startTerm.season} ${connectSync.startTerm.year}` : ""}. Pick your stream and we'll fill in your completed courses automatically.
+            Signed in with Connect{connectSync.startTerm?.season && connectSync.startTerm?.year ? ` — first semester detected as ${connectSync.startTerm.season} ${connectSync.startTerm.year}` : ""}. Confirm your stream to import {connectSync.terms?.reduce((count, term) => count + term.records.length, 0)} course registrations into their recorded semesters. Past registrations will count as completed for planning; Connect does not provide grades or confirm passes.
+          </p>
+        )}
+
+        {connectSync?.terms?.some(term => term.unavailable || !term.records.length) && !isChange && (
+          <p role="status" className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2.5 text-sm text-amber-200">
+            Connect returned no course history for {connectSync.terms.filter(term => term.unavailable || !term.records.length).map(term => `${term.season} ${term.year}`).join(", ")}. Only available courses will be imported. Missing courses remain uncompleted and may appear in future recommendations. Import your grade sheet for a complete history.
           </p>
         )}
 
@@ -149,7 +162,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
                 <select
                   aria-label="First semester season"
                   value={season}
-                  disabled={busy}
+                  disabled={busy || Boolean(connectSync)}
                   onChange={(event) => { setSeason(event.target.value); setError(""); }}
                   style={{ colorScheme: "dark" }}
                   className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
@@ -177,7 +190,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
                 <select
                   aria-label="First semester year"
                   value={year}
-                  disabled={busy}
+                  disabled={busy || Boolean(connectSync)}
                   onChange={(event) => { setYear(event.target.value); setError(""); }}
                   style={{ colorScheme: "dark" }}
                   className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 pr-9 text-base text-neutral-100 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"

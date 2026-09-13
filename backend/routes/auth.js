@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const { getCurriculum } = require("../plannerState");
+const { prepareConnectPlan } = require("../connectPlan");
 
 const validStudentId = (value) => typeof value === "string" && value.trim().length > 0 && value.length <= 100;
 const VALID_SEASONS = ["Spring", "Summer", "Fall"];
@@ -60,15 +61,11 @@ router.post("/set-stream", async (req, res) => {
 
     let connectFields = {};
     const connectSync = req.body.connectSync;
-    if (connectSync && typeof connectSync === "object") {
-      const completedCourses = Array.isArray(connectSync.completedCourses) ? connectSync.completedCourses.filter((code) => typeof code === "string") : null;
-      const currentSemester = Number.isInteger(connectSync.currentSemester) && connectSync.currentSemester >= 1 ? connectSync.currentSemester : null;
-      if (completedCourses && currentSemester) {
-        connectFields = {
-          completedCourses,
-          currentSemester,
-          ...(connectSync.gradesheetImport && typeof connectSync.gradesheetImport === "object" ? { gradesheetImport: connectSync.gradesheetImport } : {}),
-        };
+    if (connectSync) {
+      try {
+        connectFields = { ...await prepareConnectPlan(connectSync, stream), plannerVersion: 1 };
+      } catch (error) {
+        return res.status(422).json({ error: error.message || "Connect history could not be imported. No account was created." });
       }
     }
 

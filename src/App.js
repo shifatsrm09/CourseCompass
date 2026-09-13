@@ -6,15 +6,6 @@ import Dashboard from "./components/Dashboard";
 import { draftKey } from "./engine/plannerPersistence";
 import GradesheetSync from "./components/GradesheetSync";
 
-// Captured and consumed exactly once, at module-evaluation time — completely
-// outside React's render/effect lifecycle. This matters because React 18's
-// <React.StrictMode> intentionally double-invokes effects in development
-// (mount -> cleanup -> mount again) to catch missing-cleanup bugs. The OAuth
-// authorization code here is single-use: if it were read inside a normal
-// useEffect, the first invocation's cleanup would abort the in-flight
-// exchange fetch, and by the second invocation the hash would already be
-// stripped, silently dropping the whole login. Reading it once here sidesteps
-// that entirely.
 const initialConnectHash = (() => {
   if (typeof window === "undefined") return null;
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -36,15 +27,9 @@ function App() {
   const [connectNotice, setConnectNotice] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
-  // Gates the normal session-restore effect until the one-time Connect
-  // exchange (if any) has finished, so they can't race each other.
   const [connectExchangeDone, setConnectExchangeDone] = useState(!initialConnectHash);
   const connectExchangeStarted = useRef(false);
 
-  // Runs the one-time Connect OAuth exchange, if a code came back in the
-  // hash. Deliberately not tied to any AbortController cleanup — a single-use
-  // code exchange must run to completion exactly once, even across
-  // StrictMode's dev-only double-invoke of this effect.
   useEffect(() => {
     if (!initialConnectHash || connectExchangeStarted.current) return;
     connectExchangeStarted.current = true;
@@ -75,6 +60,7 @@ function App() {
           setConnectPendingSync(data.pendingSync || null);
           setNeedsStream(true);
         } else {
+          try { sessionStorage.removeItem(draftKey(data.user.studentId)); } catch {}
           setUser(data.user);
           setTempStudentId(data.user.studentId);
           setNeedsStream(false);
@@ -94,9 +80,7 @@ function App() {
     const restoreSession = async () => {
       setSession({ loading: true, error: "" });
       try {
-        if (needsStream || user) {
-          // The Connect exchange above already established a session/pending
-          // stream selection — nothing left to restore.
+        if (initialConnectHash || needsStream || user) {
           if (active) setSession({ loading: false, error: "" });
           return;
         }
@@ -154,7 +138,7 @@ function App() {
   };
 
   const handleStreamSaved = (savedUser) => {
-    if (changingPlan) sessionStorage.removeItem(draftKey(savedUser.studentId));
+    if (changingPlan || connectPendingSync) sessionStorage.removeItem(draftKey(savedUser.studentId));
     setUser(savedUser);
     setNeedsStream(false);
     setChangingPlan(false);
@@ -173,7 +157,7 @@ function App() {
   if (session.loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4" role="status">
-        <p className="text-sm font-medium text-neutral-400">Loading your saved plan…</p>
+        <p className="text-sm font-medium text-neutral-400">{!connectExchangeDone ? "Fetching your Connect course history…" : "Loading your saved plan…"}</p>
       </div>
     );
   }

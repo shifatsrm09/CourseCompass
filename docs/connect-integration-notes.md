@@ -2,7 +2,7 @@
 
 > Everything confirmed or inferred about BRACU Connect's OAuth flow and data
 > APIs, gathered while building Login with Connect. Implementation lives in
-> `backend/routes/connect.js`. This file is documentation only — update it if
+> `backend/routes/connect.js` and `backend/connectPlan.js`. This file is documentation only — update it if
 > new endpoints/fields get confirmed or existing guesses turn out wrong.
 
 ---
@@ -48,14 +48,14 @@ Discovery:  https://sso.bracu.ac.bd/realms/bracu/.well-known/openid-configuratio
   "id_token": "..."
 }
 ```
-`id_token` is a JWT; we decode its payload (base64url, no signature verification — see code comment in `connect.js` on why that's an accepted simplification for now) as a fallback source of claims.
+The token exchange supplies the access token used for the portfolio and schedules requests. The route no longer decodes the ID token as an identity-only fallback.
 
 ### Userinfo (confirmed reachable, exact field names NOT separately confirmed)
 ```
 GET /realms/bracu/protocol/openid-connect/userinfo
 Authorization: Bearer <access_token>
 ```
-Used only as a **fallback** if the portfolios call (§2) fails — `preferred_username` / `sub` are guessed field names, not independently verified.
+Not used by the current integration. Portfolio/history failures now return an explicit error instead of falling back to an ID-only login.
 
 ---
 
@@ -63,9 +63,9 @@ Used only as a **fallback** if the portfolios call (§2) fails — `preferred_us
 
 Confirmed live via DevTools Network tab during a real logged-in session. This is a completely different API surface from SSO — same-origin as the Connect webapp itself, authenticated with the same Bearer token.
 
-### 2a. Portfolios — confirmed
+### 2a. Portfolios — exact URL confirmed by the user on 2026-09-13
 ```
-GET https://connect.bracu.ac.bd/api/adv/v1/student-courses/portfolios
+GET https://connect.bracu.ac.bd/api/mds/v1/portfolios
 Authorization: Bearer <access_token>
 ```
 Returns an array (one entry seen, presumably one per program/degree):
@@ -94,9 +94,9 @@ Returns an array (one entry seen, presumably one per program/degree):
 - `studentId` — the real BRACU-format ID (matches our app's `studentId` field exactly). More reliable than any userinfo/JWT-claim guess.
 - `id` — the `studentPortfolioId` needed for every other call below.
 - `enrolledSessionSemesterId` / `currentSessionSemesterId` — exact start term and current term, encoded (see §2c). No more asking the user to manually type in their starting season/year.
-- `cgpa`, `attemptedCredit`, `earnedCredit` — bonus profile data, currently stored but not surfaced in the UI.
+- `cgpa`, `attemptedCredit`, `earnedCredit` — additional profile data; the planner currently imports course registrations.
 
-**Not independently confirmed:** the exact path `/api/adv/v1/student-courses/portfolios`. It's inferred by pattern-matching the confirmed `schedules` path below (same feature area, same request sequence, same base). If it 404s in practice, `connect.js` logs a specific warning (`"Connect portfolios endpoint returned <status>..."`) — check backend console.
+The previous `/api/adv/v1/student-courses/portfolios` path was wrong. The implementation now uses the confirmed `/api/mds/v1/portfolios` URL.
 
 ### 2b. Sessions — confirmed, but **incomplete / not useful for full history**
 ```
@@ -125,7 +125,7 @@ Examples confirmed against real data: `20241` = Spring 2024, `20252` = Summer 20
 
 Rotation order for generating a sequence: **Spring → Summer → Fall → Spring (next year)**.
 
-Implemented in `connect.js` as `decodeSemesterSessionId`, `encodeSemesterSessionId`, `semesterSessionsBetween`, `countSemestersInclusive`. Mirrors the frontend's independent `src/engine/academicTerm.js` (used for the term-label badges on semester cards) — same rotation logic, different codebase, not currently shared as one module.
+Implemented in `connect.js` as `decodeSemesterSessionId`, `encodeSemesterSessionId`, and `semesterSessionsBetween`. Mirrors the frontend's independent `src/engine/academicTerm.js` (used for the term-label badges on semester cards) — same rotation logic, different codebase, not currently shared as one module.
 
 ### 2d. Schedules — confirmed, real sample response
 ```
@@ -157,20 +157,23 @@ GET https://connect.bracu.ac.bd/api/adv/v1/student-courses/schedules
 
 **Consequence for our "completed courses" sync:** we can only say *"this course code was registered in a semester before the student's current one."* We cannot distinguish a passed course from a withdrawn or failed one. This is stored verbatim in the `gradesheetImport.note` field so it's never silently presented as more authoritative than it is.
 
-Lab/theory pairs (e.g. `PHY112` + `PHY112L`, `CSE220` + `CSE220L`) are returned as **separate entries** with distinct `courseCode`s — we don't merge them, they're treated as independent codes matching however the curriculum data models them.
+Lab/theory pairs are separate entries. An unknown zero-credit LAB linked through `parentSectionId` to a returned theory entry is excluded from planner slots so it does not consume a COD slot. Other unmatched courses map to COD using the grade-sheet importer.
 
 ---
 
 ## 3. What our implementation actually does (as of now)
 
 `POST /api/auth/connect/exchange`:
-1. Exchange `code` for `access_token` (confirmed working)
-2. `GET portfolios` → `studentId`, `studentPortfolioId`, `enrolledSessionSemesterId`, `currentSessionSemesterId`, `cgpa`, `earnedCredit`
-   - Fallback to `userinfo`/JWT-claim guessing only if this fails
-3. Compute every semester from enrollment up to (**excluding**) the current one
-4. Sequentially `GET schedules` for each of those semesters, collect all `courseCode`s
-5. Build `completedCourses` (deduped course codes) + `currentSemester` (1-based count of elapsed terms) + `startTerm` (decoded from `enrolledSessionSemesterId`)
-6. Existing account → applied immediately. New account → handed to the frontend as `pendingSync`, applied once they pick a stream (StreamSelect pre-fills season/year from the detected `startTerm`)
+1. Exchange the authorization code for an access token.
+2. Fetch the confirmed portfolios URL and select a single CSE undergraduate portfolio (or the only portfolio).
+3. Generate every term from enrollment up to, excluding, the current term; fetch its schedules sequentially.
+4. A schedule HTTP 404 marks that term unavailable and fetching continues. Authentication failures, other HTTP errors, and malformed responses still stop the import. If every past term returns 404, show an endpoint/history error instead of creating an empty import. Empty arrays and unavailable terms are recorded in `gradesheetImport.missingTerms`; visible warnings identify these gaps before stream confirmation and in the planner. Only returned courses are assumed completed; missing courses remain in future recommendations. The user explicitly chose partial imports on 2026-09-13.
+5. Pass semester-grouped records through `prepareConnectPlan`, which reuses the existing grade-sheet mapping and planning engine. Preserve recorded semesters, map unknown courses to COD, and rebalance remaining courses. No grades are invented: imported records retain null grades and pass status; prior registrations are assumed completed for planning only.
+6. Existing accounts: save canonical `plannerState`, derived legacy fields, start term, and import history together with a planner-version check/increment.
+7. New accounts: return `pendingSync` with terms/start/current term. StreamSelect prefills the stream when the first term identifies English and math, then imports the canonical plan through `/api/auth/set-stream` on confirmation.
+8. The UI clears stale local planner drafts after a successful sync and shows the registration-data limitation in imported history. Partial imports also show a persistent missing-history warning outside the collapsed history panel.
+
+Current-semester registrations are not imported by this flow. Its current semester is generated by the planner, just as with grade-sheet import. The existing TARC/COD/capacity validation remains in force; unsupported histories fail explicitly rather than dropping courses.
 
 ---
 
@@ -187,9 +190,9 @@ This only works for browsers where it's manually installed via `chrome://extensi
 
 ## 5. Open items / known gaps
 
-- [ ] `portfolios` path unconfirmed character-for-character (pattern-matched guess)
+- [x] Correct portfolios path confirmed and applied: `/api/mds/v1/portfolios`
 - [ ] `sessions` endpoint exists but is unused (returns incomplete history, not needed given the generate-the-sequence approach)
 - [ ] No grade/pass-fail data available anywhere found so far — "completed" = "registered in a past semester" only
-- [ ] `id_token` signature is not verified (claims are trusted based on direct-from-Keycloak transport only)
+- [x] Removed unverified ID-token claim fallback; failed portfolio requests no longer produce an ID-only success
 - [ ] Real production redirect_uri still blocked — waiting on BRACU IT (email drafted earlier in this project)
 - [ ] Course-data fetch is sequential (one semester at a time) — fine for a one-time login, would need rate-limit awareness if ever made more frequent
