@@ -103,7 +103,9 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
 
       {user.gradesheetImport?.source === "connect" && user.gradesheetImport.missingTerms?.length > 0 && (
         <p role="status" className="mb-3 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
-          Incomplete Connect history: no courses were returned for {user.gradesheetImport.missingTerms.map(term => `${term.season} ${term.year}`).join(", ")}. Missing courses have not been marked completed and may appear in future recommendations. Sync your grade sheet to fill in your full history.
+          Incomplete Connect history: no courses were returned for {user.gradesheetImport.missingTerms.map(term => `${term.season} ${term.year}`).join(", ")}.
+          {user.gradesheetImport.assumedTerms?.length > 0 && <> Default stream courses were assumed completed for {user.gradesheetImport.assumedTerms.map(term => `${term.season} ${term.year}`).join(", ")}; available Connect records take precedence.</>}
+          {" "}Courses missing from both imported and assumed history remain uncompleted. Sync your grade sheet to replace assumptions with your actual history.
         </p>
       )}
 
@@ -115,7 +117,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
             {user.gradesheetImport.records.map(record => (
               <li key={record.id} className="flex flex-wrap justify-between gap-x-2">
                 <span>{record.term.season} {record.term.year} · {record.code}{record.occurrenceId && curriculum.byId.get(record.occurrenceId)?.code === "COD" ? " → COD" : ""}</span>
-                <span>{record.grade || "Grade unavailable"} · {record.credits} credits</span>
+                <span>{record.assumed ? "Assumed completed" : record.grade || "Grade unavailable"}{record.credits != null ? ` · ${record.credits} credits` : ""}</span>
               </li>
             ))}
           </ul>

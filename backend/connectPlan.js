@@ -28,6 +28,22 @@ async function prepareConnectPlan(sync, stream) {
     }).map((record, recordIndex) => ({ id: `connect:${index}:${recordIndex}`, code: record.code, credits: record.credits, grade: null, passed: true }));
     return { season: term.season, year: term.year, records };
   });
+  const observedCodes = new Set(Object.values(defaultMappings({ terms }, curriculum)));
+  const assumedTerms = [];
+  terms.slice(0, 3).forEach((term, index) => {
+    if (term.records.length) return;
+    const defaults = curriculum.occurrences.filter(course => course.semester_row === index + 1 && !observedCodes.has(course.code));
+    if (!defaults.length) return;
+    term.records = defaults.map((course, courseIndex) => ({
+      id: `connect:assumed:${index}:${courseIndex}`,
+      code: course.code,
+      credits: null,
+      grade: null,
+      passed: true,
+      assumed: true,
+    }));
+    assumedTerms.push({ season: term.season, year: term.year });
+  });
   let result;
   if (!elapsed) {
     const { createDefaultState } = await import("../src/engine/plannerState.mjs");
@@ -46,6 +62,7 @@ async function prepareConnectPlan(sync, stream) {
       importedAt: new Date().toISOString(),
       records: result.records.map(record => ({ ...record, passed: null })),
       missingTerms,
+      assumedTerms,
       note: "Past Connect registrations are treated as completed for planning. Connect does not provide grades or confirm passes. Current-semester courses are recommendations, not synced registrations.",
     },
     lastPlannerMutationId: null,

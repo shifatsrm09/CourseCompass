@@ -114,7 +114,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
 
         {connectSync?.terms?.some(term => term.unavailable || !term.records.length) && !isChange && (
           <p role="status" className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2.5 text-sm text-amber-200">
-            Connect returned no course history for {connectSync.terms.filter(term => term.unavailable || !term.records.length).map(term => `${term.season} ${term.year}`).join(", ")}. Only available courses will be imported. Missing courses remain uncompleted and may appear in future recommendations. Import your grade sheet for a complete history.
+            Connect returned no course history for {connectSync.terms.filter(term => term.unavailable || !term.records.length).map(term => `${term.season} ${term.year}`).join(", ")}. Missing semesters 1–3 will use your selected stream's default courses as assumed completions, unless Connect records those courses elsewhere. Later missing semesters will remain unfilled. Import your grade sheet for verified history.
           </p>
         )}
 
