@@ -16,14 +16,32 @@ const User = require("../models/User");
 //     (it may be locked to Connect's own official callback URLs — if so,
 //     /start will redirect fine but Keycloak will reject with
 //     invalid_redirect_uri, or /exchange's token call will fail).
-//   - The course-data endpoints (schedule / degree-progress). These are
-//     best-effort only: if they fail, login still succeeds using whatever
-//     `userinfo` returns, just without auto-filled completed courses.
+//
+// CONFIRMED from live captured network traffic:
+//   GET  {CONNECT_BASE}/api/adv/v1/student-courses/portfolios
+//     -> [{ id: <studentPortfolioId>, studentId: "24101128",
+//           enrolledSessionSemesterId: 20241, currentSessionSemesterId: 20262,
+//           cgpa, attemptedCredit, earnedCredit, fullName, ... }]
+//   GET  {CONNECT_BASE}/api/adv/v1/student-courses/schedules
+//        ?studentPortfolioId=<id>&semesterSessionId=<id>
+//     -> [{ courseCode, courseCredit, sectionType, ... }]  (registration data,
+//        NOT a transcript — no grade/pass-fail field exists in this response,
+//        so "completed" here really means "was registered in a past
+//        semester", not "passed". A withdrawn/failed course looks identical.)
+//   semesterSessionId encoding: first 4 digits = year, last digit = season
+//        (1 = Spring, 2 = Summer, 3 = Fall), e.g. 20252 = Summer 2025.
+// The `portfolios` path itself is inferred by pattern-matching the confirmed
+// `schedules` path (same feature area, same request sequence) — not
+// independently verified character-for-character. If it 404s, check the
+// backend console for the warning this logs and correct CONNECT_BASE_URL.
 const SSO_BASE = (process.env.CONNECT_SSO_BASE || "https://sso.bracu.ac.bd/realms/bracu").replace(/\/+$/, "");
 const CONNECT_AUTHORIZE_URL = `${SSO_BASE}/protocol/openid-connect/auth`;
 const CONNECT_TOKEN_URL = `${SSO_BASE}/protocol/openid-connect/token`;
 const CONNECT_USERINFO_URL = `${SSO_BASE}/protocol/openid-connect/userinfo`;
-const CONNECT_DEGREE_PROGRESS_URL = process.env.CONNECT_DEGREE_PROGRESS_URL || "https://connect.bracu.ac.bd/api/student/degree-progress";
+
+const CONNECT_BASE_URL = (process.env.CONNECT_BASE_URL || "https://connect.bracu.ac.bd").replace(/\/+$/, "");
+const CONNECT_PORTFOLIOS_URL = `${CONNECT_BASE_URL}/api/adv/v1/student-courses/portfolios`;
+const CONNECT_SCHEDULES_URL = `${CONNECT_BASE_URL}/api/adv/v1/student-courses/schedules`;
 
 const CONNECT_CLIENT_ID = process.env.CONNECT_CLIENT_ID || "slm";
 const CONNECT_REDIRECT_URI = process.env.CONNECT_REDIRECT_URI; // must be a FRONTEND page (e.g. FRONTEND_URL itself) — Keycloak lands the browser here with #code=...&state=...
@@ -72,11 +90,40 @@ function decodeJwtClaims(token) {
   }
 }
 
-function parseSemesterName(name) {
-  const match = /^(Spring|Summer|Fall)\s+(\d{4})$/i.exec(String(name || "").trim());
-  if (!match) return { season: "Unknown", year: null };
-  const season = match[1][0].toUpperCase() + match[1].slice(1).toLowerCase();
-  return { season, year: Number(match[2]) };
+// semesterSessionId encoding confirmed live: first 4 digits = year, last
+// digit = season (1 Spring, 2 Summer, 3 Fall).
+const SEASON_ORDER = ["Spring", "Summer", "Fall"];
+function decodeSemesterSessionId(id) {
+  if (!Number.isInteger(id)) return null;
+  const year = Math.floor(id / 10);
+  const season = SEASON_ORDER[(id % 10) - 1];
+  return season ? { year, season } : null;
+}
+function encodeSemesterSessionId(year, season) {
+  return year * 10 + (SEASON_ORDER.indexOf(season) + 1);
+}
+// Generates every semesterSessionId from `startId` (inclusive) up to `endId`
+// (exclusive), following the Spring -> Summer -> Fall -> Spring(+1) rotation.
+// Capped at 40 terms as a sanity guard against malformed data.
+function semesterSessionsBetween(startId, endId) {
+  const start = decodeSemesterSessionId(startId);
+  if (!start || !Number.isInteger(endId)) return [];
+  const ids = [];
+  let year = start.year;
+  let seasonIndex = SEASON_ORDER.indexOf(start.season);
+  for (let i = 0; i < 40; i++) {
+    const id = encodeSemesterSessionId(year, SEASON_ORDER[seasonIndex]);
+    if (id === endId) break;
+    ids.push(id);
+    seasonIndex += 1;
+    if (seasonIndex >= SEASON_ORDER.length) { seasonIndex = 0; year += 1; }
+  }
+  return ids;
+}
+// 1-based ordinal count of terms from `startId` through `endId`, inclusive
+// of both ends (e.g. Spring24..Summer26 across the confirmed example = 8).
+function countSemestersInclusive(startId, endId) {
+  return semesterSessionsBetween(startId, endId).length + 1;
 }
 
 router.get("/start", (req, res) => {
@@ -151,56 +198,94 @@ router.post("/exchange", async (req, res) => {
     if (!accessToken) return res.status(502).json({ code: "TOKEN_EXCHANGE_FAILED", error: "Connect did not return an access token." });
 
     const idClaims = tokenData.id_token ? decodeJwtClaims(tokenData.id_token) : {};
+    const authHeader = { Authorization: `Bearer ${accessToken}` };
 
-    let userinfo = {};
+    // Portfolios is the authoritative source for the real BRACU student ID
+    // and semester range — confirmed live, much more reliable than the
+    // userinfo-claim guess used as a fallback below.
+    let portfolio = null;
     try {
-      const userinfoResponse = await fetch(CONNECT_USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (userinfoResponse.ok) userinfo = await userinfoResponse.json();
+      const portfoliosResponse = await fetch(CONNECT_PORTFOLIOS_URL, { headers: authHeader });
+      if (portfoliosResponse.ok) {
+        const portfolios = await portfoliosResponse.json();
+        portfolio = Array.isArray(portfolios) ? portfolios[0] : null;
+      } else {
+        console.warn("Connect portfolios endpoint returned", portfoliosResponse.status, "(path is inferred, not independently confirmed)");
+      }
     } catch (err) {
-      console.warn("Connect userinfo fetch failed:", err.message);
+      console.warn("Connect portfolios fetch failed:", err.message);
     }
 
-    const studentId = userinfo.preferred_username || idClaims.preferred_username || userinfo.sub || idClaims.sub;
+    let studentId = portfolio?.studentId;
+    if (!studentId) {
+      // Fallback: userinfo-based guess, in case the portfolios call failed.
+      let userinfo = {};
+      try {
+        const userinfoResponse = await fetch(CONNECT_USERINFO_URL, { headers: authHeader });
+        if (userinfoResponse.ok) userinfo = await userinfoResponse.json();
+      } catch (err) {
+        console.warn("Connect userinfo fetch failed:", err.message);
+      }
+      studentId = userinfo.preferred_username || idClaims.preferred_username || userinfo.sub || idClaims.sub;
+    }
     if (!studentId || typeof studentId !== "string") {
       return res.status(502).json({ code: "MISSING_STUDENT_ID", error: "Connect didn't return a student ID we recognize. Try gradesheet import instead." });
     }
 
-    // Course-data endpoint is an unconfirmed guess — best-effort only, never
-    // blocks the login itself.
+    // Course history: walk every semester from enrollment up to (not
+    // including) the current one, pulling registered courseCodes from each.
+    // Best-effort — a failure here never blocks the login itself.
     let completedCourses = [];
     let currentSemester = 1;
+    let startTerm = null;
     let gradesheetImport = null;
-    try {
-      const progressResponse = await fetch(CONNECT_DEGREE_PROGRESS_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (progressResponse.ok) {
-        const progress = await progressResponse.json();
+    if (portfolio && Number.isInteger(portfolio.enrolledSessionSemesterId) && Number.isInteger(portfolio.currentSessionSemesterId)) {
+      try {
+        startTerm = decodeSemesterSessionId(portfolio.enrolledSessionSemesterId);
+        currentSemester = countSemestersInclusive(portfolio.enrolledSessionSemesterId, portfolio.currentSessionSemesterId);
+        const pastSemesterIds = semesterSessionsBetween(portfolio.enrolledSessionSemesterId, portfolio.currentSessionSemesterId);
+
         const records = [];
-        (progress.semesters || []).forEach((semesterEntry) => {
-          const term = parseSemesterName(semesterEntry.semesterName);
-          (semesterEntry.courses || []).forEach((course, index) => {
+        for (const semesterSessionId of pastSemesterIds) {
+          const term = decodeSemesterSessionId(semesterSessionId);
+          const url = `${CONNECT_SCHEDULES_URL}?studentPortfolioId=${portfolio.id}&semesterSessionId=${semesterSessionId}`;
+          // Sequential, not parallel — this is a handful of requests during
+          // a one-time login, not worth risking rate-limiting Connect for.
+          // eslint-disable-next-line no-await-in-loop
+          const schedulesResponse = await fetch(url, { headers: authHeader });
+          if (!schedulesResponse.ok) {
+            console.warn("Connect schedules fetch failed for", semesterSessionId, schedulesResponse.status);
+            continue;
+          }
+          // eslint-disable-next-line no-await-in-loop
+          const courses = await schedulesResponse.json();
+          (Array.isArray(courses) ? courses : []).forEach((course, index) => {
+            if (!course.courseCode) return;
             records.push({
-              id: `connect:${semesterEntry.semesterName}:${course.courseCode}:${index}`,
+              id: `connect:${semesterSessionId}:${course.courseCode}:${index}`,
               term,
               code: course.courseCode,
-              grade: course.grade,
-              credits: course.credits,
+              credits: course.courseCredit ?? null,
             });
           });
-        });
+        }
+
         completedCourses = [...new Set(records.map((record) => record.code))];
-        currentSemester = (progress.semesters || []).length + 1;
         gradesheetImport = {
           source: "connect",
           importedAt: new Date().toISOString(),
           records,
-          cgpa: progress.cgpa ?? null,
-          completedCredits: progress.completedCredits ?? null,
+          cgpa: portfolio.cgpa ?? null,
+          completedCredits: portfolio.earnedCredit ?? null,
+          // Registration data has no grade/pass-fail field, so this reflects
+          // "was registered in a past semester", not a verified pass.
+          note: "Derived from Connect class registrations, not a transcript — no grade data was available to confirm a pass.",
         };
-      } else {
-        console.warn("Connect degree-progress endpoint returned", progressResponse.status, "(unconfirmed endpoint — this is expected until the real path is found)");
+      } catch (err) {
+        console.warn("Connect course history fetch failed:", err.message);
       }
-    } catch (err) {
-      console.warn("Connect degree-progress fetch failed (endpoint unconfirmed):", err.message);
+    } else {
+      console.warn("Connect portfolio missing enrolledSessionSemesterId/currentSessionSemesterId — skipping course history sync.");
     }
 
     const existing = await User.findOne({ studentId });
@@ -221,7 +306,7 @@ router.post("/exchange", async (req, res) => {
       success: true,
       firstLogin: true,
       studentId,
-      pendingSync: gradesheetImport ? { completedCourses, currentSemester, gradesheetImport } : null,
+      pendingSync: gradesheetImport ? { completedCourses, currentSemester, startTerm, gradesheetImport } : null,
     });
   } catch (err) {
     console.error("Connect sync failed:", err);

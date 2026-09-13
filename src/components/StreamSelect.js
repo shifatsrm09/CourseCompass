@@ -7,8 +7,8 @@ const SEASONS = ["Spring", "Summer", "Fall"];
 export default function StreamSelect({ studentId, onUpdate, mode = "create", onCancel, connectSync = null }) {
   const isChange = mode === "change";
   const [stream, setStream] = useState("");
-  const [season, setSeason] = useState("");
-  const [year, setYear] = useState("");
+  const [season, setSeason] = useState(() => (SEASONS.includes(connectSync?.startTerm?.season) ? connectSync.startTerm.season : ""));
+  const [year, setYear] = useState(() => (Number.isInteger(connectSync?.startTerm?.year) ? String(connectSync.startTerm.year) : ""));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
@@ -101,7 +101,7 @@ export default function StreamSelect({ studentId, onUpdate, mode = "create", onC
 
         {connectSync && !isChange && (
           <p className="mb-4 rounded-lg border border-emerald-900/60 bg-emerald-950/40 px-3 py-2.5 text-sm text-emerald-200">
-            Signed in with Connect. Pick your stream and we'll fill in your completed courses automatically.
+            Signed in with Connect{connectSync.startTerm?.season && connectSync.startTerm?.year ? ` — first semester detected as ${connectSync.startTerm.season} ${connectSync.startTerm.year}` : ""}. Pick your stream and we'll fill in your completed courses automatically.
           </p>
         )}
 
