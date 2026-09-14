@@ -86,7 +86,7 @@ router.get("/start", (req, res) => {
   url.searchParams.set("client_id", CONNECT_CLIENT_ID);
   url.searchParams.set("redirect_uri", CONNECT_REDIRECT_URI);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "openid");
+  url.searchParams.set("scope", "openid offline_access");
   url.searchParams.set("response_mode", "fragment");
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
@@ -100,40 +100,46 @@ router.post("/exchange", async (req, res) => {
     return res.status(501).json({ code: "CONNECT_NOT_CONFIGURED", error: "Login with Connect isn't set up yet." });
   }
 
-  const { code, state } = req.body || {};
+  const { code, state, accessToken: extensionToken } = req.body || {};
+  const fromExtension = typeof extensionToken === "string" && extensionToken.length > 0 && extensionToken.length <= 16384;
   const cookies = parseCookies(req);
   const verifier = cookies.cc_connect_pkce;
   const expectedState = cookies.cc_connect_state;
-  res.clearCookie("cc_connect_pkce", { path: "/" });
-  res.clearCookie("cc_connect_state", { path: "/" });
+  if (!fromExtension) {
+    res.clearCookie("cc_connect_pkce", { path: "/" });
+    res.clearCookie("cc_connect_state", { path: "/" });
+  }
 
-  if (!code || !state || !verifier || state !== expectedState) {
+  if (!fromExtension && (!code || !state || !verifier || state !== expectedState)) {
     return res.status(400).json({ code: "INVALID_CALLBACK", error: "The Connect login could not be verified. Please try again." });
   }
 
   try {
-    const tokenResponse = await fetch(CONNECT_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: CONNECT_CLIENT_ID,
-        code: String(code),
-        redirect_uri: CONNECT_REDIRECT_URI,
-        code_verifier: verifier,
-      }),
-    });
-    if (!tokenResponse.ok) {
-      const detail = await tokenResponse.text().catch(() => "");
-      console.error("Connect token exchange failed:", tokenResponse.status, detail);
-      return res.status(502).json({
-        code: "TOKEN_EXCHANGE_FAILED",
-        error: "Connect rejected the login. This commonly means our redirect URI isn't registered with BRACU's SSO client — a real client registration from BRACU IT may be required.",
+    let accessToken = extensionToken;
+    if (!fromExtension) {
+      const tokenResponse = await fetch(CONNECT_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: CONNECT_CLIENT_ID,
+          code: String(code),
+          redirect_uri: CONNECT_REDIRECT_URI,
+          code_verifier: verifier,
+        }),
       });
+      if (!tokenResponse.ok) {
+        const detail = await tokenResponse.text().catch(() => "");
+        console.error("Connect token exchange failed:", tokenResponse.status, detail);
+        return res.status(502).json({
+          code: "TOKEN_EXCHANGE_FAILED",
+          error: "Connect rejected the login. This commonly means our redirect URI isn't registered with BRACU's SSO client — a real client registration from BRACU IT may be required.",
+        });
+      }
+      const tokenData = await tokenResponse.json();
+      accessToken = tokenData.access_token;
+      if (!accessToken) return res.status(502).json({ code: "TOKEN_EXCHANGE_FAILED", error: "Connect did not return an access token." });
     }
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-    if (!accessToken) return res.status(502).json({ code: "TOKEN_EXCHANGE_FAILED", error: "Connect did not return an access token." });
 
     const authHeader = { Authorization: `Bearer ${accessToken}` };
     const fetchData = async (url, label, allowMissing = false) => {

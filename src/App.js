@@ -5,6 +5,7 @@ import StreamSelect from "./components/StreamSelect";
 import Dashboard from "./components/Dashboard";
 import { draftKey } from "./engine/plannerPersistence";
 import GradesheetSync from "./components/GradesheetSync";
+import { receiveConnectToken } from "./engine/connectBridge";
 
 const initialConnectHash = (() => {
   if (typeof window === "undefined") return null;
@@ -12,9 +13,10 @@ const initialConnectHash = (() => {
   const code = hashParams.get("code");
   const state = hashParams.get("state");
   const error = hashParams.get("error");
-  if (!code && !state && !error) return null;
+  const bridge = hashParams.get("connect_bridge");
+  if (!code && !state && !error && !bridge) return null;
   window.history.replaceState({}, "", window.location.pathname + window.location.search);
-  return { code, state, error };
+  return { code, state, error, bridge };
 })();
 
 function App() {
@@ -40,17 +42,20 @@ function App() {
         setConnectExchangeDone(true);
         return;
       }
-      if (!initialConnectHash.code || !initialConnectHash.state) {
+      if (!initialConnectHash.bridge && (!initialConnectHash.code || !initialConnectHash.state)) {
         setConnectNotice("Login with Connect returned an incomplete response (missing " + (initialConnectHash.code ? "state" : "code") + "). Please try again.");
         setConnectExchangeDone(true);
         return;
       }
       try {
+        const payload = initialConnectHash.bridge
+          ? { accessToken: await receiveConnectToken(initialConnectHash.bridge) }
+          : { code: initialConnectHash.code, state: initialConnectHash.state };
         const response = await fetch(`${API_BASE}/auth/connect/exchange`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ code: initialConnectHash.code, state: initialConnectHash.state }),
+          body: JSON.stringify(payload),
         });
         const data = await readApiResponse(response);
         if (!response.ok) {

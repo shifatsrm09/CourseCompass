@@ -17,7 +17,7 @@ Confirmed live (captured from an actual OAuth redirect + working token exchange)
 | SSO base | `https://sso.bracu.ac.bd/realms/bracu` |
 | `client_id` | `slm` (Connect's own client — not one we registered) |
 | Flow | Authorization Code + PKCE (S256) |
-| Scope | `openid` |
+| Scope | `openid offline_access` (offline token issuance remains subject to Keycloak policy) |
 | `response_mode` | `fragment` — **the auth code comes back in the URL hash (`#code=...`), never query params.** Browsers never send fragments to a server, so the code can only be read by JS running in the browser, then POSTed to our backend. This is why the flow needed restructuring away from a simple GET-redirect callback. |
 
 ### Endpoints
@@ -164,7 +164,7 @@ Lab/theory pairs are separate entries. An unknown zero-credit LAB linked through
 ## 3. What our implementation actually does (as of now)
 
 `POST /api/auth/connect/exchange`:
-1. Exchange the authorization code for an access token.
+1. Accept the extension-issued access token, or exchange the authorization code for legacy callbacks. The token is used only against the configured Connect API; identity comes from its authenticated portfolios response.
 2. Fetch the confirmed portfolios URL and select a single CSE undergraduate portfolio (or the only portfolio).
 3. Generate every term from enrollment up to, excluding, the current term; fetch its schedules sequentially.
 4. A schedule HTTP 404 marks that term unavailable and fetching continues. Authentication failures, other HTTP errors, and malformed responses still stop the import. If every past term returns 404, show an endpoint/history error instead of creating an empty import. Empty arrays and unavailable terms are recorded in `gradesheetImport.missingTerms`; visible warnings identify these gaps before stream confirmation and in the planner. Missing past semesters 1–3 use the selected stream’s default courses as assumed completions, except courses already recorded by Connect elsewhere. Assumed records carry `assumed: true`, null grades/credits, and their terms are stored in `gradesheetImport.assumedTerms`. Later missing terms remain unfilled. The planner visibly distinguishes these assumptions from imported registrations; grade-sheet import replaces them with actual history. The user explicitly chose partial imports on 2026-09-13.
@@ -177,14 +177,25 @@ Current-semester registrations are not imported by this flow. Its current semest
 
 ---
 
-## 4. The bridge extension (personal-use only, not a production solution)
+## 4. The bridge extension (version 2)
 
-Since the code lands on `connect.bracu.ac.bd` (not our domain), nothing in our own app can read it — that's a hard same-origin boundary, not a bug. `tools/connect-oauth-bridge-extension/` is a minimal Chrome MV3 content script that:
-- Matches `https://connect.bracu.ac.bd/*`
-- Runs at `document_start`, checks `window.location.hash` for `code=`
-- If present, redirects the tab to the local app (`http://localhost:3000` — hardcoded in `content.js`, edit if testing elsewhere) with the same hash
+The user confirmed the `slm` client and `offline_access` authorization in their Keycloak account applications page on 2026-09-14. That establishes the existing Connect authorization; it does not itself register Course Compass or guarantee issuance of an offline token.
 
-This only works for browsers where it's manually installed via `chrome://extensions` → Load unpacked. **It cannot be part of a real public login button** — each user would need to install it themselves. It exists purely to let us validate/use the pipeline before BRACU IT (hopefully) registers a real OAuth client.
+`tools/connect-oauth-bridge-extension/` now contains:
+- `app.js`: intercepts a real click on Login with Connect on the two allowed Course Compass origins. Relays the one-time token result to the React app through origin-checked window messages.
+- `background.js`: creates a per-tab PKCE verifier and random state, requests `openid offline_access`, and accepts only the matching state/tab callback. Exchanges the code directly with Keycloak using an extension host permission. The worker uses a temporary extension page while completing the exchange.
+- `content.js`: reads the Connect callback hash at document start and sends it to the worker. Unrelated portal callbacks are ignored because they have no matching extension-owned flow.
+- `callback.html`: shows login progress while the worker exchanges the code.
+
+The allowed app origins are `http://localhost:3000` and `https://compass-bracu.vercel.app`. Update both `manifest.json` and `background.js` if the app moves. Local login interception supports the current `/api` and `http://localhost:5000/api` configuration.
+
+Refresh tokens are retained in `chrome.storage.local` with access restricted to trusted extension contexts. They are not written to website localStorage, URLs, or the User document. The short-lived access token is handed to the app once through the originating tab, and the app posts it to `/api/auth/connect/exchange`. Pending verifier and access-token handoffs use extension session storage with expiry checks. The returned URL contains only a random handoff state.
+
+Later clicks on Login with Connect first attempt a refresh. Rotated refresh tokens replace the previous value; an `invalid_grant` response clears that value and starts a new portal login. Network errors do not discard the saved token. Removing the extension clears its local credentials; revoke the offline authorization in the Keycloak account page to invalidate it at the provider. Course Compass logout alone does not revoke the extension's saved Connect authorization.
+
+Offline tokens can expire through offline-session policy or be revoked. Requesting the scope does not prove it was granted. No background periodic refresh or scheduled sync is implemented; refresh happens on an explicit Connect login click.
+
+To use this version, reload the unpacked extension in `chrome://extensions`, accept any new permissions, refresh the Course Compass page, then click Login with Connect. Restart the local backend after pulling its changes; deployment must include the updated frontend/backend. The extension remains a separately installed component. No tests, build, or live login verification were run for this update.
 
 ---
 
