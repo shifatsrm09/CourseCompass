@@ -50,7 +50,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
     code: record.code,
     imported: true,
     isRepeat: false,
-  })), [importedRecords, user.startTerm, state, curriculum]);
+  })), [importedRecords, user.startTerm, state]);
   const repeatCount = repeatCourses.length + importedRepeatIds.size;
 
   const renameCod = (instanceId) => {
@@ -151,7 +151,7 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
   return (
-    <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1">
+    <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none">
       <h2 className="mb-4 text-center text-xl font-bold text-neutral-50 sm:mb-5 sm:text-3xl">CSE Course Planner</h2>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">

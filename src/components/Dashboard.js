@@ -349,7 +349,7 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
         </div>
       )}
 
-      <div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px]">
         {curriculum ? (
           <CoursePlanner
             key={`${user.studentId}:${user.stream}:${resetToken}`}
