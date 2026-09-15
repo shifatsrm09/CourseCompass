@@ -152,7 +152,7 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
   return (
-    <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none">
+    <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none lg:pb-0">
       <PlannerSidebar open={sidebarOpen} onClose={onCloseSidebar} stream={user.stream} totalCourses={totalCourses} repeatCount={repeatCount} blocked={blocked} onBalance={() => dispatch({ type: "REBALANCE" })} onSyncGradesheet={onSyncGradesheet} onChangePlan={onChangePlan} gradesheetPanel={gradesheetPanel} />
 
       {planner.error && (

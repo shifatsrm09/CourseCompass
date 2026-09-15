@@ -30,7 +30,7 @@ export default function SemesterRow({
 
   return (
     <div
-      className={`planner-row relative flex min-w-0 items-start rounded-xl border border-neutral-800 bg-neutral-900 p-3 shadow-md shadow-black/20 transition-shadow sm:gap-2 sm:p-5 ${
+      className={`planner-row relative flex min-w-0 items-start rounded-xl border border-neutral-800 bg-neutral-900 p-3 shadow-md shadow-black/20 transition-shadow sm:gap-2 sm:p-5 lg:py-3.5 ${
         snapshot.isDragging ? "scale-[1.02] shadow-xl shadow-black/50" : ""
       }`}
       ref={dragProvided.innerRef}
@@ -46,11 +46,11 @@ export default function SemesterRow({
         {canDrag && "☰"}
       </div>
       <div className="flex w-full min-w-0 flex-col">
-        <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1 sm:mb-3">
+        <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1 sm:mb-3 lg:mb-2">
           <div className={`flex min-w-0 items-baseline gap-1.5 sm:gap-x-2 ${canDrag ? "pl-8 sm:pl-0" : ""}`}>
-            <span className="whitespace-nowrap text-xs font-semibold leading-5 text-neutral-100 sm:text-lg">Semester {index + 1}</span>
+            <span className="whitespace-nowrap text-[10px] font-medium uppercase leading-4 text-white sm:text-xs sm:tracking-wide">Semester {index + 1}</span>
             {slot.termLabel && (
-              <span className="whitespace-nowrap text-[10px] font-medium leading-4 text-neutral-400 sm:text-xs sm:tracking-wide sm:text-neutral-500">{slot.termLabel}</span>
+              <span className="whitespace-nowrap text-[10px] font-medium uppercase leading-4 text-neutral-400 sm:text-xs sm:tracking-wide sm:text-neutral-500">{slot.termLabel}</span>
             )}
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
@@ -60,7 +60,7 @@ export default function SemesterRow({
               </span>
             )}
             {slot.thesis && (
-              <span className="whitespace-nowrap rounded-full border border-red-800 bg-red-950/40 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-red-400 sm:hidden">
+              <span className="whitespace-nowrap rounded-full border border-purple-800 bg-purple-950/40 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-purple-300 sm:px-2 sm:py-1 sm:text-xs">
                 {slot.thesis.title}
               </span>
             )}
@@ -92,8 +92,8 @@ export default function SemesterRow({
             )}
           </div>
         </div>
-        <div className={slot.thesis ? "flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3" : ""}>
-          <div className={`grid w-full min-w-0 ${canAdd ? "grid-cols-6" : "grid-cols-5"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2 ${slot.thesis ? "sm:flex-1" : ""}`}>
+        <div>
+          <div className={`grid w-full min-w-0 ${canAdd ? "grid-cols-6" : "grid-cols-5"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2`}>
             {slot.courses.map((course) => (
               <CourseBox
                 key={course.instanceId}
@@ -124,11 +124,6 @@ export default function SemesterRow({
               </button>
             )}
           </div>
-          {slot.thesis && (
-            <span className="hidden max-w-full self-start break-words rounded-lg border border-red-800 bg-red-950/40 px-3 py-1.5 text-sm text-red-400 sm:inline">
-              {slot.thesis.title}
-            </span>
-          )}
         </div>
       </div>
     </div>

@@ -348,7 +348,7 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
         </div>
       )}
 
-      <div className={`relative transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${sidebarOpen && curriculum ? "lg:pl-60" : ""}`}><div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px]">
+      <div className={`relative transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${sidebarOpen && curriculum ? "lg:pl-60" : ""}`}><div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px] lg:py-3">
         {curriculum ? (
           <CoursePlanner
             key={`${user.studentId}:${user.stream}:${resetToken}`}

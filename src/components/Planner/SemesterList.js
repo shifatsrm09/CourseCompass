@@ -55,7 +55,7 @@ export default function SemesterList({
   return (
     <div>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-6">
         {groups.map((group, year) => (
           <section
             key={group.id}
@@ -63,10 +63,10 @@ export default function SemesterList({
             style={desktop ? { gridColumn: year < 2 ? 1 : 2, gridRow: year < 2 ? year + 1 : year - 1 } : undefined}
             aria-label={desktop ? `Year ${year + 1}` : "Semesters"}
           >
-          {desktop && <h3 className="mb-3 text-base font-semibold text-neutral-300">Year {year + 1}</h3>}
+          {desktop && <h3 className="mb-2 text-base font-semibold text-neutral-300">Year {year + 1}</h3>}
         <Droppable droppableId={group.id} direction="vertical">
           {(provided) => (
-            <div className="flex flex-col gap-3 sm:gap-4" ref={provided.innerRef} {...provided.droppableProps}>
+            <div className="flex flex-col gap-3 sm:gap-4 lg:gap-3" ref={provided.innerRef} {...provided.droppableProps}>
               {group.slots.map((slot, localIndex) => {
                 const index = group.offset + localIndex;
                 const status = getStatus(index);
