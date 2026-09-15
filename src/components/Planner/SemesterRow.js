@@ -98,9 +98,10 @@ export default function SemesterRow({
               <CourseBox
                 key={course.instanceId}
                 course={course}
+                isRepeat={course.isRepeat}
                 isLocked={!canEdit || course.completed}
                 onReplace={() => onReplace(slot.id, course.instanceId)}
-                onContextMenu={(event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code)}
+                onContextMenu={!blocked && (course.code === "COD" || (canEdit && !course.completed)) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
                 hideCompletedLabel={status === "completed"}
               />
             ))}
@@ -108,9 +109,9 @@ export default function SemesterRow({
               <CourseBox
                 key={repeat.id}
                 course={{ instanceId: repeat.id, code: repeat.code }}
-                isRepeat
-                isLocked={false}
-                onContextMenu={canEdit ? (event) => onRepeatContextMenu(event, slot.id, repeat.id, repeat.code) : undefined}
+                isRepeat={repeat.isRepeat ?? true}
+                isLocked={Boolean(repeat.imported)}
+                onContextMenu={canEdit && !repeat.imported ? (event) => onRepeatContextMenu(event, slot.id, repeat.id, repeat.code) : undefined}
               />
             ))}
             {canAdd && (

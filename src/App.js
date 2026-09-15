@@ -28,6 +28,14 @@ function App() {
         }
         const cached = JSON.parse(saved);
         if (!cached.user?.studentId) throw new Error("The saved session could not be read. Return to login to load your account.");
+        if (cached.user.stream && cached.user.plannerState && cached.user.gradesheetImport?.records?.length) {
+          if (!active) return;
+          setUser(cached.user);
+          setTempStudentId(cached.user.studentId);
+          setNeedsStream(false);
+          setSession({ loading: false, error: "" });
+          return;
+        }
         const response = await fetch(`${API_BASE}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

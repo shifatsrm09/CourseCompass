@@ -22,7 +22,8 @@
     "tailwindcss": "^3.4.14"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node scripts/dev.cjs",
+    "start:frontend": "react-scripts start",
     "start:api": "npm --prefix backend start",
     "build": "react-scripts build",
     "test": "react-scripts test",

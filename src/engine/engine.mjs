@@ -93,6 +93,18 @@ function applyAction(state, action, curriculum) {
   if (!input.ok) return { ok: false, state, error: input.errors[0], warnings: input.errors };
   try {
     const next = cloneState(state);
+    if (action?.type === "RENAME_COD") {
+      const instance = allInstances(next).find(course => course.instanceId === action.instanceId);
+      if (curriculum.byId.get(instance?.occurrenceId)?.code !== "COD" || typeof action.label !== "string") planningError("INVALID_COURSE_LABEL", "Choose a COD course to rename.");
+      const label = action.label.trim();
+      if (label.length > 40) planningError("INVALID_COURSE_LABEL", "Use at most 40 characters.");
+      next.courseLabels = { ...next.courseLabels };
+      if (!label) delete next.courseLabels[action.instanceId];
+      else next.courseLabels[action.instanceId] = label;
+      const validation = validatePlannerState(next, curriculum, { previousState: state, allowUnplaced: true, checkSchedule: false });
+      if (!validation.ok) return { ok: false, state, error: validation.errors[0], warnings: validation.errors };
+      return { ok: true, state: next, changes: [{ type: "RENAME_COD", instanceId: action.instanceId, label }], warnings: [] };
+    }
     const notBefore = new Map();
     const pinned = new Set();
     switch (action?.type) {

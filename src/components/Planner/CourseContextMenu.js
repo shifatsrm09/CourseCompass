@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-export default function CourseContextMenu({ context, onClose, onRemove, label = "Remove course" }) {
+export default function CourseContextMenu({ context, onClose, onRemove, onRename, canRemove = true, label = "Remove course" }) {
   const menuRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -25,7 +25,10 @@ export default function CourseContextMenu({ context, onClose, onRemove, label = 
         onClose();
       } else if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
         event.preventDefault();
-        menu.querySelector("button").focus();
+        const buttons = [...menu.querySelectorAll("button")];
+        const current = buttons.indexOf(document.activeElement);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next].focus();
       }
     };
     document.addEventListener("pointerdown", outside);
@@ -53,7 +56,12 @@ export default function CourseContextMenu({ context, onClose, onRemove, label = 
       className="fixed z-50 min-w-44 max-w-[calc(100vw-16px)] rounded-lg border border-neutral-700 bg-neutral-900 p-1 shadow-xl shadow-black/50"
       style={{ left: context.x, top: context.y }}
     >
-      <button
+      {onRename && (
+        <button type="button" role="menuitem" className="w-full rounded-md px-3 py-2 text-left text-sm text-neutral-100 outline-none hover:bg-neutral-800 focus:bg-neutral-800" onClick={() => { onClose(); onRename(); }}>
+          Rename course
+        </button>
+      )}
+      {canRemove && <button
         type="button"
         role="menuitem"
         className="w-full rounded-md px-3 py-2 text-left text-sm text-neutral-100 outline-none hover:bg-neutral-800 focus:bg-neutral-800"
@@ -64,7 +72,7 @@ export default function CourseContextMenu({ context, onClose, onRemove, label = 
         }}
       >
         {label}
-      </button>
+      </button>}
     </div>,
     document.body
   );

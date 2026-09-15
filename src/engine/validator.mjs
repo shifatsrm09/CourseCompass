@@ -72,7 +72,7 @@ function validateTransition(state, previous, curriculum, errors) {
 function validatePlannerState(state, curriculum, options = {}) {
   const errors = [];
   const add = (code, message, details = {}) => errors.push({ code, message, ...details });
-  if (!hasOnlyKeys(state, ["schemaVersion", "stream", "semesters", "currentSemester", "completedCourses", "personalized", "unplaced"]) || state.schemaVersion !== 1 || state.stream !== curriculum.stream || !Array.isArray(state.semesters) || !state.semesters.length || state.semesters.length > 300 || !Array.isArray(state.unplaced) || !Array.isArray(state.completedCourses) || typeof state.personalized !== "boolean") {
+  if (!hasOnlyKeys(state, ["schemaVersion", "stream", "semesters", "currentSemester", "completedCourses", "personalized", "unplaced", "courseLabels"]) || state.schemaVersion !== 1 || state.stream !== curriculum.stream || !Array.isArray(state.semesters) || !state.semesters.length || state.semesters.length > 300 || !Array.isArray(state.unplaced) || !Array.isArray(state.completedCourses) || typeof state.personalized !== "boolean") {
     return { ok: false, errors: [{ code: "INVALID_PLANNER_STATE", message: "Planner state has an unsupported schema, stream, or semester list." }] };
   }
   if (!Number.isInteger(state.currentSemester) || state.currentSemester < 1 || state.currentSemester > state.semesters.length + 1) add("INVALID_SEMESTER", "Current semester must be a chronological position within the plan.");
@@ -127,6 +127,14 @@ function validatePlannerState(state, curriculum, options = {}) {
     if (!occurrences.has(course.occurrenceId)) add("MISSING_COURSE", `Curriculum occurrence ${course.occurrenceId} has no planned or unscheduled instance.`);
   }
   if (!options.allowUnplaced && state.unplaced.length) add("UNPLACED_COURSES", `${state.unplaced.length} course(s) still need valid future placements.`);
+  if (errors.length) return { ok: false, errors };
+  if (state.courseLabels !== undefined) {
+    if (!state.courseLabels || typeof state.courseLabels !== "object" || Array.isArray(state.courseLabels)) add("INVALID_COURSE_LABEL", "Course labels must be a map.");
+    else for (const [id, label] of Object.entries(state.courseLabels)) {
+      const instance = allInstances(state).find(course => course.instanceId === id);
+      if (!instance || curriculum.byId.get(instance.occurrenceId)?.code !== "COD" || typeof label !== "string" || !label.trim() || label.length > 40) add("INVALID_COURSE_LABEL", "Only COD courses can have names, up to 40 characters.");
+    }
+  }
   if (errors.length) return { ok: false, errors };
   if (options.checkSchedule !== false) {
     const completed = new Set(state.completedCourses);

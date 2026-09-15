@@ -55,6 +55,10 @@ export default function GradesheetSync({ user: accountUser, curriculum: accountC
         const data = await readApiResponse(response);
         if (!mounted.current) return;
         if (!response.ok || (!data.firstLogin && !data.user)) throw new Error(data.error || "Could not check the detected account. Please retry.");
+        if (data.user?.stream && data.user.plannerState && data.user.gradesheetImport?.records?.length) {
+          onImported(data.user);
+          return;
+        }
         setNewAccount(!data.user);
         setDetectedUser(data.user || { studentId: parsed.studentId, plannerVersion: 0 });
         const codes = parsed.terms.flatMap(term => term.records.map(record => record.code));
@@ -149,8 +153,8 @@ export default function GradesheetSync({ user: accountUser, curriculum: accountC
                   <h2 className="text-sm font-semibold text-neutral-200">{termName(term)}</h2>
                   <ul className="mt-1 space-y-1 text-xs text-neutral-400">
                     {term.records.map(record => <li key={record.id} className="flex flex-wrap justify-between gap-x-2">
-                      <span>{record.code}{mappings[record.id] && mappings[record.id] !== record.code && record.passed ? ` → ${mappings[record.id]}` : ""}</span>
-                      <span>{record.grade} · {record.credits} credits{!record.passed ? " · not marked completed" : ""}</span>
+                      <span>{record.code}</span>
+                      <span>{record.isRepeat ? "RT · " : ""}{record.grade || "Grade unavailable"}{record.credits != null ? ` · ${record.credits} credits` : ""}</span>
                     </li>)}
                   </ul>
                 </section>
@@ -162,7 +166,7 @@ export default function GradesheetSync({ user: accountUser, curriculum: accountC
                 <p className="mt-1">Suggested current courses: {preview.data.plannerState.semesters[preview.data.plannerState.currentSemester - 1]?.courses.map(course => curriculum.byId.get(course.occurrenceId).code).join(", ") || "None"}</p>
               </div>
             )}
-            <p className="mt-4 rounded-lg border border-amber-900/60 bg-amber-950/40 p-3 text-sm text-amber-200">{newAccount ? "Confirming creates your account and personalized plan." : "Syncing replaces your existing progress and course placements."} Unmatched passed courses use COD slots. Failed, withdrawn, and earlier repeated attempts stay in the imported history and do not count twice.</p>
+            <p className="mt-4 rounded-lg border border-amber-900/60 bg-amber-950/40 p-3 text-sm text-amber-200">{newAccount ? "Confirming creates your account and personalized plan." : "Syncing replaces your existing progress and course placements."} Import uses course and semester history: the latest listed attempt counts as completed regardless of grade. Only the latest attempt of a repeated course is tagged RT. Earlier attempts remain visible without RT and do not count twice. Original course names are preserved, including courses outside the default curriculum.</p>
           </>
         )}
         {(error || preview.error) && <p role="alert" className="mt-4 rounded-lg bg-red-950/50 p-3 text-sm text-red-300">{error || preview.error}{conflict ? " Reload the page to load the latest saved plan before importing again." : ""}</p>}

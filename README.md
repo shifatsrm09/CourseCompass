@@ -18,3 +18,9 @@ It helps students visualize their degree plan, track completed courses, and auto
 - Persistent user planner data
 - MongoDB-based user storage
 
+## Local development
+
+Run `npm start` from the repository root to start both the frontend and backend. Stop any separately running instances first to avoid port conflicts. React refreshes frontend code changes automatically; Node restarts the backend when backend or source files change. Press Ctrl+C to stop both.
+
+Use `npm run start:frontend` or `npm run start:api` when running only one server. No additional development dependencies are required.
+

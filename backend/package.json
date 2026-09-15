@@ -6,7 +6,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node --watch --watch-path=. --watch-path=../src/engine --watch-path=../src/data server.js",
     "test": "node --no-experimental-require-module --test"
   },
   "keywords": [],

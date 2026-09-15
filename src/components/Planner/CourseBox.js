@@ -1,6 +1,7 @@
 import React from "react";
 
 export default function CourseBox({ course, isLocked, isRepeat, onReplace, onContextMenu, hideCompletedLabel }) {
+  const name = course.displayName || course.code;
   const clickable = !isLocked && !isRepeat;
   return (
     <button
@@ -13,11 +14,11 @@ export default function CourseBox({ course, isLocked, isRepeat, onReplace, onCon
           : "cursor-pointer border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
       }`}
       onClick={clickable ? onReplace : undefined}
-      onContextMenu={isLocked ? undefined : onContextMenu}
-      disabled={isLocked}
-      aria-label={isRepeat ? `${course.code} repeat course` : isLocked ? course.code : `Edit ${course.code}`}
+      onContextMenu={onContextMenu}
+      disabled={isLocked && !onContextMenu}
+      aria-label={isRepeat ? `${name} repeat course` : isLocked ? name : `Edit ${name}`}
     >
-      <span className={`max-w-full break-words ${course.code.length > 8 ? "text-[8px] sm:text-sm" : ""}`}>{course.code}</span>
+      <span className={`max-w-full break-words ${name.length > 8 ? "text-[8px] sm:text-sm" : ""}`}>{name}</span>
       {isRepeat ? (
         <span className="text-[7px] font-bold text-red-500 sm:text-[11px] sm:tracking-wide">RT</span>
       ) : (

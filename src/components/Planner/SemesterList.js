@@ -13,6 +13,7 @@ export default function SemesterList({
   onAdd,
   onReplace,
   onRemove,
+  onRenameCod,
   onRemoveRepeat,
   onMoveTarc,
   onBalance,
@@ -91,6 +92,8 @@ export default function SemesterList({
           context={contextMenu}
           onClose={() => setContextMenu(null)}
           label={contextMenu.action === "undo" ? "Undo completion" : "Remove course"}
+          onRename={contextMenu.code === "COD" && !contextMenu.action ? () => onRenameCod(contextMenu.instanceId) : undefined}
+          canRemove={contextMenu.action || canEdit(semesterSlots.findIndex(slot => slot.id === contextMenu.semesterId), semesterSlots.find(slot => slot.id === contextMenu.semesterId))}
           onRemove={() => {
             if (contextMenu.action === "undo") onUndoComplete(contextMenu.semesterId);
             else if (contextMenu.action === "removeRepeat") onRemoveRepeat(contextMenu.semesterId, contextMenu.instanceId);

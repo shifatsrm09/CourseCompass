@@ -9,6 +9,16 @@ export const termName = term => `${term.season} ${term.year}`;
 const passing = /^(A[+-]?|B[+-]?|C[+-]?|D[+-]?|P|S)$/;
 const knownGrade = /^(A[+-]?|B[+-]?|C[+-]?|D[+-]?|F|I|W|P|S|U|R|WIP|IP|AW)$/;
 
+export function latestRepeatIds(records) {
+  const seen = new Set();
+  const repeated = new Map();
+  for (const record of records) {
+    if (seen.has(record.code)) repeated.set(record.code, record.id);
+    seen.add(record.code);
+  }
+  return new Set(repeated.values());
+}
+
 export function parseGradesheet(lines, studentId) {
   const text = lines.join("\n");
   if (!/BRAC\s+University/i.test(text) || !/GRADE\s+SHEET/i.test(text)) throw new Error("Please choose the original BRAC University grade-sheet PDF.");
@@ -29,14 +39,17 @@ export function parseGradesheet(lines, studentId) {
     }
     const code = line.match(/^([A-Z]{2,4}\d{3}[A-Z]?)\b/);
     if (!code) continue;
-    const result = line.match(/\s(\d+(?:\.\d+)?)\s+([A-Z][+-]?|WIP|IP|AW)\s+(-|\d+(?:\.\d+)?)\s*$/);
-    if (!current || !result || !knownGrade.test(result[2])) throw new Error(`Could not read the grade for ${code[1]}. Nothing has been imported.`);
-    const credits = Number(result[1]);
-    const grade = result[2];
-    current.records.push({ id: `${termNumber(current)}:${current.records.length}`, code: code[1], grade, credits, passed: passing.test(grade) });
+    if (!current) throw new Error(`Could not identify the semester for ${code[1]}. Nothing has been imported.`);
+    const result = line.match(/\s(\d+(?:\.\d+)?)\s+(WIP|IP|AW|[A-Z][+-]?)(?=\s|\*|$)/);
+    const credits = result ? Number(result[1]) : null;
+    const grade = result && knownGrade.test(result[2]) ? result[2] : null;
+    current.records.push({ id: `${termNumber(current)}:${current.records.length}`, code: code[1], grade, credits, passed: true, completionBasis: "course-history" });
   }
   if (!terms.length || terms.some(term => !term.records.length)) throw new Error("No complete semester records were found. Scanned PDFs are not supported; download the original PDF from the portal.");
   if (terms.length > 60 || terms.some(term => term.records.length > 30)) throw new Error("This grade sheet exceeds the supported size.");
+  const attempts = terms.flatMap(term => term.records);
+  const repeats = latestRepeatIds(attempts);
+  attempts.forEach(record => { record.isRepeat = repeats.has(record.id); });
   const report = { studentId: ids[0], terms };
   if (studentId && ids[0] !== studentId.trim()) {
     const error = new Error("The grade-sheet student ID does not match your logged-in account.");
@@ -62,10 +75,12 @@ export function prepareGradesheetImport(report, mappings, currentTerm, curriculu
   if (currentIndex <= last - first || currentIndex > 80) throw new Error("The current term must be after the last graded semester.");
   const records = report.terms.flatMap(term => term.records.map(record => ({ ...record, term: { season: term.season, year: term.year }, occurrenceId: null })));
   const used = new Set();
-  const latestPass = new Map();
-  for (const record of records) if (record.passed) latestPass.set(record.code, record.id);
+  const latestAttempt = new Map();
+  const repeats = latestRepeatIds(records);
+  for (const record of records) latestAttempt.set(record.code, record.id);
   for (const record of records) {
-    if (!record.passed || latestPass.get(record.code) !== record.id) continue;
+    record.isRepeat = repeats.has(record.id);
+    if (!record.passed || latestAttempt.get(record.code) !== record.id) continue;
     const mapped = mappings[record.id];
     if (!mapped) throw new Error(`Choose a planner slot for ${record.code} before syncing.`);
     const occurrence = curriculum.byCode.get(mapped)?.find(course => !used.has(course.occurrenceId));
@@ -81,6 +96,9 @@ export function prepareGradesheetImport(report, mappings, currentTerm, curriculu
     const definition = curriculum.byId.get(record.occurrenceId);
     const slot = state.semesters[termNumber(record.term) - first];
     slot.courses.push(createInstance(definition));
+    if (definition.code === "COD" && record.code !== "COD") {
+      state.courseLabels = { ...state.courseLabels, [`course:${definition.occurrenceId}`]: record.code };
+    }
     state.completedCourses.push(definition.code);
   }
   state.completedCourses = [...new Set(state.completedCourses)];
@@ -120,18 +138,22 @@ export function validateGradesheetImport(payload, curriculum) {
   const ids = new Set();
   const mapped = new Set();
   const completed = new Set();
+  let previousTerm = -Infinity;
   for (const record of records) {
-    if (!record || typeof record.id !== "string" || record.id.length > 80 || ids.has(record.id) || !/^[A-Z]{2,4}\d{3}[A-Z]?$/.test(record.code) || !knownGrade.test(record.grade) || record.passed !== passing.test(record.grade) || !Number.isFinite(record.credits) || record.credits < 0 || record.credits > 30 || !validTerm(record.term)) throw new Error("An imported course record is invalid.");
+    if (!record || typeof record.id !== "string" || record.id.length > 80 || ids.has(record.id) || !/^[A-Z]{2,4}\d{3}[A-Z]?$/.test(record.code) || (record.grade !== null && !knownGrade.test(record.grade)) || (record.completionBasis === "course-history" ? record.passed !== true : record.passed !== passing.test(record.grade)) || (record.credits !== null && (!Number.isFinite(record.credits) || record.credits < 0 || record.credits > 30)) || !validTerm(record.term)) throw new Error("An imported course record is invalid.");
+    if (termNumber(record.term) < previousTerm) throw new Error("Imported semesters must be in chronological order.");
+    previousTerm = termNumber(record.term);
     ids.add(record.id);
     const index = termNumber(record.term) - termNumber(startTerm);
     if (index < 0 || index >= plannerState.currentSemester - 1) throw new Error("Imported grades must precede the current term.");
     if (record.occurrenceId === null) {
-      if (record.passed && !records.some(other => other.code === record.code && other.passed && other.occurrenceId && termNumber(other.term) >= termNumber(record.term))) throw new Error(`The passed course ${record.code} has no planner slot.`);
+      if (record.passed && !records.some(other => other.code === record.code && other.passed && other.occurrenceId && termNumber(other.term) >= termNumber(record.term))) throw new Error(`The course ${record.code} has no planner slot.`);
       continue;
     }
     const definition = curriculum.byId.get(record.occurrenceId);
     const code = record.code === "EMB101" && curriculum.byCode.has("DEV/EMB101") ? "DEV/EMB101" : record.code;
     const expectedCode = curriculum.byCode.has(code) ? code : "COD";
+    if (records.slice(records.indexOf(record) + 1).some(other => other.code === record.code)) throw new Error(`Only the latest ${record.code} attempt can occupy its planner slot.`);
     if (!record.passed || !definition || definition.code !== expectedCode || mapped.has(record.occurrenceId)) throw new Error(`Invalid planner mapping for ${record.code}.`);
     mapped.add(record.occurrenceId);
     completed.add(definition.code);
@@ -143,6 +165,6 @@ export function validateGradesheetImport(payload, curriculum) {
   if (completed.size !== plannerState.completedCourses.length || plannerState.completedCourses.some(code => !completed.has(code))) throw new Error("Completed courses do not match the imported grades.");
   return {
     startTerm: { season: startTerm.season, year: startTerm.year },
-    records: records.map(({ id, code, grade, credits, passed, term, occurrenceId }) => ({ id, code, grade, credits, passed, term: { season: term.season, year: term.year }, occurrenceId })),
+    records: records.map(({ id, code, grade, credits, passed, term, occurrenceId, completionBasis }) => ({ id, code, grade, credits, passed, term: { season: term.season, year: term.year }, occurrenceId, ...(completionBasis === "course-history" ? { completionBasis } : {}), isRepeat: latestRepeatIds(records).has(id) })),
   };
 }

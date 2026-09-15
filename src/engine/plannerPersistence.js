@@ -57,7 +57,10 @@ export function createPlannerPersistence({
         });
         const data = await response.json();
         if (!response.ok || !data.success || !data.user) {
-          const failure = new Error(data.error || "The server could not save this plan. Your changes are still visible.");
+          const schemaMismatch = data.code === "INVALID_PLANNER_STATE" && item.plannerState.courseLabels !== undefined;
+          const failure = new Error(schemaMismatch
+            ? "The server rejected the updated planner format. Restart your local backend, or deploy the matching backend update, then click Retry save. Your unsaved changes are preserved."
+            : data.error || "The server could not save this plan. Your changes are still visible.");
           failure.conflict = response.status === 409;
           throw failure;
         }
