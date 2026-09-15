@@ -28,6 +28,10 @@ export default function SemesterList({
     ? Array.from({ length: Math.ceil(semesterSlots.length / 3) }, (_, year) => ({ id: `year-${year}`, offset: year * 3, slots: semesterSlots.slice(year * 3, year * 3 + 3) }))
     : [{ id: "semesters", offset: 0, slots: semesterSlots }];
   const [contextMenu, setContextMenu] = useState(null);
+  const contextSlotIndex = semesterSlots.findIndex(slot => slot.id === contextMenu?.semesterId);
+  const contextSlot = semesterSlots[contextSlotIndex];
+  const contextCourse = contextSlot?.courses.find(course => course.instanceId === contextMenu?.instanceId);
+  const canEditContextCourse = Boolean(contextCourse && !contextCourse.completed && canEdit(contextSlotIndex, contextSlot));
   const openContextMenu = (event, semesterId, instanceId, code, action) => {
     event.preventDefault();
     event.stopPropagation();
@@ -116,7 +120,8 @@ export default function SemesterList({
           onClose={() => setContextMenu(null)}
           label={contextMenu.action === "undo" ? "Undo completion" : "Remove course"}
           onRename={contextMenu.code === "COD" && !contextMenu.action ? () => onRenameCod(contextMenu.instanceId) : undefined}
-          canRemove={contextMenu.action || canEdit(semesterSlots.findIndex(slot => slot.id === contextMenu.semesterId), semesterSlots.find(slot => slot.id === contextMenu.semesterId))}
+          onReplace={!contextMenu.action && canEditContextCourse ? () => onReplace(contextMenu.semesterId, contextMenu.instanceId) : undefined}
+          canRemove={Boolean(contextMenu.action) || canEditContextCourse}
           onRemove={() => {
             if (contextMenu.action === "undo") onUndoComplete(contextMenu.semesterId);
             else if (contextMenu.action === "removeRepeat") onRemoveRepeat(contextMenu.semesterId, contextMenu.instanceId);

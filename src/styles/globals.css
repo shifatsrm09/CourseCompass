@@ -9,6 +9,24 @@ body {
   background: #0f0f0f;
   color: #e5e5e5;
 }
+
+.planner-background {
+  background-color: #080808;
+  background-image:
+    radial-gradient(circle at 10px 10px, #292929 1.3px, transparent 1.8px),
+    linear-gradient(to bottom, transparent 9.5px, #1c1c1c 9.5px, #1c1c1c 10.5px, transparent 10.5px);
+  background-size: 20px 20px;
+}
+
+.planner-background::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, transparent 9.5px, #1c1c1c 9.5px, #1c1c1c 10.5px, transparent 10.5px);
+  background-size: 20px 20px;
+  -webkit-mask-image: repeating-linear-gradient(to bottom, #000 0 3px, transparent 3px 6px);
+  mask-image: repeating-linear-gradient(to bottom, #000 0 3px, transparent 3px 6px);
+}
 ::-webkit-scrollbar {
   width: 8px;
 }

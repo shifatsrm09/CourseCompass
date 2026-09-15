@@ -118,6 +118,10 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
 
   return (
     <div className="min-h-screen bg-neutral-950">
+      <div
+        aria-hidden="true"
+        className={`planner-background pointer-events-none fixed bottom-0 left-0 right-0 top-[57px] transition-[left] duration-300 ease-in-out motion-reduce:transition-none sm:top-[73px] ${sidebarOpen && curriculum ? "lg:left-60" : ""}`}
+      />
       <header className="sticky top-0 z-40 border-b border-white/10 bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70">
         <div className="flex w-full items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-4 lg:pl-0">
           <div className={`flex min-w-0 items-center gap-2 transition-[width] duration-300 ease-in-out motion-reduce:transition-none sm:gap-3 lg:shrink-0 lg:px-6 ${sidebarOpen && curriculum ? "lg:w-60" : "lg:w-48"}`}>
@@ -344,7 +348,7 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
         </div>
       )}
 
-      <div className={`transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${sidebarOpen && curriculum ? "lg:pl-60" : ""}`}><div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px]">
+      <div className={`relative transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${sidebarOpen && curriculum ? "lg:pl-60" : ""}`}><div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px]">
         {curriculum ? (
           <CoursePlanner
             key={`${user.studentId}:${user.stream}:${resetToken}`}

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-export default function CourseContextMenu({ context, onClose, onRemove, onRename, canRemove = true, label = "Remove course" }) {
+export default function CourseContextMenu({ context, onClose, onRemove, onRename, onReplace, canRemove = true, label = "Remove course" }) {
   const menuRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -59,6 +59,15 @@ export default function CourseContextMenu({ context, onClose, onRemove, onRename
       {onRename && (
         <button type="button" role="menuitem" className="w-full rounded-md px-3 py-2 text-left text-sm text-neutral-100 outline-none hover:bg-neutral-800 focus:bg-neutral-800" onClick={() => { onClose(); onRename(); }}>
           Rename course
+        </button>
+      )}
+      {onReplace && (
+        <button type="button" role="menuitem" className="w-full rounded-md px-3 py-2 text-left text-sm text-neutral-100 outline-none hover:bg-neutral-800 focus:bg-neutral-800" onClick={() => {
+          context.target.focus({ preventScroll: true });
+          onClose();
+          onReplace();
+        }}>
+          Replace course
         </button>
       )}
       {canRemove && <button
