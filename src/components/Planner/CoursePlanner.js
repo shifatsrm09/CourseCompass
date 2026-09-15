@@ -7,8 +7,9 @@ import { advanceTerm, formatTermLabel } from "../../engine/academicTerm";
 import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
+import PlannerSidebar from "./PlannerSidebar";
 
-export default function CoursePlanner({ user, setUser, curriculum }) {
+export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, onCloseSidebar, onSyncGradesheet, onChangePlan, gradesheetPanel }) {
   const planner = usePlanner({ user, setUser, curriculum });
   const { state, dispatch, blocked, saveStatus } = planner;
   const [completionSemester, setCompletionSemester] = useState(null);
@@ -152,36 +153,12 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none">
-      <h2 className="mb-4 text-center text-xl font-bold text-neutral-50 sm:mb-5 sm:text-3xl">CSE Course Planner</h2>
-
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="inline-block rounded-lg bg-neutral-800 px-2.5 py-1.5 text-xs font-semibold text-neutral-200 sm:px-3 sm:text-sm">
-          Total Courses: {totalCourses}
-        </span>
-        <span className={`inline-block rounded-lg border px-2.5 py-1.5 text-xs font-semibold sm:px-3 sm:text-sm ${repeatCount > 0 ? "border-red-900/60 bg-red-950/40 text-red-300" : "border-emerald-900/60 bg-emerald-950/40 text-emerald-300"}`}>
-          Repeat Courses: {repeatCount}
-        </span>
-      </div>
+      <PlannerSidebar open={sidebarOpen} onClose={onCloseSidebar} stream={user.stream} totalCourses={totalCourses} repeatCount={repeatCount} blocked={blocked} onBalance={() => dispatch({ type: "REBALANCE" })} onSyncGradesheet={onSyncGradesheet} onChangePlan={onChangePlan} gradesheetPanel={gradesheetPanel} />
 
       {planner.error && (
         <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
           {planner.error}
         </p>
-      )}
-
-      {user.gradesheetImport?.records?.length > 0 && (
-        <details className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-xs text-neutral-400">
-          <summary className="cursor-pointer font-medium text-neutral-200">Imported grade history</summary>
-          <p className="mt-2">Original grades are retained here. Planner edits and undoing completion do not change the uploaded academic record.</p>
-          <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
-            {user.gradesheetImport.records.map(record => (
-              <li key={record.id} className="flex flex-wrap justify-between gap-x-2">
-                <span>{record.term.season} {record.term.year} · {record.code}</span>
-                <span>{importedRepeatIds.has(record.id) ? "RT · " : ""}{record.grade || "Grade unavailable"}{record.credits != null ? ` · ${record.credits} credits` : ""}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
       )}
 
       {planner.warnings.length > 0 && (
@@ -250,7 +227,6 @@ export default function CoursePlanner({ user, setUser, curriculum }) {
           onRemove={removeCourse}
           onRemoveRepeat={removeRepeatCourse}
           onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
-          onBalance={() => dispatch({ type: "REBALANCE" })}
         />
       )}
 

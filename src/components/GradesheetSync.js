@@ -5,7 +5,7 @@ import { defaultMappings, prepareGradesheetImport, termNumber, termFromNumber, t
 import streamsConfig from "../data/streamsConfig";
 import { buildCurriculum } from "../engine/plannerState.mjs";
 
-export default function GradesheetSync({ user: accountUser, curriculum: accountCurriculum, onCancel, onImported }) {
+export default function GradesheetSync({ user: accountUser, curriculum: accountCurriculum, onCancel, onImported, compact = false }) {
   const [detectedUser, setDetectedUser] = useState(null);
   const [selectedStream, setSelectedStream] = useState("");
   const [newAccount, setNewAccount] = useState(false);
@@ -23,6 +23,7 @@ export default function GradesheetSync({ user: accountUser, curriculum: accountC
   const pending = useRef(null);
   const active = useRef(null);
   const operation = useRef(false);
+  const fileInput = useRef(null);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; active.current?.abort(); };
@@ -116,6 +117,31 @@ export default function GradesheetSync({ user: accountUser, curriculum: accountC
 
   const firstCurrent = report ? termNumber(report.terms[report.terms.length - 1]) + 1 : 0;
   const inputStyle = "w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2.5 text-sm text-neutral-100 disabled:opacity-50";
+  if (compact) return (
+    <div className="mb-2 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3 text-xs text-neutral-300">
+      <input ref={fileInput} type="file" accept=".pdf,application/pdf" aria-label="Grade-sheet PDF" onChange={chooseFile} disabled={Boolean(busy || pending.current || conflict)} className="hidden" />
+      <p className="break-words text-neutral-400">{filename || "Import your portal grade-sheet PDF."}</p>
+      {report && <>
+        <label htmlFor="compact-gradesheet-current" className="mt-3 block">Current term</label>
+        <select id="compact-gradesheet-current" value={current} onChange={event => setCurrent(Number(event.target.value))} disabled={Boolean(busy || pending.current)} className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-xs">
+          {Array.from({ length: 13 }, (_, offset) => firstCurrent + offset).map(value => <option key={value} value={value}>{termName(termFromNumber(value))}</option>)}
+        </select>
+        <p className="mt-2 text-neutral-400">{report.terms.length} semesters found. Import replaces your current plan and treats the latest listed attempts as completed.</p>
+      </>}
+      {busy && <p role="status" className="mt-2">{busy}</p>}
+      {(error || preview.error) && <p role="alert" className="mt-2 break-words text-red-300">{error || preview.error}{conflict ? " Reload to load your latest saved plan." : ""}</p>}
+      {mismatchedReport && <button type="button" disabled={Boolean(busy)} onClick={() => {
+        setReport(mismatchedReport);
+        setCurrent(termNumber(mismatchedReport.terms[mismatchedReport.terms.length - 1]) + 1);
+        setMismatchedReport(null);
+        setError("");
+      }} className="mt-2 text-left text-amber-300 underline disabled:opacity-50">Continue anyway with {mismatchedReport.studentId}</button>}
+      <div className="mt-3 flex gap-2">
+        <button type="button" onClick={() => report ? save() : fileInput.current?.click()} disabled={Boolean(busy || conflict || mismatchedReport || (report && !preview.data))} className="rounded-md bg-indigo-600 px-3 py-2 font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">{pending.current ? "Retry" : "Import"}</button>
+        <button type="button" onClick={onCancel} disabled={busy === "Syncing plan…"} className="rounded-md px-3 py-2 text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">Cancel</button>
+      </div>
+    </div>
+  );
   return (
     <main className="min-h-screen bg-neutral-950 px-3 py-6 text-neutral-100 sm:px-6">
       <div className="mx-auto max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6">

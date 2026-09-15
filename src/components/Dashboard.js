@@ -12,6 +12,17 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
     return stream ? buildCurriculum(stream.plan, user.stream) : null;
   }, [user.stream]);
 
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const sidebarButtonRef = useRef(null);
+  const closeSidebar = () => { setSidebarOpen(false); sidebarButtonRef.current?.focus(); };
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const escape = event => {
+      if (event.key === "Escape") { setSidebarOpen(false); sidebarButtonRef.current?.focus(); }
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [sidebarOpen]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [syncingGradesheet, setSyncingGradesheet] = useState(false);
   const menuRef = useRef(null);
@@ -96,20 +107,20 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
     }
   };
 
-  if (syncingGradesheet && curriculum) return (
-    <GradesheetSync user={user} curriculum={curriculum} onCancel={() => setSyncingGradesheet(false)} onImported={(savedUser) => {
+  const gradesheetPanel = syncingGradesheet && curriculum ? (
+    <GradesheetSync compact user={user} curriculum={curriculum} onCancel={() => setSyncingGradesheet(false)} onImported={(savedUser) => {
       try { sessionStorage.removeItem(draftKey(user.studentId)); } catch {}
       setUser(savedUser);
       setResetToken(token => token + 1);
       setSyncingGradesheet(false);
     }} />
-  );
+  ) : null;
 
   return (
     <div className="min-h-screen bg-neutral-950">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70">
-        <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-4">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70">
+        <div className="flex w-full items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-4 lg:pl-0">
+          <div className={`flex min-w-0 items-center gap-2 transition-[width] duration-300 ease-in-out motion-reduce:transition-none sm:gap-3 lg:shrink-0 lg:px-6 ${sidebarOpen && curriculum ? "lg:w-60" : "lg:w-48"}`}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 ring-1 ring-inset ring-indigo-500/30 sm:h-10 sm:w-10 sm:rounded-xl">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -128,17 +139,20 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
             </div>
             <div className="min-w-0 leading-tight">
               <p className="truncate text-sm font-semibold text-neutral-50 sm:text-lg">
-                <span className="hidden sm:inline">Welcome, </span>
                 {user.studentId}
               </p>
             </div>
           </div>
 
-          <span className="inline-flex max-w-full items-center truncate rounded-full bg-neutral-800 px-2 py-0.5 text-[10px] font-medium text-neutral-300 ring-1 ring-inset ring-neutral-700 sm:text-[11px]">
-            {user.stream}
-          </span>
+          <button type="button" ref={sidebarButtonRef} onClick={() => setSidebarOpen(open => !open)} aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"} aria-expanded={sidebarOpen} aria-controls="planner-sidebar" disabled={!curriculum} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-neutral-300 transition-colors hover:bg-neutral-800 focus-visible:outline focus-visible:outline-indigo-400 disabled:opacity-40 sm:h-10 sm:w-10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-5 w-5" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
 
-          <div className="relative justify-self-end">
+          <p className="min-w-0 flex-1 text-center text-sm font-semibold tracking-tight text-indigo-100 md:pointer-events-none md:absolute md:left-1/2 md:-translate-x-1/2 md:whitespace-nowrap md:text-2xl" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Course Compass
+          </p>
+
+          <div className="relative ml-auto shrink-0">
             <button
               type="button"
               ref={gearButtonRef}
@@ -173,25 +187,6 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
                 aria-label="Account settings menu"
                 className="absolute right-0 top-full z-30 mt-2 w-48 animate-fadeIn rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/50"
               >
-                <button type="button" role="menuitem" disabled={!curriculum}
-                  onClick={() => { setMenuOpen(false); setSyncingGradesheet(true); }}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-800 disabled:opacity-50">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
-                    <path d="M20 7a8 8 0 0 0-14-2L3 8m0-5v5h5M4 17a8 8 0 0 0 14 2l3-3m0 5v-5h-5" />
-                  </svg>
-                  Sync gradesheet
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => { setMenuOpen(false); onChangePlan(); }}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-800"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
-                    <path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" />
-                  </svg>
-                  Change Plan
-                </button>
                 <button
                   type="button"
                   role="menuitem"
@@ -349,20 +344,25 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
         </div>
       )}
 
-      <div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px]">
+      <div className={`transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${sidebarOpen && curriculum ? "lg:pl-60" : ""}`}><div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px]">
         {curriculum ? (
           <CoursePlanner
             key={`${user.studentId}:${user.stream}:${resetToken}`}
             user={user}
             setUser={setUser}
             curriculum={curriculum}
+            sidebarOpen={sidebarOpen}
+            onCloseSidebar={closeSidebar}
+            onSyncGradesheet={() => { setMenuOpen(false); setSyncingGradesheet(true); }}
+            gradesheetPanel={gradesheetPanel}
+            onChangePlan={onChangePlan}
           />
         ) : (
           <p role="alert" className="rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-4 text-center text-sm font-medium text-amber-200">
             The curriculum for your saved stream is unavailable. Your saved plan has been preserved.
           </p>
         )}
-      </div>
+      </div></div>
     </div>
   );
 }

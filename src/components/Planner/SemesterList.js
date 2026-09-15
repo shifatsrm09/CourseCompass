@@ -16,7 +16,6 @@ export default function SemesterList({
   onRenameCod,
   onRemoveRepeat,
   onMoveTarc,
-  onBalance,
 }) {
   const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   useEffect(() => {
@@ -51,16 +50,6 @@ export default function SemesterList({
 
   return (
     <div>
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={onBalance}
-          disabled={blocked}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-default disabled:opacity-50"
-        >
-          ⚖ Auto Balance
-        </button>
-      </div>
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
         {groups.map((group, year) => (
