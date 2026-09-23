@@ -30,6 +30,11 @@ export default function Login({ onLogin, onImportGradesheet }) {
   const handleLogin = async (event) => {
     event.preventDefault();
     if (pending.current) return;
+    const trimmedId = studentId.trim();
+    if (!/^[0-9]{6,19}$/.test(trimmedId)) {
+      setError("Student ID must contain 6–19 digits only.");
+      return;
+    }
     pending.current = true;
     setBusy(true);
     setError("");
@@ -37,14 +42,14 @@ export default function Login({ onLogin, onImportGradesheet }) {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId: studentId.trim() }),
+        body: JSON.stringify({ studentId: trimmedId }),
       });
       const data = await readApiResponse(response);
       if (!mounted.current) return;
       if (!response.ok || (!data.firstLogin && !data.user)) {
         throw new Error(data.error || "Your account could not be loaded. Please retry.");
       }
-      onLogin(data, studentId.trim());
+      onLogin(data, trimmedId);
     } catch (failure) {
       if (mounted.current) setError(failure.message || "Could not connect to Course Compass. Check your connection and retry.");
     } finally {
@@ -89,7 +94,10 @@ export default function Login({ onLogin, onImportGradesheet }) {
               type="text"
               placeholder="Enter Student ID"
               value={studentId}
-              onChange={(event) => setStudentId(event.target.value)}
+              onChange={(event) => {
+                setStudentId(event.target.value);
+                if (error) setError("");
+              }}
               required
               disabled={busy}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3.5 py-2.5 text-base text-neutral-100 placeholder:text-neutral-500 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
