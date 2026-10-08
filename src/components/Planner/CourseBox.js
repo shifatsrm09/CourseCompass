@@ -17,11 +17,13 @@ export default function CourseBox({
   const clickable = !isLocked && !isRepeat;
   const hasPrereqIssues = isDesigner && prerequisiteIssues && prerequisiteIssues.length > 0;
 
+  const hasHardIssues = isDesigner && prerequisiteIssues && prerequisiteIssues.some((i) => i.isHard !== false);
+
   const tooltipText = hasPrereqIssues
     ? prerequisiteIssues
         .map(
           (issue) =>
-            `Prerequisite not satisfied\nRequired: ${issue.prereqCode}\n${issue.prereqStatus}\nCourse scheduled in: Semester ${issue.courseSemester}`
+            `${issue.isHard === false ? "Soft prerequisite warning" : "Prerequisite not satisfied"}\n${issue.isHard === false ? "Recommended coreq/soft prereq: " : "Required: "}${issue.prereqCode}\n${issue.prereqStatus}\nCourse scheduled in: Semester ${issue.courseSemester}`
         )
         .join("\n\n")
     : "";
@@ -37,6 +39,8 @@ export default function CourseBox({
         className={`inline-flex min-h-9 min-w-0 w-full sm:w-auto flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 text-[10px] font-semibold leading-3 transition-colors sm:min-h-0 sm:flex-row sm:justify-start sm:gap-2 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm sm:leading-5 select-none ${
           isHighlighted
             ? "border-violet-400 bg-violet-950/80 text-violet-100 ring-2 ring-violet-400 ring-offset-2 ring-offset-neutral-900 shadow-xl shadow-violet-500/50 animate-pulse cursor-grab active:cursor-grabbing"
+            : hasHardIssues
+            ? "border-red-500/80 bg-neutral-800 text-red-200 hover:bg-neutral-700/90 active:bg-neutral-600 ring-1 ring-red-500/30 cursor-grab active:cursor-grabbing"
             : hasPrereqIssues
             ? "border-amber-500/80 bg-neutral-800 text-amber-200 hover:bg-neutral-700/90 active:bg-neutral-600 ring-1 ring-amber-500/30 cursor-grab active:cursor-grabbing"
             : isLocked
@@ -50,6 +54,8 @@ export default function CourseBox({
         aria-label={
           isRepeat
             ? `${name} repeat course`
+            : hasHardIssues
+            ? `${name} (prerequisite problem)`
             : hasPrereqIssues
             ? `${name} (prerequisite warning)`
             : isLocked
@@ -59,7 +65,9 @@ export default function CourseBox({
       >
         {hasPrereqIssues && (
           <span
-            className="flex items-center text-amber-400 font-bold text-xs sm:text-sm hover:scale-110 transition-transform cursor-help"
+            className={`flex items-center ${
+              hasHardIssues ? "text-red-400" : "text-amber-400"
+            } font-bold text-xs sm:text-sm hover:scale-110 transition-transform cursor-help`}
             title={tooltipText}
             onClick={(e) => {
               e.stopPropagation();
@@ -67,7 +75,7 @@ export default function CourseBox({
             }}
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
-            aria-label="Prerequisite warning"
+            aria-label={hasHardIssues ? "Prerequisite problem" : "Prerequisite warning"}
           >
             ⚠
           </span>
@@ -85,12 +93,14 @@ export default function CourseBox({
       {hasPrereqIssues && showTooltip && (
         <div
           role="tooltip"
-          className="absolute z-50 bottom-full mb-1.5 left-1/2 -translate-x-1/2 min-w-[210px] max-w-xs rounded-lg border border-amber-600/70 bg-neutral-900/95 backdrop-blur-sm p-2.5 text-left text-xs shadow-2xl text-neutral-200 pointer-events-auto"
+          className={`absolute z-50 bottom-full mb-1.5 left-1/2 -translate-x-1/2 min-w-[210px] max-w-xs rounded-lg border ${
+            hasHardIssues ? "border-red-600/70" : "border-amber-600/70"
+          } bg-neutral-900/95 backdrop-blur-sm p-2.5 text-left text-xs shadow-2xl text-neutral-200 pointer-events-auto`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="font-semibold text-amber-400 mb-1.5 flex items-center gap-1.5">
+          <div className={`font-semibold ${hasHardIssues ? "text-red-400" : "text-amber-400"} mb-1.5 flex items-center gap-1.5`}>
             <span>⚠</span>
-            <span>Prerequisite not satisfied</span>
+            <span>{hasHardIssues ? "Prerequisite not satisfied" : "Soft prerequisite warning"}</span>
           </div>
           {prerequisiteIssues.map((issue, idx) => (
             <div
@@ -100,10 +110,10 @@ export default function CourseBox({
               }`}
             >
               <div>
-                <span className="text-neutral-400">Required: </span>
+                <span className="text-neutral-400">{issue.isHard === false ? "Recommended coreq/soft prereq: " : "Required: "}</span>
                 <span className="font-semibold text-neutral-100">{issue.prereqCode}</span>
               </div>
-              <div className="text-amber-200/90 font-medium">{issue.prereqStatus}</div>
+              <div className={`${issue.isHard === false ? "text-amber-200/90" : "text-red-200/90"} font-medium`}>{issue.prereqStatus}</div>
               <div>
                 <span className="text-neutral-400">Course scheduled in: </span>
                 <span className="text-neutral-200">Semester {issue.courseSemester}</span>

@@ -21,7 +21,7 @@ describe("PlannerSidebar diagnostics badges", () => {
     expect(screen.queryByLabelText(/0 errors, 0 warnings/i)).not.toBeInTheDocument();
   });
 
-  test("renders diagnostics badge on Designer button and in Statistics when in designer mode", () => {
+  test("renders diagnostics badge in Statistics when in designer mode and no badge on Designer button", () => {
     render(
       <PlannerSidebar
         open={true}
@@ -37,13 +37,17 @@ describe("PlannerSidebar diagnostics badges", () => {
     );
 
     const badges = screen.getAllByLabelText(/0 errors, 0 warnings/i);
-    expect(badges.length).toBeGreaterThanOrEqual(1);
-
-    // Badges contain 0 count text
+    // Badge exists in Statistics section
+    expect(badges.length).toBe(1);
     expect(badges[0]).toHaveTextContent("0");
+
+    // Designer button itself does not have a badge
+    const designerButton = screen.getByRole("button", { name: /^Designer$/i });
+    expect(designerButton).toBeInTheDocument();
+    expect(designerButton.querySelector("[aria-label*='errors']")).toBeNull();
   });
 
-  test("renders active counts when there are errors and warnings", () => {
+  test("renders active counts in Statistics when there are errors and warnings", () => {
     render(
       <PlannerSidebar
         open={true}
@@ -60,7 +64,7 @@ describe("PlannerSidebar diagnostics badges", () => {
     );
 
     const badges = screen.getAllByLabelText(/1 errors, 2 warnings/i);
-    expect(badges.length).toBeGreaterThanOrEqual(1);
+    expect(badges.length).toBe(1);
     expect(badges[0]).toHaveTextContent("1");
     expect(badges[0]).toHaveTextContent("2");
   });
@@ -73,5 +77,23 @@ describe("PlannerSidebar diagnostics badges", () => {
     expect(container.querySelectorAll("svg").length).toBe(2);
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
+  });
+
+  test("does not render Merge with Main button in sidebar", () => {
+    render(
+      <PlannerSidebar
+        open={true}
+        onClose={jest.fn()}
+        stream="CSE"
+        totalCourses={40}
+        repeatCount={0}
+        blocked={false}
+        isDesigner={true}
+        errorCount={0}
+        warningCount={0}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: /Merge with Main/i })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE, readApiResponse } from "../../api";
-import { designerDraftKey } from "../../engine/plannerPersistence";
+import { draftKey, designerDraftKey } from "../../engine/plannerPersistence";
 import DesignerWelcome from "./DesignerWelcome";
 import CoursePlanner from "../Planner/CoursePlanner";
 import PlannerSidebar from "../Planner/PlannerSidebar";
@@ -22,6 +22,22 @@ export default function DesignerDashboard({
   const [syncing, setSyncing] = useState(false);
   const [confirmingResync, setConfirmingResync] = useState(false);
   const [resetToken, setResetToken] = useState(0);
+
+  const [designerValidation, setDesignerValidation] = useState({
+    problems: [],
+    warnings: [],
+    summary: { problemCount: 0, warningCount: 0, totalCount: 0 },
+  });
+  const [livePlannerState, setLivePlannerState] = useState(null);
+  const [confirmingMerge, setConfirmingMerge] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeSuccessMessage, setMergeSuccessMessage] = useState("");
+  const [mergeError, setMergeError] = useState("");
+
+  const handleValidationUpdate = useCallback((valResult, currentState) => {
+    if (valResult) setDesignerValidation(valResult);
+    if (currentState) setLivePlannerState(currentState);
+  }, []);
 
   // Statistics for sidebar before designer planner is loaded
   const totalCourses = useMemo(() => {
@@ -125,6 +141,45 @@ export default function DesignerDashboard({
     };
   };
 
+  const handleRequestMerge = () => {
+    if (designerValidation.summary.problemCount > 0) return;
+    setMergeError("");
+    setConfirmingMerge(true);
+  };
+
+  const handleMergeWithMain = async () => {
+    if (designerValidation.summary.problemCount > 0 || merging) return;
+    setMerging(true);
+    setMergeError("");
+    try {
+      const response = await fetch(`${API_BASE}/designer/merge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: user.studentId,
+          plannerState: livePlannerState || designer?.plannerState,
+        }),
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Could not merge Designer plan into Main Planner.");
+      }
+      try {
+        sessionStorage.removeItem(draftKey(user.studentId));
+      } catch {}
+      if (data.user && setUser) {
+        setUser(data.user);
+      }
+      setConfirmingMerge(false);
+      setMergeSuccessMessage("Designer plan merged into Main Planner successfully!");
+      setTimeout(() => setMergeSuccessMessage(""), 7000);
+    } catch (failure) {
+      setMergeError(failure.message || "Failed to merge with Main Planner.");
+    } finally {
+      setMerging(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none lg:pb-0">
@@ -218,8 +273,38 @@ export default function DesignerDashboard({
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={handleRequestMerge}
+            disabled={designerValidation.summary.problemCount > 0 || merging || syncing}
+            title={
+              designerValidation.summary.problemCount > 0
+                ? `Cannot merge with Main: ${designerValidation.summary.problemCount} problem(s) must be resolved first.`
+                : "Merge current Designer plan into Main Planner"
+            }
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+              designerValidation.summary.problemCount > 0
+                ? "border-neutral-800 bg-neutral-900/50 text-neutral-500 cursor-not-allowed opacity-60"
+                : "border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/50 hover:border-emerald-500/60 shadow-sm shadow-emerald-950/50 cursor-pointer"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+              <path d="M16 3h5v5" />
+              <path d="M4 20L21 3" />
+              <path d="M21 16v5h-5" />
+              <path d="M15 15l6 6" />
+              <path d="M4 4l5 5" />
+            </svg>
+            <span>Merge with Main</span>
+            {designerValidation.summary.problemCount > 0 && (
+              <span className="rounded bg-red-950/80 border border-red-800/60 px-1 py-0.2 font-mono text-[9px] uppercase tracking-wider text-red-300">
+                Blocked
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setConfirmingResync(true)}
-            disabled={syncing}
+            disabled={syncing || merging}
             className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-800/80 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 hover:text-white disabled:opacity-50"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
@@ -229,6 +314,27 @@ export default function DesignerDashboard({
           </button>
         </div>
       </div>
+
+      {/* Designer Merge Success Feedback */}
+      {mergeSuccessMessage && (
+        <div role="status" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-800/60 bg-emerald-950/60 p-3.5 text-sm text-emerald-200 shadow-lg animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs">
+              ✓
+            </span>
+            <span className="font-medium">{mergeSuccessMessage}</span>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate("/")}
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors shadow-sm"
+            >
+              Go to Main Planner
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div role="alert" className="mb-4 rounded-xl border border-red-900/60 bg-red-950/50 px-4 py-3 text-sm text-red-300">
@@ -276,6 +382,77 @@ export default function DesignerDashboard({
         </div>
       )}
 
+      {/* Confirmation Modal when merging Designer plan into Main Planner */}
+      {confirmingMerge && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={(e) => { if (e.target === e.currentTarget && !merging) setConfirmingMerge(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="merge-modal-title"
+            className="w-full max-w-md animate-fadeIn rounded-2xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 ring-1 ring-inset ring-emerald-500/30">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                  <path d="M16 3h5v5" />
+                  <path d="M4 20L21 3" />
+                  <path d="M21 16v5h-5" />
+                  <path d="M15 15l6 6" />
+                  <path d="M4 4l5 5" />
+                </svg>
+              </div>
+              <h3 id="merge-modal-title" className="text-base font-semibold text-neutral-50">
+                Merge Designer Plan into Main Planner?
+              </h3>
+            </div>
+
+            <p className="text-sm leading-relaxed text-neutral-300">
+              This will update your official Main Planner with your current Designer plan.
+            </p>
+
+            {designerValidation.summary.warningCount > 0 && (
+              <div className="mt-3.5 rounded-xl border border-amber-800/50 bg-amber-950/30 p-3 text-xs text-amber-200">
+                <div className="font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
+                  <span>⚠️</span>
+                  <span>{designerValidation.summary.warningCount} Advisory Warning{designerValidation.summary.warningCount === 1 ? "" : "s"}</span>
+                </div>
+                <p className="text-amber-300/80">
+                  Advisory warnings (such as soft prerequisites or heavy lab workloads) are permitted and will be carried over to your Main Planner.
+                </p>
+              </div>
+            )}
+
+            {mergeError && (
+              <p role="alert" className="mt-3 rounded-lg border border-red-900/60 bg-red-950/50 p-2.5 text-xs text-red-300">
+                {mergeError}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setConfirmingMerge(false)}
+                disabled={merging}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleMergeWithMain}
+                disabled={merging || designerValidation.summary.problemCount > 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
+              >
+                {merging ? "Merging…" : "Yes, Merge with Main"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CoursePlanner loaded with Designer state */}
       <CoursePlanner
         key={`designer:${user.studentId}:${resetToken}`}
@@ -295,6 +472,7 @@ export default function DesignerDashboard({
         onSyncGradesheet={onSyncGradesheet}
         gradesheetPanel={gradesheetPanel}
         onChangePlan={onChangePlan}
+        onValidationUpdate={handleValidationUpdate}
       />
     </div>
   );

@@ -30,6 +30,7 @@ export default function CoursePlanner({
   onNavigateDesigner = null,
   onNavigateMain = null,
   onSyncWithMain = null,
+  onValidationUpdate = null,
 }) {
   const planner = usePlanner({
     user,
@@ -236,6 +237,12 @@ export default function CoursePlanner({
     }, 4500);
   };
 
+  useEffect(() => {
+    if (isDesigner && onValidationUpdate) {
+      onValidationUpdate(validationResult, state);
+    }
+  }, [isDesigner, validationResult, state, onValidationUpdate]);
+
   const diagnosticsTooltip = useMemo(() => {
     if (!isDesigner) return "";
     const pCount = validationResult.summary.problemCount;
@@ -263,7 +270,6 @@ export default function CoursePlanner({
         isDesigner={isDesigner}
         onNavigateDesigner={onNavigateDesigner}
         onNavigateMain={onNavigateMain}
-        onSyncWithMain={onSyncWithMain}
         errorCount={validationResult.summary.problemCount}
         warningCount={validationResult.summary.warningCount}
         diagnosticsTooltip={diagnosticsTooltip}
@@ -272,51 +278,6 @@ export default function CoursePlanner({
           setIssuesPanelOpen(true);
         }}
       />
-
-      {/* Designer Mode: Interactive Problem and Warning Counters */}
-      {isDesigner && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3 sm:px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-              Validation Status
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { setIssuesPanelTab("problems"); setIssuesPanelOpen(true); }}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
-                validationResult.summary.problemCount > 0
-                  ? "border-red-500/40 bg-red-950/40 text-red-300 hover:bg-red-900/50 hover:border-red-500/60 shadow-sm shadow-red-950/50"
-                  : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
-              }`}
-            >
-              <span className={`flex h-2 w-2 rounded-full ${validationResult.summary.problemCount > 0 ? "bg-red-400 animate-pulse" : "bg-neutral-500"}`} />
-              <span>Problems</span>
-              <span className="rounded-md bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 font-mono text-[11px] text-neutral-200">
-                {validationResult.summary.problemCount}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setIssuesPanelTab("warnings"); setIssuesPanelOpen(true); }}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
-                validationResult.summary.warningCount > 0
-                  ? "border-amber-500/40 bg-amber-950/40 text-amber-300 hover:bg-amber-900/50 hover:border-amber-500/60 shadow-sm shadow-amber-950/50"
-                  : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
-              }`}
-            >
-              <span className={`flex h-2 w-2 rounded-full ${validationResult.summary.warningCount > 0 ? "bg-amber-400" : "bg-neutral-500"}`} />
-              <span>Warnings</span>
-              <span className="rounded-md bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 font-mono text-[11px] text-neutral-200">
-                {validationResult.summary.warningCount}
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {planner.error && (
         <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
@@ -430,6 +391,8 @@ export default function CoursePlanner({
           onLocateIssue={locateIssue}
         />
       )}
+
+
     </div>
   );
 }

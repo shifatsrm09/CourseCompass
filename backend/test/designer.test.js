@@ -460,4 +460,120 @@ test("MOVE_COURSE enforces completed semester protection in main planner mode", 
   assert.equal(designerMove.ok, true);
 });
 
+test("designer merge rejects plan when there are problems", async () => {
+  const user = defaultUser();
+  let storedUser = clone(user);
+
+  // Create designer state with a hard prerequisite violation (CSE111 before CSE110)
+  const brokenState = clone(user.plannerState);
+  const sem0 = brokenState.semesters[0];
+  const sem1 = brokenState.semesters[1];
+  const cse110Idx = sem0.courses.findIndex(c => curriculum.byId.get(c.occurrenceId).code === "CSE110");
+  const cse111Idx = sem1.courses.findIndex(c => curriculum.byId.get(c.occurrenceId).code === "CSE111");
+
+  const [cse110] = sem0.courses.splice(cse110Idx, 1);
+  const [cse111] = sem1.courses.splice(cse111Idx, 1);
+  sem0.courses.push(cse111);
+  sem1.courses.push(cse110);
+
+  let storedDesigner = {
+    studentId: user.studentId,
+    stream: user.stream,
+    plannerState: brokenState,
+    plannerVersion: 1,
+  };
+
+  mock.method(User, "findOne", async () => clone(storedUser));
+  mock.method(User, "findOneAndUpdate", async () => {
+    assert.fail("User must NOT be updated when merge is blocked by problems");
+  });
+  mock.method(DesignerState, "findOne", async () => clone(storedDesigner));
+
+  const res = await post("designer/merge", { studentId: user.studentId });
+  assert.equal(res.status, 422);
+  assert.equal(res.body.code, "MERGE_BLOCKED_BY_PROBLEMS");
+  assert.ok(res.body.summary.problemCount >= 1);
+  assert.deepEqual(storedUser.plannerState, user.plannerState);
+});
+
+test("designer merge allows plan when there are only warnings, updating main planner", async () => {
+  const user = defaultUser();
+  let storedUser = clone(user);
+
+  // Create designer plan with a soft prerequisite warning:
+  // Move PHY112 (sem 2) to sem 5 (after CSE250 in sem 4)
+  const warningState = clone(user.plannerState);
+  const pIdx = warningState.semesters[1].courses.findIndex(
+    c => curriculum.byId.get(c.occurrenceId).code === "PHY112"
+  );
+  const [phy112] = warningState.semesters[1].courses.splice(pIdx, 1);
+  const other = warningState.semesters[4].courses.pop();
+  warningState.semesters[1].courses.push(other);
+  warningState.semesters[4].courses.push(phy112);
+
+  let storedDesigner = {
+    studentId: user.studentId,
+    stream: user.stream,
+    plannerState: warningState,
+    plannerVersion: 2,
+  };
+
+  mock.method(User, "findOne", async () => clone(storedUser));
+  mock.method(User, "findOneAndUpdate", async (filter, update) => {
+    storedUser.plannerState = clone(update.$set.plannerState);
+    storedUser.plannerVersion = (storedUser.plannerVersion || 0) + 1;
+    return clone(storedUser);
+  });
+
+  mock.method(DesignerState, "findOne", async () => clone(storedDesigner));
+  mock.method(DesignerState, "findOneAndUpdate", async (filter, update) => {
+    storedDesigner.plannerState = clone(update.$set.plannerState);
+    storedDesigner.plannerVersion = (storedDesigner.plannerVersion || 0) + 1;
+    return clone(storedDesigner);
+  });
+
+  const res = await post("designer/merge", { studentId: user.studentId });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.success, true);
+  assert.equal(res.body.summary.problemCount, 0);
+  assert.ok(res.body.summary.warningCount >= 1);
+  assert.deepEqual(storedUser.plannerState.semesters[4].courses, warningState.semesters[4].courses);
+  assert.equal(storedUser.plannerVersion, 2);
+});
+
+test("designer merge succeeds on clean plan and updates user plannerState", async () => {
+  const user = defaultUser();
+  let storedUser = clone(user);
+
+  const cleanState = clone(user.plannerState);
+  cleanState.courseLabels = { "some-inst": "Custom Name" };
+
+  let storedDesigner = {
+    studentId: user.studentId,
+    stream: user.stream,
+    plannerState: cleanState,
+    plannerVersion: 1,
+  };
+
+  mock.method(User, "findOne", async () => clone(storedUser));
+  mock.method(User, "findOneAndUpdate", async (filter, update) => {
+    storedUser.plannerState = clone(update.$set.plannerState);
+    storedUser.plannerVersion = (storedUser.plannerVersion || 0) + 1;
+    return clone(storedUser);
+  });
+
+  mock.method(DesignerState, "findOne", async () => clone(storedDesigner));
+  mock.method(DesignerState, "findOneAndUpdate", async (filter, update) => {
+    storedDesigner.plannerState = clone(update.$set.plannerState);
+    storedDesigner.plannerVersion = (storedDesigner.plannerVersion || 0) + 1;
+    return clone(storedDesigner);
+  });
+
+  const res = await post("designer/merge", { studentId: user.studentId });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.success, true);
+  assert.equal(res.body.summary.problemCount, 0);
+  assert.deepEqual(storedUser.plannerState.courseLabels, { "some-inst": "Custom Name" });
+});
+
 

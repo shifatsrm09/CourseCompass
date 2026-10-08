@@ -114,14 +114,6 @@ export default function PlannerSidebar({
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
             <span className="flex-1 text-left">Designer</span>
-            {isDesigner && (
-              <DiagnosticsBadge
-                errorCount={errorCount}
-                warningCount={warningCount}
-                title={diagnosticsTooltip}
-                onOpenDiagnostics={onOpenDiagnostics}
-              />
-            )}
           </button>
 
           {/* Auto Balance */}

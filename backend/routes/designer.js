@@ -1,7 +1,7 @@
 const express = require("express");
 const User = require("../models/User");
 const DesignerState = require("../models/DesignerState");
-const { getCurriculum, samePlannerState } = require("../plannerState");
+const { getCurriculum, samePlannerState, deriveLegacyFields } = require("../plannerState");
 
 const router = express.Router();
 const validStudentId = (value) => typeof value === "string" && value.trim().length > 0 && value.length <= 100;
@@ -194,6 +194,97 @@ router.post("/reset", async (req, res) => {
 
   await DesignerState.deleteOne({ studentId });
   return res.json({ success: true });
+});
+
+// Merge Designer plan into Main Planner
+// Blocked if there are problems; allowed if only warnings or clean
+router.post("/merge", async (req, res) => {
+  const { studentId, plannerState } = req.body || {};
+  if (!validStudentId(studentId)) {
+    return res.status(400).json({ code: "INVALID_STUDENT_ID", error: "A student ID is required." });
+  }
+
+  const user = await User.findOne({ studentId });
+  if (!user) {
+    return res.status(404).json({ code: "USER_NOT_FOUND", error: "Student account not found." });
+  }
+
+  const designer = await DesignerState.findOne({ studentId });
+  if (!designer || (!designer.plannerState && !plannerState)) {
+    return res.status(404).json({
+      code: "DESIGNER_NOT_FOUND",
+      error: "Designer workspace not found. Please sync with Main first.",
+    });
+  }
+
+  const stateToMerge = plannerState || designer.plannerState;
+  const stream = designer?.stream || user.stream;
+  const curriculum = await getCurriculum(stream);
+  if (!curriculum) {
+    return res.status(422).json({ code: "UNSUPPORTED_STREAM", error: "The curriculum could not be found." });
+  }
+
+  // Validate Designer plan using validateDesignerPlan
+  const { validateDesignerPlan } = await import("../../src/engine/designerValidation.mjs");
+  const validation = validateDesignerPlan(stateToMerge, curriculum);
+
+  if (validation.summary.problemCount > 0) {
+    return res.status(422).json({
+      code: "MERGE_BLOCKED_BY_PROBLEMS",
+      error: `Cannot merge with Main Planner: there ${
+        validation.summary.problemCount === 1 ? "is 1 problem" : `are ${validation.summary.problemCount} problems`
+      } that must be resolved first.`,
+      problems: validation.problems,
+      warnings: validation.warnings,
+      summary: validation.summary,
+    });
+  }
+
+  // Deep clone to ensure clean state
+  const clonedPlannerState = JSON.parse(JSON.stringify(stateToMerge));
+  clonedPlannerState.personalized = true;
+
+  const legacyFields = typeof deriveLegacyFields === "function" ? deriveLegacyFields(clonedPlannerState, curriculum) : {};
+  const mutationId = `merge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  // Save into Main Planner (User)
+  const updatedUser = await User.findOneAndUpdate(
+    { studentId },
+    {
+      $set: {
+        ...legacyFields,
+        plannerState: clonedPlannerState,
+        lastPlannerMutationId: mutationId,
+      },
+      $inc: { plannerVersion: 1 },
+    },
+    { new: true, runValidators: true }
+  );
+
+  // Also update DesignerState so it remains consistent
+  const updatedDesigner = await DesignerState.findOneAndUpdate(
+    { studentId },
+    {
+      $set: {
+        plannerState: clonedPlannerState,
+        lastPlannerMutationId: mutationId,
+      },
+      $inc: { plannerVersion: 1 },
+    },
+    { new: true }
+  );
+
+  return res.json({
+    success: true,
+    user: updatedUser,
+    designer: updatedDesigner ? {
+      plannerState: updatedDesigner.plannerState,
+      plannerVersion: versionOf(updatedDesigner),
+      stream: updatedDesigner.stream,
+    } : null,
+    message: "Designer plan merged into Main Planner successfully.",
+    summary: validation.summary,
+  });
 });
 
 module.exports = router;

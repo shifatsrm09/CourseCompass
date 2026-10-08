@@ -76,34 +76,55 @@ export function validateDesignerPlan(state, curriculum, options = {}) {
       let message = "";
       if (prereqSemester !== null) {
         if (prereqSemester > courseSemester) {
-          message = `${courseCode} requires ${prereqCode}, but ${prereqCode} is scheduled after ${courseCode} (Semester ${prereqSemester}).`;
+          message = isSoft
+            ? `${courseCode} recommends ${prereqCode} as a corequisite/soft prerequisite, but ${prereqCode} is scheduled after ${courseCode} (Semester ${prereqSemester}).`
+            : `${courseCode} requires ${prereqCode}, but ${prereqCode} is scheduled after ${courseCode} (Semester ${prereqSemester}).`;
         } else if (prereqSemester === courseSemester) {
           message = `${courseCode} requires ${prereqCode}, but both are scheduled in Semester ${courseSemester}.`;
         } else {
           message = `${courseCode} requires ${prereqCode}, but prerequisite is not satisfied.`;
         }
       } else {
-        message = `${courseCode} requires ${prereqCode}, but ${prereqCode} is not scheduled in any semester.`;
+        message = isSoft
+          ? `${courseCode} recommends ${prereqCode} as a corequisite/soft prerequisite, but ${prereqCode} is not scheduled in any semester.`
+          : `${courseCode} requires ${prereqCode}, but ${prereqCode} is not scheduled in any semester.`;
       }
 
-      problems.push({
-        id: `problem:prereq:${instanceId}:${prereqCode}`,
-        type: "PREREQUISITE_VIOLATION",
-        severity: "problem",
-        title: isSoft ? "Prerequisite / Corequisite violation" : "Prerequisite violation",
-        message,
-        rule: isSoft
-          ? "Soft prerequisites / corequisites must be scheduled concurrently or in an earlier semester."
-          : "Prerequisites must be completed in an earlier semester before taking advanced courses.",
-        courses: prereqCode ? [courseCode, prereqCode] : [courseCode],
-        instanceIds: [instanceId, ...(prereqInstanceId ? [prereqInstanceId] : [])],
-        semesters: prereqSemester ? [courseSemester, prereqSemester] : [courseSemester],
-        semesterIds: [courseSemesterId, ...(prereqSemesterId ? [prereqSemesterId] : [])].filter(Boolean),
-        primarySemester: courseSemester,
-        primarySemesterId: courseSemesterId,
-        primaryCourseCode: courseCode,
-        primaryInstanceId: instanceId,
-      });
+      if (isSoft) {
+        warnings.push({
+          id: `warning:soft_prereq:${instanceId}:${prereqCode}`,
+          type: "SOFT_PREREQUISITE_VIOLATION",
+          severity: "warning",
+          title: "Soft prerequisite warning",
+          message,
+          rule: "Soft prerequisites / corequisites should ideally be scheduled concurrently or in an earlier semester.",
+          courses: prereqCode ? [courseCode, prereqCode] : [courseCode],
+          instanceIds: [instanceId, ...(prereqInstanceId ? [prereqInstanceId] : [])],
+          semesters: prereqSemester ? [courseSemester, prereqSemester] : [courseSemester],
+          semesterIds: [courseSemesterId, ...(prereqSemesterId ? [prereqSemesterId] : [])].filter(Boolean),
+          primarySemester: courseSemester,
+          primarySemesterId: courseSemesterId,
+          primaryCourseCode: courseCode,
+          primaryInstanceId: instanceId,
+        });
+      } else {
+        problems.push({
+          id: `problem:prereq:${instanceId}:${prereqCode}`,
+          type: "PREREQUISITE_VIOLATION",
+          severity: "problem",
+          title: "Prerequisite violation",
+          message,
+          rule: "Prerequisites must be completed in an earlier semester before taking advanced courses.",
+          courses: prereqCode ? [courseCode, prereqCode] : [courseCode],
+          instanceIds: [instanceId, ...(prereqInstanceId ? [prereqInstanceId] : [])],
+          semesters: prereqSemester ? [courseSemester, prereqSemester] : [courseSemester],
+          semesterIds: [courseSemesterId, ...(prereqSemesterId ? [prereqSemesterId] : [])].filter(Boolean),
+          primarySemester: courseSemester,
+          primarySemesterId: courseSemesterId,
+          primaryCourseCode: courseCode,
+          primaryInstanceId: instanceId,
+        });
+      }
     });
   });
 

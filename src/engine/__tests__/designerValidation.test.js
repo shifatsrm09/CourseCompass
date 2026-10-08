@@ -143,4 +143,40 @@ describe("validateDesignerPlan", () => {
     expect(fixedOverload.problems.some(p => p.type === "COURSE_OVERLOAD")).toBe(false);
     expect(fixedOverload.problems.some(p => p.type === "PREREQUISITE_VIOLATION")).toBe(true);
   });
+
+  test("10. Breaking a soft prerequisite (sp) produces a Warning, NOT a Problem", () => {
+    const softCurriculum = buildCurriculum([
+      { code: "CSE110", semester_row: 1, hp: [], type: "Program Core" },
+      { code: "CSE111", semester_row: 2, hp: [], sp: ["CSE110"], type: "Program Core" },
+      { code: "MAT120", semester_row: 1, hp: [], type: "Basic Science" },
+      { code: "PHY111", semester_row: 2, hp: [], type: "Basic Science" },
+    ], "test-soft");
+
+    const state = createDefaultState(softCurriculum);
+
+    // Place CSE111 in semester 1 and CSE110 in semester 2 (CSE110 scheduled after CSE111)
+    const cse110Idx = state.semesters[0].courses.findIndex(c => softCurriculum.byId.get(c.occurrenceId).code === "CSE110");
+    const cse111Idx = state.semesters[1].courses.findIndex(c => softCurriculum.byId.get(c.occurrenceId).code === "CSE111");
+
+    const [cse110] = state.semesters[0].courses.splice(cse110Idx, 1);
+    const [cse111] = state.semesters[1].courses.splice(cse111Idx, 1);
+
+    state.semesters[0].courses.push(cse111);
+    state.semesters[1].courses.push(cse110);
+
+    const result = validateDesignerPlan(state, softCurriculum);
+
+    // Should NOT be a problem
+    expect(result.summary.problemCount).toBe(0);
+    expect(result.problems).toHaveLength(0);
+
+    // MUST be a warning
+    expect(result.summary.warningCount).toBe(1);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0].type).toBe("SOFT_PREREQUISITE_VIOLATION");
+    expect(result.warnings[0].severity).toBe("warning");
+    expect(result.warnings[0].title).toBe("Soft prerequisite warning");
+    expect(result.warnings[0].courses).toContain("CSE111");
+    expect(result.warnings[0].courses).toContain("CSE110");
+  });
 });

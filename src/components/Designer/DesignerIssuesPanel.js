@@ -185,11 +185,11 @@ export default function DesignerIssuesPanel({
                     </p>
 
                     {/* Affected Semesters / Courses breakdown */}
-                    {issue.type === "PREREQUISITE_VIOLATION" && issue.courses?.length >= 2 && (
+                    {(issue.type === "PREREQUISITE_VIOLATION" || issue.type === "SOFT_PREREQUISITE_VIOLATION") && issue.courses?.length >= 2 && (
                       <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2.5 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between text-neutral-300">
                           <span className="text-neutral-400">Semester {issue.semesters?.[0]}</span>
-                          <span className="font-semibold text-red-300">→ {issue.courses[0]}</span>
+                          <span className={`font-semibold ${isProblem ? "text-red-300" : "text-amber-300"}`}>→ {issue.courses[0]}</span>
                         </div>
                         {issue.semesters?.[1] ? (
                           <div className="flex items-center justify-between text-neutral-300">
@@ -198,7 +198,7 @@ export default function DesignerIssuesPanel({
                           </div>
                         ) : (
                           <div className="flex items-center justify-between text-neutral-400 text-[11px]">
-                            <span>Prerequisite {issue.courses[1]}</span>
+                            <span>{issue.type === "SOFT_PREREQUISITE_VIOLATION" ? "Corequisite " : "Prerequisite "}{issue.courses[1]}</span>
                             <span className="italic text-neutral-500">Unscheduled</span>
                           </div>
                         )}
