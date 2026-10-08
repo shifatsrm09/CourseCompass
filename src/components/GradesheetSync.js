@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE, readApiResponse } from "../api";
-import { readGradesheet } from "../engine/readGradesheet";
 import { defaultMappings, prepareGradesheetImport, termNumber, termFromNumber, termName } from "../engine/gradesheet.mjs";
 import streamsConfig from "../data/streamsConfig";
 import { buildCurriculum } from "../engine/plannerState.mjs";
@@ -47,6 +46,7 @@ export default function GradesheetSync({ user: accountUser, curriculum: accountC
     setFilename(file.name);
     pending.current = null;
     try {
+      const { readGradesheet } = await import("../engine/readGradesheet");
       const parsed = await readGradesheet(file, accountUser?.studentId);
       if (!mounted.current) return;
       if (!accountUser) {

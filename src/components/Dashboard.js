@@ -13,7 +13,7 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan, curre
     return stream ? buildCurriculum(stream.plan, user.stream) : null;
   }, [user.stream]);
 
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia("(min-width: 1024px)").matches : true);
   const sidebarButtonRef = useRef(null);
   const closeSidebar = () => { setSidebarOpen(false); sidebarButtonRef.current?.focus(); };
   useEffect(() => {

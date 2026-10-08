@@ -25,6 +25,9 @@ export function getPrerequisiteViolations(state, curriculum) {
     });
   });
 
+  const unplacedCodes = new Set(
+    (state.unplaced || []).map((u) => curriculum.byId?.get(u.occurrenceId)?.code).filter(Boolean)
+  );
   const completed = new Set(state.completedCourses || []);
   const violationsByInstance = new Map();
 
@@ -33,53 +36,90 @@ export function getPrerequisiteViolations(state, curriculum) {
 
     sem.courses.forEach((course) => {
       const definition = curriculum.byId?.get(course.occurrenceId);
-      if (!definition || !Array.isArray(definition.hp) || definition.hp.length === 0) {
-        return;
-      }
-
+      if (!definition) return;
       const courseCode = definition.code;
-      // If course is recorded as completed before current semester, it was completed historically
-      if (
-        courseCode !== "COD" &&
-        completed.has(courseCode) &&
-        semesterIndex < (state.currentSemester || 1) - 1
-      ) {
-        return;
-      }
+      if (courseCode === "COD") return;
 
       const issues = [];
-      for (const prereqCode of definition.hp) {
-        if (!prereqCode || prereqCode.trim() === "") continue;
-        if (!curriculum.byCode?.has(prereqCode)) continue;
+      const checkedPrereqs = new Set();
 
-        const isCompleted = completed.has(prereqCode);
-        const earlierPlacement = codePlacements.get(prereqCode)?.find((pos) => pos < semesterIndex);
+      // 1. Hard prerequisites (hp): must be strictly earlier (pos < semesterIndex)
+      for (const prereqCode of (definition.hp || [])) {
+        if (!prereqCode || !prereqCode.trim() || !curriculum.byCode?.has(prereqCode)) continue;
+        checkedPrereqs.add(prereqCode);
+        const placements = codePlacements.get(prereqCode) || [];
+        const earlierPlacement = placements.find((pos) => pos < semesterIndex);
 
-        // If neither completed nor placed in an earlier semester, prerequisite is violated
-        if (!isCompleted && earlierPlacement === undefined) {
-          const currentPlacements = codePlacements.get(prereqCode) || [];
-          let prereqStatus = "Not scheduled in any semester";
-
-          if (currentPlacements.length > 0) {
-            const firstSlot = currentPlacements[0];
-            if (firstSlot === semesterIndex) {
-              prereqStatus = `Currently scheduled in same semester (Semester ${firstSlot + 1})`;
+        if (earlierPlacement === undefined) {
+          if (placements.length > 0) {
+            let prereqStatus;
+            if (placements.includes(semesterIndex)) {
+              prereqStatus = `Currently scheduled in same semester (Semester ${semesterIndex + 1})`;
             } else {
-              prereqStatus = `Currently scheduled in Semester ${firstSlot + 1}`;
+              const firstLater = placements.find((pos) => pos > semesterIndex);
+              prereqStatus = `Currently scheduled after in Semester ${firstLater + 1}`;
             }
-          } else if (
-            Array.isArray(state.unplaced) &&
-            state.unplaced.some((u) => curriculum.byId?.get(u.occurrenceId)?.code === prereqCode)
-          ) {
-            prereqStatus = "Currently unscheduled";
+            issues.push({
+              prereqCode,
+              prereqStatus,
+              courseCode,
+              courseSemester: semesterIndex + 1,
+              isHard: true,
+            });
+          } else if (unplacedCodes.has(prereqCode)) {
+            issues.push({
+              prereqCode,
+              prereqStatus: "Currently unscheduled",
+              courseCode,
+              courseSemester: semesterIndex + 1,
+              isHard: true,
+            });
+          } else if (!completed.has(prereqCode)) {
+            issues.push({
+              prereqCode,
+              prereqStatus: "Not scheduled in any semester",
+              courseCode,
+              courseSemester: semesterIndex + 1,
+              isHard: true,
+            });
           }
+        }
+      }
 
-          issues.push({
-            prereqCode,
-            prereqStatus,
-            courseCode,
-            courseSemester: semesterIndex + 1,
-          });
+      // 2. Soft prerequisites / Corequisites (sp): can be concurrent (pos <= semesterIndex), but NOT after (pos > semesterIndex)
+      for (const spCode of (definition.sp || [])) {
+        if (!spCode || !spCode.trim() || checkedPrereqs.has(spCode) || !curriculum.byCode?.has(spCode)) continue;
+        checkedPrereqs.add(spCode);
+        const placements = codePlacements.get(spCode) || [];
+        const validPlacement = placements.find((pos) => pos <= semesterIndex);
+
+        if (validPlacement === undefined) {
+          if (placements.length > 0) {
+            const firstLater = placements.find((pos) => pos > semesterIndex);
+            issues.push({
+              prereqCode: spCode,
+              prereqStatus: `Currently scheduled after in Semester ${firstLater + 1}`,
+              courseCode,
+              courseSemester: semesterIndex + 1,
+              isHard: false,
+            });
+          } else if (unplacedCodes.has(spCode)) {
+            issues.push({
+              prereqCode: spCode,
+              prereqStatus: "Currently unscheduled",
+              courseCode,
+              courseSemester: semesterIndex + 1,
+              isHard: false,
+            });
+          } else if (!completed.has(spCode)) {
+            issues.push({
+              prereqCode: spCode,
+              prereqStatus: "Not scheduled in any semester",
+              courseCode,
+              courseSemester: semesterIndex + 1,
+              isHard: false,
+            });
+          }
         }
       }
 

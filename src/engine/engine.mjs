@@ -5,7 +5,7 @@ import { scheduleFuture, planningError } from "./scheduler.mjs";
 function editableSemester(state, semesterId, options = {}) {
   const index = state.semesters.findIndex(semester => semester.id === semesterId);
   if (index < 0) planningError("SEMESTER_NOT_FOUND", "The selected semester is no longer in this plan.");
-  if (!options.isDesigner && index < state.currentSemester - 1) planningError("FROZEN_SEMESTER", "Completed semesters are protected. Undo the most recent completion before editing it.");
+  if (!options.isDesigner && index < state.currentSemester) planningError("FROZEN_SEMESTER", "Current and completed semesters are protected. Edit an upcoming semester instead.");
   if (state.semesters[index].isTarc) planningError("TARC_NOT_ALLOWED", "Courses cannot be added, replaced, or removed in TARC.");
   return index;
 }
@@ -33,9 +33,8 @@ function insertCourse(state, index, occurrenceId, curriculum, excludedId, option
   if (!definition) planningError("COURSE_NOT_FOUND", "Select a course from this stream's curriculum.");
   if (definition.is_tarc) planningError("TARC_NOT_ALLOWED", "TARC courses stay in their TARC semester.");
   const target = state.semesters[index];
-  const maxAllowed = options.isDesigner ? 6 : 5;
-  if (target.courses.length >= maxAllowed) {
-    planningError("SEMESTER_FULL", `Semester ${index + 1} cannot exceed ${maxAllowed} courses.`);
+  if (options.isDesigner && target.courses.length >= 6) {
+    planningError("SEMESTER_FULL", `Semester ${index + 1} cannot exceed 6 courses.`);
   }
   const codeOf = course => curriculum.byId.get(course.occurrenceId).code;
   if (target.courses.some(course => definition.code === "COD" ? codeOf(course) === "COD" : course.occurrenceId === occurrenceId)) planningError("COURSE_ALREADY_EXISTS", `${definition.code} is already in this semester.`);
@@ -65,7 +64,7 @@ function insertCourse(state, index, occurrenceId, curriculum, excludedId, option
       const semester = state.semesters[position];
       source = semester.courses.find(course => course.occurrenceId === occurrenceId && course.instanceId !== excludedId);
       if (source) {
-        if (!options.isDesigner && position < state.currentSemester - 1) planningError("FROZEN_SEMESTER", `${definition.code} is in a completed semester and cannot be moved.`);
+        if (!options.isDesigner && position < state.currentSemester) planningError("FROZEN_SEMESTER", `${definition.code} is in a current or completed semester and cannot be moved.`);
         sourceList = semester.courses;
         break;
       }
@@ -171,10 +170,10 @@ function applyAction(state, action, curriculum, options = {}) {
         const fromSem = next.semesters[fromIndex];
         const toSem = next.semesters[toIndex];
 
-        if (!designerOptions.isDesigner && fromIndex < next.currentSemester - 1) {
-          planningError("FROZEN_SEMESTER", "Completed semesters cannot be modified.");
+        if (!designerOptions.isDesigner && fromIndex < next.currentSemester) {
+          planningError("FROZEN_SEMESTER", "Current and completed semesters are protected.");
         }
-        if (!designerOptions.isDesigner && toIndex < next.currentSemester - 1) {
+        if (!designerOptions.isDesigner && toIndex < next.currentSemester) {
           planningError("FROZEN_SEMESTER", "Courses cannot be moved into completed semesters.");
         }
 
@@ -184,7 +183,7 @@ function applyAction(state, action, curriculum, options = {}) {
         const coursePos = fromSem.courses.findIndex(c => c.instanceId === action.instanceId);
         if (coursePos < 0) planningError("COURSE_NOT_FOUND", "The course is no longer in that semester.");
 
-        const maxAllowed = designerOptions.isDesigner ? 6 : 5;
+        const maxAllowed = designerOptions.isDesigner ? 6 : 4;
         if (fromIndex !== toIndex && toSem.courses.length >= maxAllowed) {
           planningError("SEMESTER_FULL", `Semester ${toIndex + 1} cannot exceed ${maxAllowed} courses.`);
         }
@@ -202,11 +201,6 @@ function applyAction(state, action, curriculum, options = {}) {
           if (fromIndex < next.currentSemester - 1 && toIndex >= next.currentSemester - 1) {
             if (code && next.completedCourses?.includes(code)) {
               next.completedCourses = next.completedCourses.filter(c => c !== code);
-            }
-          }
-          if (toIndex < next.currentSemester - 1) {
-            if (code && !next.completedCourses?.includes(code) && code !== "COD") {
-              next.completedCourses = [...next.completedCourses, code];
             }
           }
         }
@@ -247,7 +241,11 @@ function applyAction(state, action, curriculum, options = {}) {
       default:
         planningError("UNKNOWN_ACTION", "This planner action is not supported.");
     }
-    if (action.type !== "COMPLETE_SEMESTER" && action.type !== "MOVE_SEMESTER" && !(action.type === "MOVE_COURSE" && action.fromSemesterId === action.toSemesterId)) {
+    if (
+      action.type !== "COMPLETE_SEMESTER" &&
+      action.type !== "MOVE_SEMESTER" &&
+      !(action.type === "MOVE_COURSE" && (isDesigner || action.fromSemesterId === action.toSemesterId))
+    ) {
       scheduleFuture(next, curriculum, { notBefore, pinned, isDesigner, allowPrerequisiteOverride: isDesigner });
     }
     trimTrailingEmptySemesters(next, curriculum);

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getSemesterStatus } from "../../engine/plannerState.mjs";
 import { displayCourseCode } from "../../engine/labs.mjs";
 import { getThesisPlan } from "../../engine/thesisPlan.mjs";
 import { getPrerequisiteViolations } from "../../engine/prerequisites.mjs";
+import { validateDesignerPlan } from "../../engine/designerValidation.mjs";
 import usePlanner from "../../engine/usePlanner";
 import { termNumber, latestRepeatIds } from "../../engine/gradesheet.mjs";
 import { advanceTerm, formatTermLabel } from "../../engine/academicTerm";
@@ -10,6 +11,7 @@ import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
 import PlannerSidebar from "./PlannerSidebar";
+import DesignerIssuesPanel from "../Designer/DesignerIssuesPanel";
 
 export default function CoursePlanner({
   user,
@@ -140,7 +142,7 @@ export default function CoursePlanner({
   }, [selectedSlot, curriculum, state, modalContext, repeatCourses, isDesigner]);
 
   const getStatus = (index) => getSemesterStatus(state, index);
-  const canEdit = (index, slot) => !blocked && (isDesigner || index >= state.currentSemester - 1) && !slot.isTarc;
+  const canEdit = (index, slot) => !blocked && (isDesigner || index >= state.currentSemester) && !slot.isTarc;
   const closeEditModal = () => setModalContext(null);
 
   const openAdd = (semesterId) => {
@@ -195,6 +197,56 @@ export default function CoursePlanner({
   const recoveryNeeded = ["error", "conflict", "pending"].includes(saveStatus.kind);
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
+  const validationResult = useMemo(() => {
+    if (!isDesigner || !state || !curriculum) {
+      return { problems: [], warnings: [], summary: { problemCount: 0, warningCount: 0, totalCount: 0 } };
+    }
+    return validateDesignerPlan(state, curriculum, {
+      plannerWarnings: planner.warnings,
+      plannerError: planner.error,
+    });
+  }, [isDesigner, state, curriculum, planner.warnings, planner.error]);
+
+  const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [issuesPanelTab, setIssuesPanelTab] = useState("problems");
+  const [highlightedCourseIds, setHighlightedCourseIds] = useState(new Set());
+  const [highlightedSemesterId, setHighlightedSemesterId] = useState(null);
+  const highlightTimeoutRef = useRef(null);
+
+  const locateIssue = (issue) => {
+    const courseIds = new Set(issue.instanceIds || []);
+    setHighlightedCourseIds(courseIds);
+    setHighlightedSemesterId(issue.primarySemesterId || issue.semesterIds?.[0] || null);
+
+    const targetCourseId = issue.instanceIds?.[0];
+    const targetSemesterId = issue.primarySemesterId || issue.semesterIds?.[0];
+
+    const courseEl = targetCourseId ? document.getElementById(`course-box-${targetCourseId}`) : null;
+    const semesterEl = targetSemesterId ? document.getElementById(`semester-row-${targetSemesterId}`) : null;
+
+    const elToScroll = courseEl || semesterEl;
+    if (elToScroll) {
+      elToScroll.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedCourseIds(new Set());
+      setHighlightedSemesterId(null);
+    }, 4500);
+  };
+
+  const diagnosticsTooltip = useMemo(() => {
+    if (!isDesigner) return "";
+    const pCount = validationResult.summary.problemCount;
+    const wCount = validationResult.summary.warningCount;
+    const lines = [`${pCount} problem${pCount === 1 ? "" : "s"}, ${wCount} warning${wCount === 1 ? "" : "s"}`];
+    validationResult.problems.slice(0, 3).forEach((p) => lines.push(`• ${p.title}: ${p.message}`));
+    if (validationResult.problems.length > 3) lines.push(`...and ${validationResult.problems.length - 3} more problems`);
+    validationResult.warnings.slice(0, 2).forEach((w) => lines.push(`• ${w.title}: ${w.message}`));
+    return lines.join("\n");
+  }, [isDesigner, validationResult]);
+
   return (
     <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none lg:pb-0">
       <PlannerSidebar
@@ -212,7 +264,59 @@ export default function CoursePlanner({
         onNavigateDesigner={onNavigateDesigner}
         onNavigateMain={onNavigateMain}
         onSyncWithMain={onSyncWithMain}
+        errorCount={validationResult.summary.problemCount}
+        warningCount={validationResult.summary.warningCount}
+        diagnosticsTooltip={diagnosticsTooltip}
+        onOpenDiagnostics={(tab) => {
+          setIssuesPanelTab(tab || "problems");
+          setIssuesPanelOpen(true);
+        }}
       />
+
+      {/* Designer Mode: Interactive Problem and Warning Counters */}
+      {isDesigner && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3 sm:px-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              Validation Status
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setIssuesPanelTab("problems"); setIssuesPanelOpen(true); }}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                validationResult.summary.problemCount > 0
+                  ? "border-red-500/40 bg-red-950/40 text-red-300 hover:bg-red-900/50 hover:border-red-500/60 shadow-sm shadow-red-950/50"
+                  : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
+              }`}
+            >
+              <span className={`flex h-2 w-2 rounded-full ${validationResult.summary.problemCount > 0 ? "bg-red-400 animate-pulse" : "bg-neutral-500"}`} />
+              <span>Problems</span>
+              <span className="rounded-md bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 font-mono text-[11px] text-neutral-200">
+                {validationResult.summary.problemCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setIssuesPanelTab("warnings"); setIssuesPanelOpen(true); }}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                validationResult.summary.warningCount > 0
+                  ? "border-amber-500/40 bg-amber-950/40 text-amber-300 hover:bg-amber-900/50 hover:border-amber-500/60 shadow-sm shadow-amber-950/50"
+                  : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
+              }`}
+            >
+              <span className={`flex h-2 w-2 rounded-full ${validationResult.summary.warningCount > 0 ? "bg-amber-400" : "bg-neutral-500"}`} />
+              <span>Warnings</span>
+              <span className="rounded-md bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 font-mono text-[11px] text-neutral-200">
+                {validationResult.summary.warningCount}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {planner.error && (
         <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
@@ -292,6 +396,8 @@ export default function CoursePlanner({
             dispatch({ type: "MOVE_COURSE", instanceId, fromSemesterId, toSemesterId, toIndex });
           }}
           isDesigner={isDesigner}
+          highlightedSemesterId={highlightedSemesterId}
+          highlightedCourseIds={highlightedCourseIds}
         />
       )}
 
@@ -314,6 +420,16 @@ export default function CoursePlanner({
         error={planner.error}
         title={modalContext?.mode === "add" ? "Add a course" : `Replace ${modalContext?.code || "course"}`}
       />
+
+      {isDesigner && (
+        <DesignerIssuesPanel
+          isOpen={issuesPanelOpen}
+          onClose={() => setIssuesPanelOpen(false)}
+          initialTab={issuesPanelTab}
+          validationResult={validationResult}
+          onLocateIssue={locateIssue}
+        />
+      )}
     </div>
   );
 }

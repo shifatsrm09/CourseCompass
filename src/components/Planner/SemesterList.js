@@ -19,6 +19,8 @@ export default function SemesterList({
   onMoveSemester,
   onMoveCourse,
   isDesigner = false,
+  highlightedSemesterId = null,
+  highlightedCourseIds = new Set(),
 }) {
   const [desktop, setDesktop] = useState(() => (
     typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -122,6 +124,8 @@ export default function SemesterList({
                         canEdit={canEdit(index, slot)}
                         blocked={blocked}
                         isDesigner={isDesigner}
+                        isHighlighted={highlightedSemesterId === slot.id}
+                        highlightedCourseIds={highlightedCourseIds}
                         onComplete={onComplete}
                         canUndo={status === "completed" && (index === semesterSlots.length - 1 || getStatus(index + 1) !== "completed")}
                         onUndoMenu={(event) => {

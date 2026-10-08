@@ -27,7 +27,7 @@ function validateTransition(state, previous, curriculum, errors, options = {}) {
     }
   }
   if (!isDesigner) {
-    const frozenCount = previous.currentSemester - (state.currentSemester > previous.currentSemester ? 0 : 1);
+    const frozenCount = previous.currentSemester - (state.currentSemester > previous.currentSemester ? 1 : 0);
     for (let index = 0; index < Math.min(frozenCount, previous.semesters.length); index++) {
       if (!same(previous.semesters[index], state.semesters[index])) add("FROZEN_SEMESTER", `Semester ${index + 1} is completed and cannot be rearranged.`);
     }
@@ -110,7 +110,7 @@ function validatePlannerState(state, curriculum, options = {}) {
       placements.get(definition.code).push(index);
     }
   };
-  const maxSemesterCourses = isDesigner ? 6 : 5;
+  const maxSemesterCourses = isDesigner ? 6 : 4;
   state.semesters.forEach((semester, index) => {
     if (!hasOnlyKeys(semester, ["id", "originalRow", "isTarc", "courses"]) || !validText(semester.id) || !Number.isInteger(semester.originalRow) || semester.originalRow < 1 || typeof semester.isTarc !== "boolean" || !Array.isArray(semester.courses)) {
       add("INVALID_SEMESTER", `Semester ${index + 1} is malformed.`);
@@ -119,7 +119,7 @@ function validatePlannerState(state, curriculum, options = {}) {
     if (ids.has(semester.id) || rows.has(semester.originalRow)) add("INVALID_SEMESTER_ORDER", "Semester identities and original rows must be unique.");
     ids.add(semester.id);
     rows.add(semester.originalRow);
-    if (!semester.isTarc && semester.courses.length > maxSemesterCourses) {
+    if (options.checkSchedule !== false && !semester.isTarc && semester.courses.length > maxSemesterCourses) {
       add("SEMESTER_FULL", `Semester ${index + 1} exceeds the ${maxSemesterCourses}-course maximum.`);
     }
     let codCount = 0;
@@ -136,7 +136,6 @@ function validatePlannerState(state, curriculum, options = {}) {
     if (!occurrences.has(course.occurrenceId)) add("MISSING_COURSE", `Curriculum occurrence ${course.occurrenceId} has no planned or unscheduled instance.`);
   }
   if (!options.allowUnplaced && state.unplaced.length) add("UNPLACED_COURSES", `${state.unplaced.length} course(s) still need valid future placements.`);
-  if (errors.length) return { ok: false, errors };
   if (state.courseLabels !== undefined) {
     if (!state.courseLabels || typeof state.courseLabels !== "object" || Array.isArray(state.courseLabels)) add("INVALID_COURSE_LABEL", "Course labels must be a map.");
     else for (const [id, label] of Object.entries(state.courseLabels)) {
@@ -144,11 +143,12 @@ function validatePlannerState(state, curriculum, options = {}) {
       if (!instance || curriculum.byId.get(instance.occurrenceId)?.code !== "COD" || typeof label !== "string" || !label.trim() || label.length > 40) add("INVALID_COURSE_LABEL", "Only COD courses can have names, up to 40 characters.");
     }
   }
-  if (errors.length) return { ok: false, errors };
   if (options.checkSchedule !== false && !isDesigner) {
     const completed = new Set(state.completedCourses);
-    state.semesters.forEach((semester, index) => semester.courses.forEach(course => {
+    state.semesters.forEach((semester, index) => semester?.courses?.forEach(course => {
+      if (!course || !course.occurrenceId) return;
       const definition = curriculum.byId.get(course.occurrenceId);
+      if (!definition) return;
       if (index < state.currentSemester || (definition.code !== "COD" && completed.has(definition.code))) return;
       for (const prerequisite of definition.hp) {
         if (!curriculum.byCode?.has(prerequisite)) continue;
@@ -157,6 +157,7 @@ function validatePlannerState(state, curriculum, options = {}) {
       }
     }));
   }
+  if (errors.length) return { ok: false, errors };
   if (options.previousState) {
     const previous = validatePlannerState(options.previousState, curriculum, { allowUnplaced: true, checkSchedule: false, isDesigner });
     if (!previous.ok) add("INVALID_PREVIOUS_STATE", "The previous planner state is malformed; no transition can be validated.");

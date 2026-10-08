@@ -1,3 +1,57 @@
+export function DiagnosticsBadge({ errorCount = 0, warningCount = 0, title, onOpenDiagnostics }) {
+  const errorActive = errorCount > 0;
+  const warningActive = warningCount > 0;
+
+  const handleOpen = (e, tab) => {
+    if (onOpenDiagnostics) {
+      e.stopPropagation();
+      e.preventDefault();
+      onOpenDiagnostics(tab);
+    }
+  };
+
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-2 rounded bg-[#252526] px-1.5 py-0.5 text-xs font-mono border border-neutral-700/60 shadow-sm select-none ${
+        onOpenDiagnostics ? "hover:border-neutral-500 hover:bg-[#2d2d2d] cursor-pointer" : ""
+      }`}
+      onClick={(e) => handleOpen(e, errorActive ? "problems" : warningActive ? "warnings" : "problems")}
+      title={title || `${errorCount} error${errorCount === 1 ? "" : "s"}, ${warningCount} warning${warningCount === 1 ? "" : "s"}`}
+      aria-label={`${errorCount} errors, ${warningCount} warnings`}
+      role={onOpenDiagnostics ? "button" : undefined}
+      tabIndex={onOpenDiagnostics ? 0 : undefined}
+    >
+      <span
+        className={`inline-flex items-center gap-1 ${errorActive ? "text-red-400 font-semibold" : "text-neutral-200"}`}
+        onClick={(e) => handleOpen(e, "problems")}
+      >
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.2" strokeWidth="1.3" />
+          <line x1="5.6" y1="5.6" x2="10.4" y2="10.4" strokeWidth="1.3" strokeLinecap="round" />
+          <line x1="10.4" y1="5.6" x2="5.6" y2="10.4" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+        <span className="tabular-nums text-[11px] leading-none">{errorCount}</span>
+      </span>
+
+      <span
+        className={`inline-flex items-center gap-1 ${warningActive ? "text-amber-400 font-semibold" : "text-neutral-200"}`}
+        onClick={(e) => handleOpen(e, "warnings")}
+      >
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+          <path
+            d="M7.13 2.76a1 1 0 0 1 1.74 0l5.3 9.2A1 1 0 0 1 13.3 13.5H2.7a1 1 0 0 1-.87-1.54l5.3-9.2Z"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+          <line x1="8" y1="6.2" x2="8" y2="9.2" strokeWidth="1.3" strokeLinecap="round" />
+          <circle cx="8" cy="11.4" r="0.65" fill="currentColor" stroke="none" />
+        </svg>
+        <span className="tabular-nums text-[11px] leading-none">{warningCount}</span>
+      </span>
+    </span>
+  );
+}
+
 export default function PlannerSidebar({
   open,
   onClose,
@@ -13,6 +67,10 @@ export default function PlannerSidebar({
   onNavigateDesigner,
   onNavigateMain,
   onSyncWithMain,
+  errorCount = 0,
+  warningCount = 0,
+  diagnosticsTooltip,
+  onOpenDiagnostics,
 }) {
   const actionClass = "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800/70 hover:text-white focus-visible:outline focus-visible:outline-indigo-400";
   return (
@@ -55,7 +113,15 @@ export default function PlannerSidebar({
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
-            Designer
+            <span className="flex-1 text-left">Designer</span>
+            {isDesigner && (
+              <DiagnosticsBadge
+                errorCount={errorCount}
+                warningCount={warningCount}
+                title={diagnosticsTooltip}
+                onOpenDiagnostics={onOpenDiagnostics}
+              />
+            )}
           </button>
 
           {/* Auto Balance */}
@@ -112,11 +178,25 @@ export default function PlannerSidebar({
             <div className="flex items-center justify-between gap-3 border-b border-neutral-800/60 py-2.5">
               <dt className="text-neutral-400">Total Courses</dt>
               <dd className="font-semibold tabular-nums text-neutral-200">{totalCourses}</dd>
+              <span className="sr-only">Total Courses: {totalCourses}</span>
             </div>
-            <div className="flex items-center justify-between gap-3 py-2.5">
+            <div className={`flex items-center justify-between gap-3 ${isDesigner ? "border-b border-neutral-800/60" : ""} py-2.5`}>
               <dt className="text-neutral-400">Repeat Courses</dt>
               <dd className={`font-semibold tabular-nums ${repeatCount > 0 ? "text-red-400" : "text-emerald-400"}`}>{repeatCount}</dd>
             </div>
+            {isDesigner && (
+              <div className="flex items-center justify-between gap-3 py-2.5">
+                <dt className="text-neutral-400">Diagnostics</dt>
+                <dd>
+                  <DiagnosticsBadge
+                    errorCount={errorCount}
+                    warningCount={warningCount}
+                    title={diagnosticsTooltip}
+                    onOpenDiagnostics={onOpenDiagnostics}
+                  />
+                </dd>
+              </div>
+            )}
           </dl>
         </section>
       </aside>

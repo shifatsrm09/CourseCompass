@@ -25,6 +25,8 @@ export default function SemesterRow({
   onCourseContextMenu,
   onRepeatContextMenu,
   isDesigner = false,
+  isHighlighted = false,
+  highlightedCourseIds = new Set(),
 }) {
   const isCurrent = status === "current";
   const totalBoxes = slot.courses.length + (slot.repeats?.length || 0);
@@ -33,7 +35,12 @@ export default function SemesterRow({
 
   return (
     <div
-      className={`planner-row relative flex min-w-0 items-start rounded-xl border border-neutral-800 bg-neutral-900 p-3 shadow-md shadow-black/20 transition-shadow sm:gap-2 sm:p-5 lg:py-3.5 ${
+      id={`semester-row-${slot.id}`}
+      className={`planner-row relative flex min-w-0 items-start rounded-xl border p-3 shadow-md shadow-black/20 transition-all duration-300 sm:gap-2 sm:p-5 lg:py-3.5 ${
+        isHighlighted
+          ? "border-violet-500/80 bg-neutral-900 ring-2 ring-violet-500/60 shadow-xl shadow-violet-950/50"
+          : "border-neutral-800 bg-neutral-900"
+      } ${
         snapshot.isDragging ? "scale-[1.02] shadow-xl shadow-black/50" : ""
       }`}
       ref={dragProvided.innerRef}
@@ -118,12 +125,13 @@ export default function SemesterRow({
                       draggableId={course.instanceId}
                       index={cIdx}
                       isDragDisabled={!canDragCourse}
+                      disableInteractiveElementBlocking
                     >
                       {(dragProvided, dragSnapshot) => (
                         <div
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
-                          {...dragProvided.dragHandleProps}
+                          {...(canDragCourse ? dragProvided.dragHandleProps : {})}
                           className={`inline-flex transition-transform ${
                             dragSnapshot.isDragging
                               ? "z-50 opacity-95 scale-105 shadow-2xl ring-2 ring-indigo-500 rounded-lg cursor-grabbing"
@@ -137,10 +145,11 @@ export default function SemesterRow({
                             isRepeat={course.isRepeat}
                             isLocked={!canEdit || (!isDesigner && course.completed)}
                             onReplace={() => onReplace(slot.id, course.instanceId)}
-                            onContextMenu={!blocked && (course.code === "COD" || canEdit) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
+                            onContextMenu={!blocked && (course.code === "COD" || (canEdit && (isDesigner || !course.completed))) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
                             hideCompletedLabel={status === "completed"}
                             isDesigner={isDesigner}
                             prerequisiteIssues={course.prerequisiteIssues}
+                            isHighlighted={highlightedCourseIds?.has(course.instanceId)}
                           />
                         </div>
                       )}
@@ -160,6 +169,7 @@ export default function SemesterRow({
                 {canAdd && (
                   <button
                     type="button"
+                    aria-label="Add Course"
                     className="min-h-9 min-w-0 rounded-md border border-dashed border-neutral-600 bg-neutral-950 px-1 py-1.5 text-[10px] font-medium text-neutral-400 transition-colors hover:border-neutral-500 hover:bg-neutral-900 hover:text-neutral-200 sm:min-h-0 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm"
                     onClick={() => onAdd(slot.id)}
                   >

@@ -150,8 +150,7 @@ function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new
       eligible.sort((a, b) => Number(protectedCourse(b)) - Number(protectedCourse(a)) || Number((deadlines.get(b.instanceId) ?? Infinity) <= currentIndex) - Number((deadlines.get(a.instanceId) ?? Infinity) <= currentIndex) || compare(a, b));
       const selected = new Set();
       let codPlaced = false;
-      const hasProtected = eligible.some((course) => protectedCourse(course));
-      const cap = designerMode ? 6 : (hasProtected ? 5 : 4);
+      const cap = designerMode ? 6 : 4;
       for (const course of eligible) {
         const isCod = curriculum.byId.get(course.occurrenceId).code === "COD";
         if (selected.size < cap && !(isCod && codPlaced)) {

@@ -139,7 +139,7 @@ test("consecutive actions preserve the complete latest snapshot", async () => {
   const storage = storeUser();
   const first = moveCourse(defaultPlan(), "CSE423", 11);
   const saved = await save(first);
-  const second = moveCourse(clone(first), "CSE421", 11);
+  const second = moveCourse(clone(first), "CSE421", 10);
   const final = await save(second, saved.body.plannerVersion, "save-2");
   assert.equal(final.status, 200, JSON.stringify(final.body));
   assert.equal(storage.read().plannerVersion, 2);

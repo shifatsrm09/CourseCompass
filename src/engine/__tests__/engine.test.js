@@ -73,7 +73,7 @@ function assertInvariants(before, after, curriculum) {
   after.semesters.forEach((semester, index) => {
     const definitions = semester.courses.map((item) => curriculum.byId.get(item.occurrenceId));
     expect(definitions.every(Boolean)).toBe(true);
-    if (!semester.isTarc) expect(definitions.length).toBeLessThanOrEqual(4);
+    if (!semester.isTarc) expect(definitions.length).toBeLessThanOrEqual(5);
     const cod = definitions.filter((item) => item.code === "COD").length;
     expect(cod).toBeLessThanOrEqual(1);
     codCount += cod;

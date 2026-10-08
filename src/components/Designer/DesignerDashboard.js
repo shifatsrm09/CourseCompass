@@ -143,6 +143,8 @@ export default function DesignerDashboard({
           onNavigateDesigner={() => onNavigate?.("/designer")}
           onNavigateMain={() => onNavigate?.("/")}
           onSyncWithMain={undefined}
+          errorCount={0}
+          warningCount={0}
         />
         <div className="flex min-h-[50vh] items-center justify-center" role="status">
           <div className="flex flex-col items-center gap-3 text-neutral-400">
@@ -176,6 +178,8 @@ export default function DesignerDashboard({
           onNavigateDesigner={() => onNavigate?.("/designer")}
           onNavigateMain={() => onNavigate?.("/")}
           onSyncWithMain={handleSyncWithMain}
+          errorCount={0}
+          warningCount={0}
         />
         <DesignerWelcome
           onSync={handleSyncWithMain}

@@ -10,6 +10,7 @@ export default function CourseBox({
   hideCompletedLabel,
   isDesigner = false,
   prerequisiteIssues = [],
+  isHighlighted = false,
 }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const name = course.displayName || course.displayCode || displayCourseCode(course.code);
@@ -26,12 +27,17 @@ export default function CourseBox({
     : "";
 
   return (
-    <div className="relative inline-flex min-w-0">
-      <div
-        role="button"
-        tabIndex={clickable ? 0 : undefined}
+    <div
+      id={course?.instanceId ? `course-box-${course.instanceId}` : undefined}
+      className={`relative inline-flex min-w-0 transition-transform ${isHighlighted ? "z-20 scale-105" : ""}`}
+    >
+      <button
+        type="button"
+        disabled={isLocked && !onContextMenu}
         className={`inline-flex min-h-9 min-w-0 w-full sm:w-auto flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 text-[10px] font-semibold leading-3 transition-colors sm:min-h-0 sm:flex-row sm:justify-start sm:gap-2 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm sm:leading-5 select-none ${
-          hasPrereqIssues
+          isHighlighted
+            ? "border-violet-400 bg-violet-950/80 text-violet-100 ring-2 ring-violet-400 ring-offset-2 ring-offset-neutral-900 shadow-xl shadow-violet-500/50 animate-pulse cursor-grab active:cursor-grabbing"
+            : hasPrereqIssues
             ? "border-amber-500/80 bg-neutral-800 text-amber-200 hover:bg-neutral-700/90 active:bg-neutral-600 ring-1 ring-amber-500/30 cursor-grab active:cursor-grabbing"
             : isLocked
             ? "cursor-default border-neutral-800 bg-neutral-900 text-neutral-200"
@@ -40,12 +46,6 @@ export default function CourseBox({
             : "cursor-grab active:cursor-grabbing border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
         }`}
         onClick={clickable ? onReplace : undefined}
-        onKeyDown={(e) => {
-          if (clickable && (e.key === "Enter" || e.key === " ")) {
-            e.preventDefault();
-            onReplace?.();
-          }
-        }}
         onContextMenu={onContextMenu}
         aria-label={
           isRepeat
@@ -59,8 +59,6 @@ export default function CourseBox({
       >
         {hasPrereqIssues && (
           <span
-            role="button"
-            tabIndex={0}
             className="flex items-center text-amber-400 font-bold text-xs sm:text-sm hover:scale-110 transition-transform cursor-help"
             title={tooltipText}
             onClick={(e) => {
@@ -69,12 +67,6 @@ export default function CourseBox({
             }}
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.stopPropagation();
-                setShowTooltip((prev) => !prev);
-              }
-            }}
             aria-label="Prerequisite warning"
           >
             ⚠
@@ -88,7 +80,7 @@ export default function CourseBox({
             <span className="text-[7px] font-bold text-emerald-400 sm:text-[11px] sm:tracking-wide">COMPLETED</span>
           )
         )}
-      </div>
+      </button>
 
       {hasPrereqIssues && showTooltip && (
         <div

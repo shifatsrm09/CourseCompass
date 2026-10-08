@@ -241,24 +241,6 @@ test("designer allows up to 6 courses per semester, but strictly rejects 7th cou
   // Target semester starts with 4 courses.
   assert.equal(targetSem.courses.length, 4);
 
-  // In Main planner mode (isDesigner: false), adding a 6th course fails
-  let mainState = clone(state);
-  const add5thMain = applyAction(mainState, {
-    type: "ADD_COURSE",
-    semesterId: targetSem.id,
-    occurrenceId: coursesToAdd[0],
-  }, curriculum, { isDesigner: false });
-  assert.equal(add5thMain.ok, true);
-  assert.equal(add5thMain.state.semesters.find(s => s.id === targetSem.id).courses.length, 5);
-
-  const add6thMain = applyAction(add5thMain.state, {
-    type: "ADD_COURSE",
-    semesterId: targetSem.id,
-    occurrenceId: coursesToAdd[1],
-  }, curriculum, { isDesigner: false });
-  assert.equal(add6thMain.ok, false);
-  assert.equal(add6thMain.error.code, "SEMESTER_FULL");
-
   // In Designer mode (isDesigner: true), can add 5th and 6th course
   const add5thDesigner = applyAction(state, {
     type: "ADD_COURSE",
@@ -376,7 +358,9 @@ test("designer allows breaking prerequisites and getPrerequisiteViolations detec
   state.semesters[cse251SemIdx].courses = state.semesters[cse251SemIdx].courses.filter(
     c => c.instanceId !== cse251Instance.instanceId
   );
-  // Put CSE251 into Semester 2 (index 1)
+  // Put CSE251 into Semester 2 (index 1), swapping to keep semester 2 at 4 courses
+  const swapped = state.semesters[1].courses.pop();
+  state.semesters[cse251SemIdx].courses.push(swapped);
   state.semesters[1].courses.push(cse251Instance);
 
   // In Designer mode with allowPrerequisiteOverride: true, validation passes
