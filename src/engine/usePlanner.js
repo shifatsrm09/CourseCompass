@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { API_BASE } from "../api";
 import { applyAction } from "./engine.mjs";
 import { restorePlannerState } from "./plannerState.mjs";
-import { createPlannerPersistence, draftKey } from "./plannerPersistence";
+import { createPlannerPersistence, draftKey, designerDraftKey } from "./plannerPersistence";
 
-function loadInitial(user, curriculum) {
-  const restored = restorePlannerState(user, curriculum);
+function loadInitial(user, curriculum, isDesigner = false, designerState = null, activeDraftKey = null) {
+  const account = isDesigner
+    ? { ...user, plannerState: designerState, stream: user.stream }
+    : user;
+  const restored = restorePlannerState(account, curriculum, { isDesigner });
   if (!restored.ok) return restored;
   try {
-    const stored = sessionStorage.getItem(draftKey(user.studentId));
+    const key = activeDraftKey || (isDesigner ? designerDraftKey(user.studentId) : draftKey(user.studentId));
+    const stored = sessionStorage.getItem(key);
     if (!stored) return restored;
     const draft = JSON.parse(stored);
     if (draft.stream !== user.stream || !Number.isInteger(draft.version) ||
@@ -20,7 +24,7 @@ function loadInitial(user, curriculum) {
       if (typeof item.mutationId !== "string" || !item.mutationId) {
         throw new Error("The pending local draft has no save identity. Load the saved plan to continue.");
       }
-      last = restorePlannerState({ ...user, plannerState: item.plannerState }, curriculum);
+      last = restorePlannerState({ ...account, plannerState: item.plannerState }, curriculum, { isDesigner });
       if (!last.ok) throw new Error(last.error?.message || "The pending local draft is invalid.");
     }
     return { ...last, draft };
@@ -32,8 +36,20 @@ function loadInitial(user, curriculum) {
   }
 }
 
-export default function usePlanner({ user, setUser, curriculum }) {
-  const [initial] = useState(() => loadInitial(user, curriculum));
+export default function usePlanner({
+  user,
+  setUser,
+  curriculum,
+  isDesigner = false,
+  designerState = null,
+  designerVersion = 0,
+  onDesignerSaved = null,
+  reloadSavedPlanFn = null,
+}) {
+  const activeDraftKey = isDesigner ? designerDraftKey(user?.studentId) : draftKey(user?.studentId);
+  const saveEndpoint = isDesigner ? `${API_BASE}/designer/save-plan` : `${API_BASE}/planner/save-plan`;
+
+  const [initial] = useState(() => loadInitial(user, curriculum, isDesigner, designerState, activeDraftKey));
   const [state, setState] = useState(initial.state);
   const stateRef = useRef(initial.state);
   const [error, setError] = useState(initial.ok ? "" : initial.error?.message || "Your saved plan could not be restored.");
@@ -53,14 +69,21 @@ export default function usePlanner({ user, setUser, curriculum }) {
   const makeQueue = (savedUser, draft) => createPlannerPersistence({
     studentId: savedUser.studentId,
     stream: savedUser.stream,
-    version: draft?.version ?? savedUser.plannerVersion ?? 0,
+    version: draft?.version ?? (isDesigner ? designerVersion : (savedUser.plannerVersion ?? 0)),
     pending: draft?.pending || [],
-    onSaved: (updatedUser) => { if (mounted.current) setUserRef.current(updatedUser); },
+    saveEndpoint,
+    onSaved: (updatedPayload) => {
+      if (isDesigner) {
+        onDesignerSaved?.(updatedPayload);
+      } else if (mounted.current) {
+        setUserRef.current?.(updatedPayload);
+      }
+    },
     onStatus: (status) => { if (mounted.current) setSaveStatus(status); },
     onDraft: (draftValue) => {
       try {
-        if (draftValue) sessionStorage.setItem(draftKey(savedUser.studentId), JSON.stringify(draftValue));
-        else sessionStorage.removeItem(draftKey(savedUser.studentId));
+        if (draftValue) sessionStorage.setItem(activeDraftKey, JSON.stringify(draftValue));
+        else sessionStorage.removeItem(activeDraftKey);
         if (mounted.current) setStorageError("");
       } catch {
         if (mounted.current) setStorageError("Browser storage is unavailable. Keep this page open until your plan is saved.");
@@ -83,7 +106,7 @@ export default function usePlanner({ user, setUser, curriculum }) {
 
   const dispatch = (action) => {
     if (blocked || !stateRef.current || !queueRef.current) return false;
-    const result = applyAction(stateRef.current, action, curriculum);
+    const result = applyAction(stateRef.current, action, curriculum, { mode: isDesigner ? "designer" : "main", isDesigner });
     if (!result.ok) {
       setError(result.error?.message || "This change cannot be applied to your plan.");
       return false;
@@ -104,6 +127,24 @@ export default function usePlanner({ user, setUser, curriculum }) {
     if (saveStatus.kind === "saving" || reloadBusy) return;
     setReloadBusy(true);
     try {
+      if (isDesigner && reloadSavedPlanFn) {
+        const reloaded = await reloadSavedPlanFn();
+        if (!reloaded.ok || !reloaded.designer) throw new Error(reloaded.error || "The saved Designer plan could not be loaded.");
+        const restored = restorePlannerState({ ...user, stream: user.stream, plannerState: reloaded.designer.plannerState }, curriculum, { isDesigner: true });
+        if (!restored.ok) throw new Error(restored.error?.message || "The database plan could not be restored.");
+        if (!mounted.current) return;
+        queueRef.current?.dispose();
+        queueRef.current = makeQueue(user, null);
+        sessionStorage.removeItem(activeDraftKey);
+        stateRef.current = restored.state;
+        setState(restored.state);
+        setWarnings(restored.warnings || []);
+        onDesignerSaved?.(reloaded.designer);
+        setSaveStatus({ kind: "idle", message: "Saved plan loaded" });
+        setRestoreBlocked(false);
+        setError("");
+        return;
+      }
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

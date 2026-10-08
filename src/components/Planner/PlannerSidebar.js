@@ -1,4 +1,19 @@
-export default function PlannerSidebar({ open, onClose, stream, totalCourses, repeatCount, blocked, onBalance, onSyncGradesheet, onChangePlan, gradesheetPanel }) {
+export default function PlannerSidebar({
+  open,
+  onClose,
+  stream,
+  totalCourses,
+  repeatCount,
+  blocked,
+  onBalance,
+  onSyncGradesheet,
+  onChangePlan,
+  gradesheetPanel,
+  isDesigner = false,
+  onNavigateDesigner,
+  onNavigateMain,
+  onSyncWithMain,
+}) {
   const actionClass = "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800/70 hover:text-white focus-visible:outline focus-visible:outline-indigo-400";
   return (
     <>
@@ -17,19 +32,75 @@ export default function PlannerSidebar({ open, onClose, stream, totalCourses, re
         className={`fixed bottom-0 left-0 top-[57px] z-30 flex w-60 flex-col overflow-y-auto border-r border-neutral-800 bg-neutral-950 p-3 transition-transform duration-300 ease-in-out motion-reduce:transition-none sm:top-[73px] ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <nav aria-label="Planner actions" className="shrink-0 space-y-1">
-          <button type="button" onClick={onBalance} disabled={blocked} className={`${actionClass} bg-indigo-500/10 text-indigo-300 disabled:cursor-default disabled:opacity-40`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true"><path d="M12 3v17M5 20h14M4 7h16M6 7l-4 7h8L6 7Zm12 0-4 7h8l-4-7Z" /></svg>
+          {/* Main Planner navigation item */}
+          <button
+            type="button"
+            onClick={onNavigateMain}
+            className={`${actionClass} ${!isDesigner ? "bg-neutral-800/80 text-white font-semibold" : ""}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Main Planner
+          </button>
+
+          {/* Designer navigation item */}
+          <button
+            type="button"
+            onClick={onNavigateDesigner}
+            className={`${actionClass} ${isDesigner ? "bg-violet-500/15 text-violet-300 ring-1 ring-inset ring-violet-500/30 font-semibold" : ""}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            Designer
+          </button>
+
+          {/* Auto Balance */}
+          <button
+            type="button"
+            onClick={onBalance}
+            disabled={blocked || !onBalance}
+            className={`${actionClass} bg-indigo-500/10 text-indigo-300 disabled:cursor-default disabled:opacity-40`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+              <path d="M12 3v17M5 20h14M4 7h16M6 7l-4 7h8L6 7Zm12 0-4 7h8l-4-7Z" />
+            </svg>
             Auto Balance
           </button>
-          <button type="button" onClick={onSyncGradesheet} aria-expanded={Boolean(gradesheetPanel)} aria-controls="sidebar-gradesheet" className={actionClass}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true"><path d="M20 7a8 8 0 0 0-14-2L3 8m0-5v5h5M4 17a8 8 0 0 0 14 2l3-3m0 5v-5h-5" /></svg>
-            Sync gradesheet
-          </button>
+
+          {/* Sync gradesheet */}
+          {onSyncGradesheet && (
+            <button
+              type="button"
+              onClick={onSyncGradesheet}
+              aria-expanded={Boolean(gradesheetPanel)}
+              aria-controls="sidebar-gradesheet"
+              className={actionClass}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+                <path d="M20 7a8 8 0 0 0-14-2L3 8m0-5v5h5M4 17a8 8 0 0 0 14 2l3-3m0 5v-5h-5" />
+              </svg>
+              Sync gradesheet
+            </button>
+          )}
           {gradesheetPanel && <div id="sidebar-gradesheet">{gradesheetPanel}</div>}
-          <button type="button" onClick={onChangePlan} className={actionClass}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" /></svg>
-            Change Plan
-          </button>
+
+          {/* Change Plan */}
+          {onChangePlan && (
+            <button
+              type="button"
+              onClick={onChangePlan}
+              className={actionClass}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+                <path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" />
+              </svg>
+              Change Plan
+            </button>
+          )}
         </nav>
         <section aria-labelledby="sidebar-statistics" className="mt-auto shrink-0 pt-8">
           <h2 id="sidebar-statistics" className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Statistics</h2>

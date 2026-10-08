@@ -3,6 +3,7 @@ const cors = require("cors");
 const database = require("./db");
 const authRoutes = require("./routes/auth");
 const plannerRoutes = require("./routes/planner");
+const designerRoutes = require("./routes/designer");
 
 const app = express();
 
@@ -25,6 +26,7 @@ async function requireDatabase(req, res, next) {
 
 app.use("/api/auth", requireDatabase, authRoutes);
 app.use("/api/planner", requireDatabase, plannerRoutes);
+app.use("/api/designer", requireDatabase, designerRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: "API route not found" });

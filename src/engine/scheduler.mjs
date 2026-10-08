@@ -45,7 +45,8 @@ function validateDependencyGraph(state, curriculum) {
   return providers;
 }
 
-function fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBefore) {
+function fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBefore, options = {}) {
+  const isDesigner = options.isDesigner || options.allowPrerequisiteOverride;
   const deadlines = new Map();
   const positions = new Map();
   const anchors = [];
@@ -62,7 +63,12 @@ function fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBef
       const latest = index - 1;
       const previousDeadline = deadlines.get(provider.instanceId) ?? Infinity;
       if (latest >= previousDeadline) continue;
-      if (latest < Math.max(state.currentSemester, notBefore.get(provider.instanceId) ?? state.currentSemester)) planningError("PREREQUISITE_NOT_SATISFIED", `${code} is required before semester ${index + 1}, which conflicts with its allowed placement. Move the dependent course or TARC first.`);
+      if (latest < Math.max(state.currentSemester, notBefore.get(provider.instanceId) ?? state.currentSemester)) {
+        if (!isDesigner) {
+          planningError("PREREQUISITE_NOT_SATISFIED", `${code} is required before semester ${index + 1}, which conflicts with its allowed placement. Move the dependent course or TARC first.`);
+        }
+        continue;
+      }
       deadlines.set(provider.instanceId, latest);
       anchors.push({ course: provider, index: latest });
     }
@@ -71,7 +77,10 @@ function fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBef
     const position = positions.get(instanceId);
     if (position == null || position <= deadline) continue;
     const semester = state.semesters[position];
-    if (semester.isTarc) planningError("PREREQUISITE_NOT_SATISFIED", "A required TARC course is scheduled too late. Move the whole TARC semester first.");
+    if (semester.isTarc) {
+      if (!isDesigner) planningError("PREREQUISITE_NOT_SATISFIED", "A required TARC course is scheduled too late. Move the whole TARC semester first.");
+      continue;
+    }
     const courseIndex = semester.courses.findIndex(course => course.instanceId === instanceId);
     state.unplaced.push(...semester.courses.splice(courseIndex, 1));
     notBefore.set(instanceId, deadline);
@@ -79,12 +88,13 @@ function fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBef
   return deadlines;
 }
 
-function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new Set() } = {}) {
+function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new Set(), isDesigner = false, allowPrerequisiteOverride = false } = {}) {
+  const designerMode = isDesigner || allowPrerequisiteOverride;
   for (const course of state.unplaced) {
     if (isCompletedInstance(state, course, curriculum)) planningError("COMPLETED_COURSE_UNPLACED", `${curriculum.byId.get(course.occurrenceId).code} is recorded as completed but its historical placement is missing. Restore that record before changing the plan.`);
   }
   const providers = validateDependencyGraph(state, curriculum);
-  const deadlines = fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBefore);
+  const deadlines = fixedPrerequisiteDeadlines(state, curriculum, pinned, providers, notBefore, { isDesigner: designerMode });
   const completed = new Set(state.completedCourses);
   state.semesters.slice(0, state.currentSemester).forEach(semester => semester.courses.forEach(course => completed.add(curriculum.byId.get(course.occurrenceId).code)));
   let pending = state.unplaced.map(course => ({ course, start: notBefore.get(course.instanceId) ?? state.currentSemester }));
@@ -107,7 +117,9 @@ function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new
       for (const course of semester.courses) {
         const definition = curriculum.byId.get(course.occurrenceId);
         if (!isCompletedInstance(state, course, curriculum) && !definition.hp.every(code => completed.has(code))) {
-          planningError("PREREQUISITE_NOT_SATISFIED", `TARC course ${definition.code} requires ${definition.hp.filter(code => !completed.has(code)).join(", ")} before semester ${index + 1}.`);
+          if (!designerMode) {
+            planningError("PREREQUISITE_NOT_SATISFIED", `TARC course ${definition.code} requires ${definition.hp.filter(code => !completed.has(code)).join(", ")} before semester ${index + 1}.`);
+          }
         }
       }
     } else {
@@ -121,22 +133,25 @@ function scheduleFuture(state, curriculum, { notBefore = new Map(), pinned = new
         const definition = curriculum.byId.get(course.occurrenceId);
         if (definition.is_tarc) planningError("INVALID_TARC", "Unscheduled TARC courses require their original TARC semester to be restored together.");
         const ready = isCompletedInstance(state, course, curriculum) || definition.hp.every(code => completed.has(code));
-        if (!ready && pinned.has(course.instanceId)) planningError("PREREQUISITE_NOT_SATISFIED", `${definition.code} requires ${definition.hp.filter(code => !completed.has(code)).join(", ")} in an earlier semester.`);
-        if (definition.code === "COD" && existingCod && incoming.includes(course) && !pinned.has(course.instanceId)) pending.push({ course, start: index + 1 });
-        else if (ready) eligible.push(course);
-        else pending.push({ course, start: index + 1 });
+        if (!ready && pinned.has(course.instanceId)) {
+          if (!designerMode) {
+            planningError("PREREQUISITE_NOT_SATISFIED", `${definition.code} requires ${definition.hp.filter(code => !completed.has(code)).join(", ")} in an earlier semester.`);
+          }
+        }
+        const isExistingInSemester = semester.courses.some(c => c.instanceId === course.instanceId);
+        if (definition.code === "COD" && existingCod && incoming.includes(course) && !pinned.has(course.instanceId)) {
+          pending.push({ course, start: index + 1 });
+        } else if (ready || (designerMode && (pinned.has(course.instanceId) || isExistingInSemester))) {
+          eligible.push(course);
+        } else {
+          pending.push({ course, start: index + 1 });
+        }
       }
       eligible.sort((a, b) => Number(protectedCourse(b)) - Number(protectedCourse(a)) || Number((deadlines.get(b.instanceId) ?? Infinity) <= currentIndex) - Number((deadlines.get(a.instanceId) ?? Infinity) <= currentIndex) || compare(a, b));
       const selected = new Set();
       let codPlaced = false;
-      // The engine's own placement decisions (auto balance, rebalancing after an
-      // edit, filling future semesters) always target 4 courses per semester.
-      // A 5th slot is only ever available when the user explicitly pinned a
-      // course into this semester in the current action (ADD_COURSE / REPLACE_COURSE) -
-      // that is what "protectedCourse" pinning represents here. The engine itself
-      // will never grow a semester to 5 on its own.
       const hasProtected = eligible.some((course) => protectedCourse(course));
-      const cap = hasProtected ? 5 : 4;
+      const cap = designerMode ? 6 : (hasProtected ? 5 : 4);
       for (const course of eligible) {
         const isCod = curriculum.byId.get(course.occurrenceId).code === "COD";
         if (selected.size < cap && !(isCod && codPlaced)) {

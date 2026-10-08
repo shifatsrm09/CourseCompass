@@ -75,7 +75,7 @@ function isCompletedInstance(state, course, curriculum) {
   return definition?.code !== "COD" && state.completedCourses.includes(definition?.code);
 }
 
-function restorePlannerState(user, curriculum) {
+function restorePlannerState(user, curriculum, options = {}) {
   const warnings = [];
   try {
     let state;
@@ -99,7 +99,8 @@ function restorePlannerState(user, curriculum) {
           const semesterIndex = state.semesters.findIndex(s => s?.originalRow === course.semester_row);
           const target = semesterIndex >= 0 ? state.semesters[semesterIndex] : null;
           const isFuture = semesterIndex >= ((state.currentSemester || 1) - 1);
-          const hasRoom = target && Array.isArray(target.courses) && target.courses.length < 5;
+          const maxCapacity = options.isDesigner ? 6 : 5;
+          const hasRoom = target && Array.isArray(target.courses) && target.courses.length < maxCapacity;
           const matchTarc = target && !!target.isTarc === !!course.is_tarc;
           if (target && isFuture && hasRoom && matchTarc) {
             target.courses.push(createInstance(course));
@@ -155,9 +156,9 @@ function restorePlannerState(user, curriculum) {
       const completed = state.semesters.slice(0, state.currentSemester - 1).flatMap(semester => semester.courses.map(course => curriculum.byId.get(course.occurrenceId).code));
       state.completedCourses = [...new Set([...state.completedCourses, ...completed])];
     }
-    const structural = validatePlannerState(state, curriculum, { allowUnplaced: true, checkSchedule: false });
+    const structural = validatePlannerState(state, curriculum, { allowUnplaced: true, checkSchedule: false, isDesigner: options.isDesigner });
     if (!structural.ok) return { ok: false, state, error: structural.errors[0], warnings: structural.errors };
-    const validation = validatePlannerState(state, curriculum, { allowUnplaced: true });
+    const validation = validatePlannerState(state, curriculum, { allowUnplaced: true, isDesigner: options.isDesigner, allowPrerequisiteOverride: options.isDesigner });
     warnings.push(...validation.errors);
     return { ok: true, state, warnings };
   } catch (error) {

@@ -2,34 +2,44 @@ import { cloneState, isCompletedInstance } from "./plannerState.mjs";
 import { validatePlannerState, allInstances, completedAfterUndo } from "./validator.mjs";
 import { scheduleFuture, planningError } from "./scheduler.mjs";
 
-function editableSemester(state, semesterId) {
+function editableSemester(state, semesterId, options = {}) {
   const index = state.semesters.findIndex(semester => semester.id === semesterId);
   if (index < 0) planningError("SEMESTER_NOT_FOUND", "The selected semester is no longer in this plan.");
-  if (index < state.currentSemester - 1) planningError("FROZEN_SEMESTER", "Completed semesters are protected. Undo the most recent completion before editing it.");
+  if (!options.isDesigner && index < state.currentSemester - 1) planningError("FROZEN_SEMESTER", "Completed semesters are protected. Undo the most recent completion before editing it.");
   if (state.semesters[index].isTarc) planningError("TARC_NOT_ALLOWED", "Courses cannot be added, replaced, or removed in TARC.");
   return index;
 }
 
-function deferCourse(state, index, instanceId, curriculum, notBefore) {
+function deferCourse(state, index, instanceId, curriculum, notBefore, options = {}) {
   const courses = state.semesters[index].courses;
   const position = courses.findIndex(course => course.instanceId === instanceId);
   if (position < 0) planningError("COURSE_NOT_FOUND", "The selected course is no longer in that semester.");
   const course = courses[position];
-  if (isCompletedInstance(state, course, curriculum)) planningError("COMPLETED_COURSE", "Completed courses cannot be moved or removed.");
+  if (!options.isDesigner && isCompletedInstance(state, course, curriculum)) planningError("COMPLETED_COURSE", "Completed courses cannot be moved or removed.");
   courses.splice(position, 1);
   state.unplaced.push(course);
   notBefore.set(course.instanceId, index + 1);
+  if (options.isDesigner) {
+    const code = curriculum.byId.get(course.occurrenceId)?.code;
+    if (code && state.completedCourses?.includes(code)) {
+      state.completedCourses = state.completedCourses.filter(c => c !== code);
+    }
+  }
   return course;
 }
 
-function insertCourse(state, index, occurrenceId, curriculum, excludedId) {
+function insertCourse(state, index, occurrenceId, curriculum, excludedId, options = {}) {
   const definition = curriculum.byId.get(occurrenceId);
   if (!definition) planningError("COURSE_NOT_FOUND", "Select a course from this stream's curriculum.");
   if (definition.is_tarc) planningError("TARC_NOT_ALLOWED", "TARC courses stay in their TARC semester.");
   const target = state.semesters[index];
+  const maxAllowed = options.isDesigner ? 6 : 5;
+  if (target.courses.length >= maxAllowed) {
+    planningError("SEMESTER_FULL", `Semester ${index + 1} cannot exceed ${maxAllowed} courses.`);
+  }
   const codeOf = course => curriculum.byId.get(course.occurrenceId).code;
   if (target.courses.some(course => definition.code === "COD" ? codeOf(course) === "COD" : course.occurrenceId === occurrenceId)) planningError("COURSE_ALREADY_EXISTS", `${definition.code} is already in this semester.`);
-  if (definition.code !== "COD" && state.completedCourses.includes(definition.code)) planningError("COMPLETED_COURSE", `${definition.code} has already been completed.`);
+  if (!options.isDesigner && definition.code !== "COD" && state.completedCourses.includes(definition.code)) planningError("COMPLETED_COURSE", `${definition.code} has already been completed.`);
   let source;
   let sourceList;
   if (definition.code === "COD") {
@@ -55,7 +65,7 @@ function insertCourse(state, index, occurrenceId, curriculum, excludedId) {
       const semester = state.semesters[position];
       source = semester.courses.find(course => course.occurrenceId === occurrenceId && course.instanceId !== excludedId);
       if (source) {
-        if (position < state.currentSemester - 1) planningError("FROZEN_SEMESTER", `${definition.code} is in a completed semester and cannot be moved.`);
+        if (!options.isDesigner && position < state.currentSemester - 1) planningError("FROZEN_SEMESTER", `${definition.code} is in a completed semester and cannot be moved.`);
         sourceList = semester.courses;
         break;
       }
@@ -102,8 +112,10 @@ function trimTrailingEmptySemesters(state, curriculum) {
   }
 }
 
-function applyAction(state, action, curriculum) {
-  const input = validatePlannerState(state, curriculum, { allowUnplaced: true, checkSchedule: false });
+function applyAction(state, action, curriculum, options = {}) {
+  const isDesigner = options.isDesigner || options.mode === "designer";
+  const designerOptions = { ...options, isDesigner };
+  const input = validatePlannerState(state, curriculum, { allowUnplaced: true, checkSchedule: false, isDesigner });
   if (!input.ok) return { ok: false, state, error: input.errors[0], warnings: input.errors };
   try {
     const next = cloneState(state);
@@ -115,7 +127,7 @@ function applyAction(state, action, curriculum) {
       next.courseLabels = { ...next.courseLabels };
       if (!label) delete next.courseLabels[action.instanceId];
       else next.courseLabels[action.instanceId] = label;
-      const validation = validatePlannerState(next, curriculum, { previousState: state, allowUnplaced: true, checkSchedule: false });
+      const validation = validatePlannerState(next, curriculum, { previousState: state, allowUnplaced: true, checkSchedule: false, isDesigner });
       if (!validation.ok) return { ok: false, state, error: validation.errors[0], warnings: validation.errors };
       return { ok: true, state: next, changes: [{ type: "RENAME_COD", instanceId: action.instanceId, label }], warnings: [] };
     }
@@ -123,27 +135,43 @@ function applyAction(state, action, curriculum) {
     const pinned = new Set();
     switch (action?.type) {
       case "ADD_COURSE": {
-        const index = editableSemester(next, action.semesterId);
-        pinned.add(insertCourse(next, index, action.occurrenceId, curriculum).instanceId);
+        const index = editableSemester(next, action.semesterId, designerOptions);
+        pinned.add(insertCourse(next, index, action.occurrenceId, curriculum, undefined, designerOptions).instanceId);
         break;
       }
       case "REMOVE_COURSE": {
-        const index = editableSemester(next, action.semesterId);
-        deferCourse(next, index, action.instanceId, curriculum, notBefore);
+        const index = editableSemester(next, action.semesterId, designerOptions);
+        deferCourse(next, index, action.instanceId, curriculum, notBefore, designerOptions);
         break;
       }
       case "REPLACE_COURSE": {
-        const index = editableSemester(next, action.semesterId);
+        const index = editableSemester(next, action.semesterId, designerOptions);
         const old = next.semesters[index].courses.find(course => course.instanceId === action.instanceId);
         if (old?.occurrenceId === action.occurrenceId) planningError("COURSE_ALREADY_EXISTS", "Select a different course to replace this occurrence.");
-        const removed = deferCourse(next, index, action.instanceId, curriculum, notBefore);
-        pinned.add(insertCourse(next, index, action.occurrenceId, curriculum, removed.instanceId).instanceId);
+        const removed = deferCourse(next, index, action.instanceId, curriculum, notBefore, designerOptions);
+        pinned.add(insertCourse(next, index, action.occurrenceId, curriculum, removed.instanceId, designerOptions).instanceId);
+        break;
+      }
+      case "MOVE_SEMESTER": {
+        const from = next.semesters.findIndex(semester => semester.id === action.semesterId);
+        if (from < 0) planningError("SEMESTER_NOT_FOUND", "The selected semester is not found.");
+        if (!Number.isInteger(action.toIndex) || action.toIndex < 0 || action.toIndex >= next.semesters.length) {
+          planningError("INVALID_DESTINATION", "Destination semester is out of bounds.");
+        }
+        const [moved] = next.semesters.splice(from, 1);
+        next.semesters.splice(action.toIndex, 0, moved);
         break;
       }
       case "MOVE_TARC": {
         const from = next.semesters.findIndex(semester => semester.id === action.semesterId && semester.isTarc);
         if (from < 0) planningError("TARC_NOT_FOUND", "The selected semester is not TARC.");
-        if (from < next.currentSemester || !Number.isInteger(action.toIndex) || action.toIndex < Math.max(2, next.currentSemester) || action.toIndex >= next.semesters.length) planningError("TARC_NOT_ALLOWED", "TARC must remain after the current semester and cannot move before semester 3.");
+        if (isDesigner) {
+          if (!Number.isInteger(action.toIndex) || action.toIndex < 0 || action.toIndex >= next.semesters.length) {
+            planningError("INVALID_DESTINATION", "Destination semester is out of bounds.");
+          }
+        } else {
+          if (from < next.currentSemester || !Number.isInteger(action.toIndex) || action.toIndex < Math.max(2, next.currentSemester) || action.toIndex >= next.semesters.length) planningError("TARC_NOT_ALLOWED", "TARC must remain after the current semester and cannot move before semester 3.");
+        }
         const [tarc] = next.semesters.splice(from, 1);
         next.semesters.splice(action.toIndex, 0, tarc);
         break;
@@ -152,7 +180,7 @@ function applyAction(state, action, curriculum) {
         const current = next.semesters[next.currentSemester - 1];
         if (!current) planningError("DEGREE_COMPLETED", "All semesters have already been completed.");
         if (current.id !== action.semesterId) planningError("STALE_ACTION", "The current semester changed. Review it before completing it.");
-        scheduleFuture(next, curriculum);
+        scheduleFuture(next, curriculum, { isDesigner });
         next.completedCourses = [...new Set([...next.completedCourses, ...current.courses.map(course => curriculum.byId.get(course.occurrenceId).code)])];
         next.currentSemester++;
         break;
@@ -169,10 +197,12 @@ function applyAction(state, action, curriculum) {
       default:
         planningError("UNKNOWN_ACTION", "This planner action is not supported.");
     }
-    if (action.type !== "COMPLETE_SEMESTER") scheduleFuture(next, curriculum, { notBefore, pinned });
+    if (action.type !== "COMPLETE_SEMESTER" && action.type !== "MOVE_SEMESTER") {
+      scheduleFuture(next, curriculum, { notBefore, pinned, isDesigner, allowPrerequisiteOverride: isDesigner });
+    }
     trimTrailingEmptySemesters(next, curriculum);
     next.personalized = true;
-    const validation = validatePlannerState(next, curriculum, { previousState: state });
+    const validation = validatePlannerState(next, curriculum, { previousState: state, isDesigner, allowPrerequisiteOverride: isDesigner });
     if (!validation.ok) return { ok: false, state, error: validation.errors[0], warnings: validation.errors };
     const result = { ok: true, state: next, changes: describeChanges(state, next, curriculum), warnings: [] };
     if (process.env.NODE_ENV === "development" && process.env.REACT_APP_ENGINE_DEBUG === "true") console.debug("Course Compass engine", { action, changes: result.changes, validation: "PASS" });

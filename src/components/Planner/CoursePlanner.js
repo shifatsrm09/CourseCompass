@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { getSemesterStatus } from "../../engine/plannerState.mjs";
 import { displayCourseCode } from "../../engine/labs.mjs";
 import { getThesisPlan } from "../../engine/thesisPlan.mjs";
+import { getPrerequisiteViolations } from "../../engine/prerequisites.mjs";
 import usePlanner from "../../engine/usePlanner";
 import { termNumber, latestRepeatIds } from "../../engine/gradesheet.mjs";
 import { advanceTerm, formatTermLabel } from "../../engine/academicTerm";
@@ -10,13 +11,41 @@ import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
 import PlannerSidebar from "./PlannerSidebar";
 
-export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, onCloseSidebar, onSyncGradesheet, onChangePlan, gradesheetPanel }) {
-  const planner = usePlanner({ user, setUser, curriculum });
+export default function CoursePlanner({
+  user,
+  setUser,
+  curriculum,
+  sidebarOpen,
+  onCloseSidebar,
+  onSyncGradesheet,
+  onChangePlan,
+  gradesheetPanel,
+  isDesigner = false,
+  designerState = null,
+  designerVersion = 0,
+  onDesignerSaved = null,
+  reloadSavedPlanFn = null,
+  onNavigateDesigner = null,
+  onNavigateMain = null,
+  onSyncWithMain = null,
+}) {
+  const planner = usePlanner({
+    user,
+    setUser,
+    curriculum,
+    isDesigner,
+    designerState,
+    designerVersion,
+    onDesignerSaved,
+    reloadSavedPlanFn,
+  });
   const { state, dispatch, blocked, saveStatus } = planner;
   const [completionSemester, setCompletionSemester] = useState(null);
   const [modalContext, setModalContext] = useState(null);
 
-  const repeatStorageKey = `courseCompass:repeatCourses:${user?.studentId || "anon"}:${curriculum?.stream || "default"}`;
+  const repeatStorageKey = isDesigner
+    ? `courseCompass:repeatCourses:designer:${user?.studentId || "anon"}:${curriculum?.stream || "default"}`
+    : `courseCompass:repeatCourses:${user?.studentId || "anon"}:${curriculum?.stream || "default"}`;
   const [repeatCourses, setRepeatCourses] = useState(() => {
     try {
       const stored = window.localStorage.getItem(repeatStorageKey);
@@ -60,6 +89,10 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
     if (label !== null) dispatch({ type: "RENAME_COD", instanceId, label });
   };
 
+  const prerequisiteViolations = useMemo(() => (
+    isDesigner && state && curriculum ? getPrerequisiteViolations(state, curriculum) : new Map()
+  ), [state, curriculum, isDesigner]);
+
   const slots = useMemo(() => (state?.semesters || []).map((semester, index) => ({
     ...semester,
     courses: semester.courses.map((instance) => ({
@@ -72,26 +105,31 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
           : curriculum.byId.get(instance.occurrenceId)?.displayCode || displayCourseCode(curriculum.byId.get(instance.occurrenceId)?.code)),
       isRepeat: repeatOccurrences.has(instance.occurrenceId),
       completed: curriculum.byId.get(instance.occurrenceId)?.code !== "COD" && state.completedCourses.includes(curriculum.byId.get(instance.occurrenceId)?.code),
+      prerequisiteIssues: prerequisiteViolations.get(instance.instanceId) || [],
     })),
     repeats: [...repeatCourses, ...earlierAttempts].filter((entry) => entry.semesterId === semester.id),
     thesis: getThesisPlan(state, curriculum).find((item) => item.index === index) || null,
     termLabel: formatTermLabel(advanceTerm(user.startTerm, index)),
-  })), [state, curriculum, user.startTerm, repeatCourses, earlierAttempts, repeatOccurrences, importedRecords]);
+  })), [state, curriculum, user.startTerm, repeatCourses, earlierAttempts, repeatOccurrences, importedRecords, prerequisiteViolations]);
 
   const selectedSlot = slots.find((slot) => slot.id === modalContext?.semesterId);
   const modalCourses = useMemo(() => {
     if (!selectedSlot) return [];
+    const maxBoxes = isDesigner ? 6 : 5;
     const usedIds = new Set(selectedSlot.courses.map((course) => course.occurrenceId));
     const hasCod = selectedSlot.courses.some((course) => course.code === "COD");
-    const frozenIds = new Set(state.semesters.slice(0, state.currentSemester - 1).flatMap((semester) => semester.courses.map((course) => course.occurrenceId)));
+    const frozenIds = isDesigner ? new Set() : new Set(state.semesters.slice(0, state.currentSemester - 1).flatMap((semester) => semester.courses.map((course) => course.occurrenceId)));
     const firstCod = curriculum.byCode.get("COD")?.[0]?.occurrenceId;
     const available = Array.from(curriculum.byId.values()).filter((course) => {
       if (course.code === "COD") return course.occurrenceId === firstCod && !hasCod;
+      if (isDesigner) {
+        return !usedIds.has(course.occurrenceId);
+      }
       return !usedIds.has(course.occurrenceId) && !frozenIds.has(course.occurrenceId) && !state.completedCourses.includes(course.code);
     });
     if (modalContext?.mode !== "add") return available;
     const repeatsHere = repeatCourses.filter((entry) => entry.semesterId === modalContext.semesterId);
-    if (selectedSlot.courses.length + repeatsHere.length >= 5) return available;
+    if (selectedSlot.courses.length + repeatsHere.length >= maxBoxes) return available;
     const existingRepeatCodes = new Set(repeatsHere.map((entry) => entry.code));
     const repeatCandidates = state.completedCourses
       .filter((code) => code !== "COD" && !existingRepeatCodes.has(code))
@@ -99,17 +137,18 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
       .filter(Boolean)
       .map((course) => ({ ...course, isRepeat: true }));
     return [...available, ...repeatCandidates];
-  }, [selectedSlot, curriculum, state, modalContext, repeatCourses]);
+  }, [selectedSlot, curriculum, state, modalContext, repeatCourses, isDesigner]);
 
   const getStatus = (index) => getSemesterStatus(state, index);
-  const canEdit = (index, slot) => !blocked && index >= state.currentSemester - 1 && !slot.isTarc;
+  const canEdit = (index, slot) => !blocked && (isDesigner || index >= state.currentSemester - 1) && !slot.isTarc;
   const closeEditModal = () => setModalContext(null);
 
   const openAdd = (semesterId) => {
     const index = slots.findIndex((slot) => slot.id === semesterId);
     if (index < 0 || !canEdit(index, slots[index])) return;
     const slot = slots[index];
-    if (slot.courses.length + (slot.repeats?.length || 0) >= 5) return;
+    const maxBoxes = isDesigner ? 6 : 5;
+    if (slot.courses.length + (slot.repeats?.length || 0) >= maxBoxes) return;
     planner.clearError();
     setModalContext({ mode: "add", semesterId, canRemove: false });
   };
@@ -118,7 +157,7 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
     const index = slots.findIndex((slot) => slot.id === semesterId);
     if (index < 0 || !canEdit(index, slots[index])) return;
     const course = slots[index].courses.find((item) => item.instanceId === instanceId);
-    if (!course || course.completed) return;
+    if (!course || (!isDesigner && course.completed)) return;
     planner.clearError();
     setModalContext({ mode: "replace", semesterId, instanceId, code: course.code, canRemove: true });
   };
@@ -158,7 +197,22 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none lg:pb-0">
-      <PlannerSidebar open={sidebarOpen} onClose={onCloseSidebar} stream={user.stream} totalCourses={totalCourses} repeatCount={repeatCount} blocked={blocked} onBalance={() => dispatch({ type: "REBALANCE" })} onSyncGradesheet={onSyncGradesheet} onChangePlan={onChangePlan} gradesheetPanel={gradesheetPanel} />
+      <PlannerSidebar
+        open={sidebarOpen}
+        onClose={onCloseSidebar}
+        stream={user.stream}
+        totalCourses={totalCourses}
+        repeatCount={repeatCount}
+        blocked={blocked}
+        onBalance={() => dispatch({ type: "REBALANCE" })}
+        onSyncGradesheet={onSyncGradesheet}
+        onChangePlan={onChangePlan}
+        gradesheetPanel={gradesheetPanel}
+        isDesigner={isDesigner}
+        onNavigateDesigner={onNavigateDesigner}
+        onNavigateMain={onNavigateMain}
+        onSyncWithMain={onSyncWithMain}
+      />
 
       {planner.error && (
         <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
@@ -232,6 +286,8 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
           onRemove={removeCourse}
           onRemoveRepeat={removeRepeatCourse}
           onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
+          onMoveSemester={(semesterId, toIndex) => dispatch({ type: "MOVE_SEMESTER", semesterId, toIndex })}
+          isDesigner={isDesigner}
         />
       )}
 

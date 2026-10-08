@@ -23,10 +23,12 @@ export default function SemesterRow({
   onReplace,
   onCourseContextMenu,
   onRepeatContextMenu,
+  isDesigner = false,
 }) {
   const isCurrent = status === "current";
   const totalBoxes = slot.courses.length + (slot.repeats?.length || 0);
-  const canAdd = canEdit && totalBoxes < 5;
+  const maxBoxes = isDesigner ? 6 : 5;
+  const canAdd = canEdit && totalBoxes < maxBoxes;
 
   return (
     <div
@@ -99,10 +101,12 @@ export default function SemesterRow({
                 key={course.instanceId}
                 course={course}
                 isRepeat={course.isRepeat}
-                isLocked={!canEdit || course.completed}
+                isLocked={!canEdit || (!isDesigner && course.completed)}
                 onReplace={() => onReplace(slot.id, course.instanceId)}
-                onContextMenu={!blocked && (course.code === "COD" || (canEdit && !course.completed)) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
+                onContextMenu={!blocked && (course.code === "COD" || canEdit) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
                 hideCompletedLabel={status === "completed"}
+                isDesigner={isDesigner}
+                prerequisiteIssues={course.prerequisiteIssues}
               />
             ))}
             {slot.repeats?.map((repeat) => (

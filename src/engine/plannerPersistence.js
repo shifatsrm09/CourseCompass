@@ -1,6 +1,7 @@
 import { API_BASE } from "../api";
 
 export const draftKey = (studentId) => `courseCompassDraft:${studentId}`;
+export const designerDraftKey = (studentId) => `courseCompassDesignerDraft:${studentId}`;
 
 const makeMutationId = () => window.crypto?.randomUUID?.() ||
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -11,6 +12,7 @@ export function createPlannerPersistence({
   version = 0,
   pending = [],
   timeoutMs = 30000,
+  saveEndpoint = `${API_BASE}/planner/save-plan`,
   request = (...args) => fetch(...args),
   onSaved = () => {},
   onStatus = () => {},
@@ -44,7 +46,7 @@ export function createPlannerPersistence({
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       activeRequest = { controller, timer };
       try {
-        const response = await request(`${API_BASE}/planner/save-plan`, {
+        const response = await request(saveEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
@@ -56,7 +58,8 @@ export function createPlannerPersistence({
           }),
         });
         const data = await response.json();
-        if (!response.ok || !data.success || !data.user) {
+        const savedPayload = data.designer || data.user;
+        if (!response.ok || !data.success || !savedPayload) {
           const schemaMismatch = data.code === "INVALID_PLANNER_STATE" && item.plannerState.courseLabels !== undefined;
           const failure = new Error(schemaMismatch
             ? "The server rejected the updated planner format. Restart your local backend, or deploy the matching backend update, then click Retry save. Your unsaved changes are preserved."
@@ -64,7 +67,7 @@ export function createPlannerPersistence({
           failure.conflict = response.status === 409;
           throw failure;
         }
-        const nextVersion = data.plannerVersion ?? data.user.plannerVersion;
+        const nextVersion = data.plannerVersion ?? savedPayload.plannerVersion;
         if (!Number.isInteger(nextVersion) || nextVersion <= acknowledgedVersion) {
           throw new Error("The server returned an invalid save version. Retry to confirm whether your plan was saved.");
         }
@@ -72,7 +75,7 @@ export function createPlannerPersistence({
         queue.shift();
         if (!disposed) {
           writeDraft();
-          onSaved(data.user);
+          onSaved(savedPayload);
         }
       } catch (error) {
         blocked = true;

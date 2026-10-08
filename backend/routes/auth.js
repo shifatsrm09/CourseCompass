@@ -127,6 +127,11 @@ router.post("/delete-account", async (req, res) => {
     return res.status(404).json({ code: "USER_NOT_FOUND", error: "Student account not found." });
   }
 
+  try {
+    const DesignerState = require("../models/DesignerState");
+    await DesignerState.deleteOne({ studentId });
+  } catch {}
+
   return res.json({ success: true });
 });
 

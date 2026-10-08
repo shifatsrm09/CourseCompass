@@ -16,6 +16,8 @@ export default function SemesterList({
   onRenameCod,
   onRemoveRepeat,
   onMoveTarc,
+  onMoveSemester,
+  isDesigner = false,
 }) {
   const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function SemesterList({
   const contextSlotIndex = semesterSlots.findIndex(slot => slot.id === contextMenu?.semesterId);
   const contextSlot = semesterSlots[contextSlotIndex];
   const contextCourse = contextSlot?.courses.find(course => course.instanceId === contextMenu?.instanceId);
-  const canEditContextCourse = Boolean(contextCourse && !contextCourse.completed && canEdit(contextSlotIndex, contextSlot));
+  const canEditContextCourse = Boolean(contextCourse && (isDesigner || !contextCourse.completed) && canEdit(contextSlotIndex, contextSlot));
   const openContextMenu = (event, semesterId, instanceId, code, action) => {
     event.preventDefault();
     event.stopPropagation();
@@ -49,7 +51,13 @@ export default function SemesterList({
     if (!group) return;
     const destination = Math.min(semesterSlots.length - 1, group.offset + result.destination.index);
     const source = semesterSlots.findIndex(slot => slot.id === result.draggableId);
-    if (source !== destination) onMoveTarc(result.draggableId, destination);
+    if (source !== destination) {
+      if (isDesigner && onMoveSemester) {
+        onMoveSemester(result.draggableId, destination);
+      } else {
+        onMoveTarc(result.draggableId, destination);
+      }
+    }
   };
 
   return (
@@ -70,7 +78,7 @@ export default function SemesterList({
               {group.slots.map((slot, localIndex) => {
                 const index = group.offset + localIndex;
                 const status = getStatus(index);
-                const canDrag = !blocked && slot.isTarc && ["recommended", "locked"].includes(status);
+                const canDrag = !blocked && (isDesigner || (slot.isTarc && ["recommended", "locked"].includes(status)));
                 return (
                   <React.Fragment key={slot.id}>
                   {!desktop && index % 3 === 0 && (
@@ -89,6 +97,7 @@ export default function SemesterList({
                         canDrag={canDrag}
                         canEdit={canEdit(index, slot)}
                         blocked={blocked}
+                        isDesigner={isDesigner}
                         onComplete={onComplete}
                         canUndo={status === "completed" && (index === semesterSlots.length - 1 || getStatus(index + 1) !== "completed")}
                         onUndoMenu={(event) => {

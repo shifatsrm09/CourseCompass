@@ -14,6 +14,22 @@ function App() {
   const [tempStudentId, setTempStudentId] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [session, setSession] = useState({ loading: true, error: "" });
+  const [currentPath, setCurrentPath] = useState(() => (typeof window !== "undefined" ? window.location.pathname : "/"));
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigate = (path) => {
+    if (typeof window !== "undefined" && window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+      setCurrentPath(path);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -142,7 +158,16 @@ function App() {
       onCancel={() => setChangingPlan(false)}
     />
   );
-  return <Dashboard user={user} setUser={setUser} onLogout={handleLogout} onChangePlan={() => setChangingPlan(true)} />;
+  return (
+    <Dashboard
+      user={user}
+      setUser={setUser}
+      onLogout={handleLogout}
+      onChangePlan={() => setChangingPlan(true)}
+      currentPath={currentPath}
+      onNavigate={navigate}
+    />
+  );
 }
 
 export default App;

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import CoursePlanner from "./Planner/CoursePlanner";
+import DesignerDashboard from "./Designer/DesignerDashboard";
 import streamsConfig from "../data/streamsConfig";
 import { buildCurriculum } from "../engine/plannerState.mjs";
 import { API_BASE, readApiResponse } from "../api";
 import { draftKey } from "../engine/plannerPersistence";
 import GradesheetSync from "./GradesheetSync";
 
-export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
+export default function Dashboard({ user, setUser, onLogout, onChangePlan, currentPath = "/", onNavigate }) {
   const curriculum = useMemo(() => {
     const stream = streamsConfig[user.stream];
     return stream ? buildCurriculum(stream.plan, user.stream) : null;
@@ -350,7 +351,21 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
 
       <div className={`relative transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${sidebarOpen && curriculum ? "lg:pl-60" : ""}`}><div className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 lg:max-w-[1600px] lg:py-3">
         {curriculum ? (
-          <CoursePlanner
+          currentPath === "/designer" ? (
+            <DesignerDashboard
+              key={`designer:${user.studentId}:${user.stream}:${resetToken}`}
+              user={user}
+              setUser={setUser}
+              curriculum={curriculum}
+              sidebarOpen={sidebarOpen}
+              onCloseSidebar={closeSidebar}
+              onNavigate={onNavigate}
+              onSyncGradesheet={() => { setMenuOpen(false); setSyncingGradesheet(true); }}
+              gradesheetPanel={gradesheetPanel}
+              onChangePlan={onChangePlan}
+            />
+          ) : (
+            <CoursePlanner
             key={`${user.studentId}:${user.stream}:${resetToken}`}
             user={user}
             setUser={setUser}
@@ -360,8 +375,10 @@ export default function Dashboard({ user, setUser, onLogout, onChangePlan }) {
             onSyncGradesheet={() => { setMenuOpen(false); setSyncingGradesheet(true); }}
             gradesheetPanel={gradesheetPanel}
             onChangePlan={onChangePlan}
+            onNavigateDesigner={() => onNavigate?.("/designer")}
+            onNavigateMain={() => onNavigate?.("/")}
           />
-        ) : (
+        )) : (
           <p role="alert" className="rounded-xl border border-amber-900/60 bg-amber-950/40 px-4 py-4 text-center text-sm font-medium text-amber-200">
             The curriculum for your saved stream is unavailable. Your saved plan has been preserved.
           </p>
