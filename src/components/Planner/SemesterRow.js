@@ -1,4 +1,5 @@
 import React from "react";
+import { Droppable, Draggable } from "@hello-pangea/dnd";
 import CourseBox from "./CourseBox";
 
 const STATUS_STYLES = {
@@ -95,39 +96,79 @@ export default function SemesterRow({
           </div>
         </div>
         <div>
-          <div className={`grid w-full min-w-0 ${canAdd ? "grid-cols-6" : "grid-cols-5"} gap-1 sm:flex sm:w-auto sm:flex-wrap sm:gap-2`}>
-            {slot.courses.map((course) => (
-              <CourseBox
-                key={course.instanceId}
-                course={course}
-                isRepeat={course.isRepeat}
-                isLocked={!canEdit || (!isDesigner && course.completed)}
-                onReplace={() => onReplace(slot.id, course.instanceId)}
-                onContextMenu={!blocked && (course.code === "COD" || canEdit) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
-                hideCompletedLabel={status === "completed"}
-                isDesigner={isDesigner}
-                prerequisiteIssues={course.prerequisiteIssues}
-              />
-            ))}
-            {slot.repeats?.map((repeat) => (
-              <CourseBox
-                key={repeat.id}
-                course={{ instanceId: repeat.id, code: repeat.code }}
-                isRepeat={repeat.isRepeat ?? true}
-                isLocked={Boolean(repeat.imported)}
-                onContextMenu={canEdit && !repeat.imported ? (event) => onRepeatContextMenu(event, slot.id, repeat.id, repeat.code) : undefined}
-              />
-            ))}
-            {canAdd && (
-              <button
-                type="button"
-                className="min-h-9 min-w-0 rounded-md border border-dashed border-neutral-600 bg-neutral-950 px-1 py-1.5 text-[10px] font-medium text-neutral-400 transition-colors hover:border-neutral-500 hover:bg-neutral-900 hover:text-neutral-200 sm:min-h-0 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm"
-                onClick={() => onAdd(slot.id)}
+          <Droppable
+            droppableId={`courses:${slot.id}`}
+            type="COURSE"
+            direction="horizontal"
+            isDropDisabled={blocked || slot.isTarc || (!isDesigner && !canEdit)}
+          >
+            {(dropProvided, dropSnapshot) => (
+              <div
+                ref={dropProvided.innerRef}
+                {...dropProvided.droppableProps}
+                className={`flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:gap-2 rounded-lg transition-all ${
+                  dropSnapshot?.isDraggingOver ? "bg-indigo-950/40 ring-2 ring-indigo-500/70 p-1 -m-1" : ""
+                }`}
               >
-                Add
-              </button>
+                {slot.courses.map((course, cIdx) => {
+                  const canDragCourse = !blocked && !slot.isTarc && (isDesigner || (!course.completed && canEdit));
+                  return (
+                    <Draggable
+                      key={course.instanceId}
+                      draggableId={course.instanceId}
+                      index={cIdx}
+                      isDragDisabled={!canDragCourse}
+                    >
+                      {(dragProvided, dragSnapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...dragProvided.dragHandleProps}
+                          className={`inline-flex transition-transform ${
+                            dragSnapshot.isDragging
+                              ? "z-50 opacity-95 scale-105 shadow-2xl ring-2 ring-indigo-500 rounded-lg cursor-grabbing"
+                              : canDragCourse
+                              ? "cursor-grab"
+                              : ""
+                          }`}
+                        >
+                          <CourseBox
+                            course={course}
+                            isRepeat={course.isRepeat}
+                            isLocked={!canEdit || (!isDesigner && course.completed)}
+                            onReplace={() => onReplace(slot.id, course.instanceId)}
+                            onContextMenu={!blocked && (course.code === "COD" || canEdit) ? (event) => onCourseContextMenu(event, slot.id, course.instanceId, course.code) : undefined}
+                            hideCompletedLabel={status === "completed"}
+                            isDesigner={isDesigner}
+                            prerequisiteIssues={course.prerequisiteIssues}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {dropProvided.placeholder}
+                {slot.repeats?.map((repeat) => (
+                  <CourseBox
+                    key={repeat.id}
+                    course={{ instanceId: repeat.id, code: repeat.code }}
+                    isRepeat={repeat.isRepeat ?? true}
+                    isLocked={Boolean(repeat.imported)}
+                    onContextMenu={canEdit && !repeat.imported ? (event) => onRepeatContextMenu(event, slot.id, repeat.id, repeat.code) : undefined}
+                  />
+                ))}
+                {canAdd && (
+                  <button
+                    type="button"
+                    className="min-h-9 min-w-0 rounded-md border border-dashed border-neutral-600 bg-neutral-950 px-1 py-1.5 text-[10px] font-medium text-neutral-400 transition-colors hover:border-neutral-500 hover:bg-neutral-900 hover:text-neutral-200 sm:min-h-0 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm"
+                    onClick={() => onAdd(slot.id)}
+                  >
+                    Add
+                  </button>
+                )}
+              </div>
             )}
-          </div>
+          </Droppable>
         </div>
       </div>
     </div>

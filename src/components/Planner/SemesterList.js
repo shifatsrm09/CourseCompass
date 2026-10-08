@@ -17,10 +17,16 @@ export default function SemesterList({
   onRemoveRepeat,
   onMoveTarc,
   onMoveSemester,
+  onMoveCourse,
   isDesigner = false,
 }) {
-  const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [desktop, setDesktop] = useState(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(min-width: 1024px)").matches
+      : false
+  ));
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const query = window.matchMedia("(min-width: 1024px)");
     const update = () => setDesktop(query.matches);
     query.addEventListener("change", update);
@@ -47,14 +53,32 @@ export default function SemesterList({
   };
   const onDragEnd = (result) => {
     if (!result.destination || blocked) return;
-    const group = groups.find(item => item.id === result.destination.droppableId);
+    if (result.source.index === result.destination.index && (!result.destination.droppableId || result.source.droppableId === result.destination.droppableId)) return;
+
+    if (result.type === "COURSE" || result.source?.droppableId?.startsWith("courses:")) {
+      const fromSemesterId = result.source.droppableId.replace(/^courses:/, "");
+      const toSemesterId = result.destination.droppableId.replace(/^courses:/, "");
+      if (!toSemesterId) return;
+      if (fromSemesterId === toSemesterId && result.source.index === result.destination.index) return;
+      if (onMoveCourse) {
+        onMoveCourse({
+          instanceId: result.draggableId,
+          fromSemesterId,
+          toSemesterId,
+          toIndex: result.destination.index,
+        });
+      }
+      return;
+    }
+
+    const group = groups.find(item => item.id === result.destination.droppableId) || groups[0];
     if (!group) return;
     const destination = Math.min(semesterSlots.length - 1, group.offset + result.destination.index);
     const source = semesterSlots.findIndex(slot => slot.id === result.draggableId);
     if (source !== destination) {
       if (isDesigner && onMoveSemester) {
         onMoveSemester(result.draggableId, destination);
-      } else {
+      } else if (onMoveTarc) {
         onMoveTarc(result.draggableId, destination);
       }
     }
@@ -72,7 +96,7 @@ export default function SemesterList({
             aria-label={desktop ? `Year ${year + 1}` : "Semesters"}
           >
           {desktop && <h3 className="mb-2 text-base font-semibold text-neutral-300">Year {year + 1}</h3>}
-        <Droppable droppableId={group.id} direction="vertical">
+        <Droppable droppableId={group.id} type="SEMESTER" direction="vertical">
           {(provided) => (
             <div className="flex flex-col gap-3 sm:gap-4 lg:gap-3" ref={provided.innerRef} {...provided.droppableProps}>
               {group.slots.map((slot, localIndex) => {

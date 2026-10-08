@@ -287,6 +287,10 @@ export default function CoursePlanner({
           onRemoveRepeat={removeRepeatCourse}
           onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
           onMoveSemester={(semesterId, toIndex) => dispatch({ type: "MOVE_SEMESTER", semesterId, toIndex })}
+          onMoveCourse={({ instanceId, fromSemesterId, toSemesterId, toIndex }) => {
+            planner.clearError();
+            dispatch({ type: "MOVE_COURSE", instanceId, fromSemesterId, toSemesterId, toIndex });
+          }}
           isDesigner={isDesigner}
         />
       )}

@@ -401,3 +401,79 @@ test("designer allows breaking prerequisites and getPrerequisiteViolations detec
   assert.ok(issues.some(issue => issue.prereqCode === "CSE250" && issue.courseCode === "CSE251"));
 });
 
+test("MOVE_COURSE allows dragging courses between any semesters in designer mode", async () => {
+  const user = defaultUser();
+  const state = clone(user.plannerState);
+
+  // Take a course from semester 4 (index 3) and move to semester 2 (index 1)
+  const fromSem = state.semesters[3];
+  const toSem = state.semesters[1];
+  const courseToMove = fromSem.courses[0];
+  const initialToSemCount = toSem.courses.length;
+
+  const result = applyAction(state, {
+    type: "MOVE_COURSE",
+    instanceId: courseToMove.instanceId,
+    fromSemesterId: fromSem.id,
+    toSemesterId: toSem.id,
+    toIndex: 0,
+  }, curriculum, { isDesigner: true });
+
+  assert.equal(result.ok, true);
+  const updatedToSem = result.state.semesters.find(s => s.id === toSem.id);
+  const updatedFromSem = result.state.semesters.find(s => s.id === fromSem.id);
+
+  // Course is now in the destination semester
+  assert.equal(updatedToSem.courses.length, initialToSemCount + 1);
+  assert.equal(updatedToSem.courses[0].instanceId, courseToMove.instanceId);
+  // Course is no longer in the source semester
+  assert.ok(!updatedFromSem.courses.some(c => c.instanceId === courseToMove.instanceId));
+
+  // TARC restrictions are enforced (cannot move into TARC)
+  const tarcSem = state.semesters.find(s => s.isTarc);
+  const tarcMove = applyAction(state, {
+    type: "MOVE_COURSE",
+    instanceId: courseToMove.instanceId,
+    fromSemesterId: fromSem.id,
+    toSemesterId: tarcSem.id,
+    toIndex: 0,
+  }, curriculum, { isDesigner: true });
+  assert.equal(tarcMove.ok, false);
+  assert.equal(tarcMove.error.code, "TARC_NOT_ALLOWED");
+});
+
+test("MOVE_COURSE enforces completed semester protection in main planner mode", async () => {
+  const user = defaultUser();
+  const state = clone(user.plannerState);
+  state.currentSemester = 2; // Semester 1 (index 0) is completed
+  state.completedCourses = state.semesters[0].courses.map(c => curriculum.byId.get(c.occurrenceId).code);
+
+  const completedSem = state.semesters[0];
+  const futureSem = state.semesters[1];
+  const courseInFuture = futureSem.courses[0];
+
+  // Moving course into completed semester fails in main planner
+  const mainMove = applyAction(state, {
+    type: "MOVE_COURSE",
+    instanceId: courseInFuture.instanceId,
+    fromSemesterId: futureSem.id,
+    toSemesterId: completedSem.id,
+    toIndex: 0,
+  }, curriculum, { isDesigner: false });
+
+  assert.equal(mainMove.ok, false);
+  assert.equal(mainMove.error.code, "FROZEN_SEMESTER");
+
+  // In designer mode, moving into/out of completed semester is permitted
+  const designerMove = applyAction(state, {
+    type: "MOVE_COURSE",
+    instanceId: courseInFuture.instanceId,
+    fromSemesterId: futureSem.id,
+    toSemesterId: completedSem.id,
+    toIndex: 0,
+  }, curriculum, { isDesigner: true });
+
+  assert.equal(designerMove.ok, true);
+});
+
+

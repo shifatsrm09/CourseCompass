@@ -27,20 +27,26 @@ export default function CourseBox({
 
   return (
     <div className="relative inline-flex min-w-0">
-      <button
-        type="button"
-        className={`inline-flex min-h-9 min-w-0 w-full sm:w-auto flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 text-[10px] font-semibold leading-3 transition-colors sm:min-h-0 sm:flex-row sm:justify-start sm:gap-2 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm sm:leading-5 ${
+      <div
+        role="button"
+        tabIndex={clickable ? 0 : undefined}
+        className={`inline-flex min-h-9 min-w-0 w-full sm:w-auto flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 text-[10px] font-semibold leading-3 transition-colors sm:min-h-0 sm:flex-row sm:justify-start sm:gap-2 sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm sm:leading-5 select-none ${
           hasPrereqIssues
-            ? "border-amber-500/80 bg-neutral-800 text-amber-200 hover:bg-neutral-700/90 active:bg-neutral-600 ring-1 ring-amber-500/30"
+            ? "border-amber-500/80 bg-neutral-800 text-amber-200 hover:bg-neutral-700/90 active:bg-neutral-600 ring-1 ring-amber-500/30 cursor-grab active:cursor-grabbing"
             : isLocked
             ? "cursor-default border-neutral-800 bg-neutral-900 text-neutral-200"
             : isRepeat
             ? "cursor-default border-red-900/60 bg-neutral-800 text-neutral-100"
-            : "cursor-pointer border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
+            : "cursor-grab active:cursor-grabbing border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
         }`}
         onClick={clickable ? onReplace : undefined}
+        onKeyDown={(e) => {
+          if (clickable && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onReplace?.();
+          }
+        }}
         onContextMenu={onContextMenu}
-        disabled={isLocked && !onContextMenu}
         aria-label={
           isRepeat
             ? `${name} repeat course`
@@ -82,7 +88,7 @@ export default function CourseBox({
             <span className="text-[7px] font-bold text-emerald-400 sm:text-[11px] sm:tracking-wide">COMPLETED</span>
           )
         )}
-      </button>
+      </div>
 
       {hasPrereqIssues && showTooltip && (
         <div

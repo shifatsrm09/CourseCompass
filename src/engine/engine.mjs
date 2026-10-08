@@ -162,6 +162,56 @@ function applyAction(state, action, curriculum, options = {}) {
         next.semesters.splice(action.toIndex, 0, moved);
         break;
       }
+      case "MOVE_COURSE": {
+        const fromIndex = next.semesters.findIndex(semester => semester.id === action.fromSemesterId);
+        if (fromIndex < 0) planningError("SEMESTER_NOT_FOUND", "The source semester is not in this plan.");
+        const toIndex = next.semesters.findIndex(semester => semester.id === action.toSemesterId);
+        if (toIndex < 0) planningError("SEMESTER_NOT_FOUND", "The destination semester is not in this plan.");
+
+        const fromSem = next.semesters[fromIndex];
+        const toSem = next.semesters[toIndex];
+
+        if (!designerOptions.isDesigner && fromIndex < next.currentSemester - 1) {
+          planningError("FROZEN_SEMESTER", "Completed semesters cannot be modified.");
+        }
+        if (!designerOptions.isDesigner && toIndex < next.currentSemester - 1) {
+          planningError("FROZEN_SEMESTER", "Courses cannot be moved into completed semesters.");
+        }
+
+        if (fromSem.isTarc) planningError("TARC_NOT_ALLOWED", "TARC courses must stay in TARC.");
+        if (toSem.isTarc) planningError("TARC_NOT_ALLOWED", "Courses cannot be moved into TARC.");
+
+        const coursePos = fromSem.courses.findIndex(c => c.instanceId === action.instanceId);
+        if (coursePos < 0) planningError("COURSE_NOT_FOUND", "The course is no longer in that semester.");
+
+        const maxAllowed = designerOptions.isDesigner ? 6 : 5;
+        if (fromIndex !== toIndex && toSem.courses.length >= maxAllowed) {
+          planningError("SEMESTER_FULL", `Semester ${toIndex + 1} cannot exceed ${maxAllowed} courses.`);
+        }
+
+        const [course] = fromSem.courses.splice(coursePos, 1);
+        const destPos = Number.isInteger(action.toIndex) && action.toIndex >= 0 && action.toIndex <= toSem.courses.length
+          ? action.toIndex
+          : toSem.courses.length;
+        toSem.courses.splice(destPos, 0, course);
+
+        pinned.add(course.instanceId);
+
+        if (designerOptions.isDesigner) {
+          const code = curriculum.byId.get(course.occurrenceId)?.code;
+          if (fromIndex < next.currentSemester - 1 && toIndex >= next.currentSemester - 1) {
+            if (code && next.completedCourses?.includes(code)) {
+              next.completedCourses = next.completedCourses.filter(c => c !== code);
+            }
+          }
+          if (toIndex < next.currentSemester - 1) {
+            if (code && !next.completedCourses?.includes(code) && code !== "COD") {
+              next.completedCourses = [...next.completedCourses, code];
+            }
+          }
+        }
+        break;
+      }
       case "MOVE_TARC": {
         const from = next.semesters.findIndex(semester => semester.id === action.semesterId && semester.isTarc);
         if (from < 0) planningError("TARC_NOT_FOUND", "The selected semester is not TARC.");
@@ -197,7 +247,7 @@ function applyAction(state, action, curriculum, options = {}) {
       default:
         planningError("UNKNOWN_ACTION", "This planner action is not supported.");
     }
-    if (action.type !== "COMPLETE_SEMESTER" && action.type !== "MOVE_SEMESTER") {
+    if (action.type !== "COMPLETE_SEMESTER" && action.type !== "MOVE_SEMESTER" && !(action.type === "MOVE_COURSE" && action.fromSemesterId === action.toSemesterId)) {
       scheduleFuture(next, curriculum, { notBefore, pinned, isDesigner, allowPrerequisiteOverride: isDesigner });
     }
     trimTrailingEmptySemesters(next, curriculum);
