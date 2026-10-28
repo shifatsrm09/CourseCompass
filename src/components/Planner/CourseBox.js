@@ -4,6 +4,15 @@ import { displayCourseCode } from "../../engine/labs.mjs";
 export default function CourseBox({ course, isLocked, isRepeat, onReplace, onContextMenu, hideCompletedLabel }) {
   const name = course.displayName || course.displayCode || displayCourseCode(course.code);
   const clickable = !isLocked && !isRepeat;
+
+  const handleClick = (event) => {
+    if (onContextMenu) {
+      onContextMenu(event);
+    } else if (clickable && onReplace) {
+      onReplace(event);
+    }
+  };
+
   return (
     <button
       type="button"
@@ -14,7 +23,7 @@ export default function CourseBox({ course, isLocked, isRepeat, onReplace, onCon
           ? "cursor-default border-red-900/60 bg-neutral-800 text-neutral-100"
           : "cursor-pointer border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-600"
       }`}
-      onClick={clickable ? onReplace : undefined}
+      onClick={handleClick}
       onContextMenu={onContextMenu}
       disabled={isLocked && !onContextMenu}
       aria-label={isRepeat ? `${name} repeat course` : isLocked ? name : `Edit ${name}`}

@@ -17,8 +17,9 @@ export default function SemesterList({
   onRemoveRepeat,
   onMoveTarc,
 }) {
-  const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [desktop, setDesktop] = useState(() => (typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia("(min-width: 1024px)").matches : false));
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const query = window.matchMedia("(min-width: 1024px)");
     const update = () => setDesktop(query.matches);
     query.addEventListener("change", update);
@@ -36,6 +37,12 @@ export default function SemesterList({
     event.preventDefault();
     event.stopPropagation();
     if (blocked) return;
+
+    if (event.type === "click" && contextMenu?.semesterId === semesterId && contextMenu?.instanceId === instanceId) {
+      setContextMenu(null);
+      return;
+    }
+
     const target = event.currentTarget;
     const rect = target.getBoundingClientRect();
     setContextMenu({ semesterId, instanceId, code, action, target,

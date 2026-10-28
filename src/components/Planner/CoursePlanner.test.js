@@ -49,6 +49,7 @@ test.each(["modal", "context menu"])("removing a prerequisite through %s updates
   const course = within(row(2)).getByRole("button", { name: "Edit B" });
   if (method === "modal") {
     fireEvent.click(course);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Replace course" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remove Course" }));
   } else {
     fireEvent.contextMenu(course, { clientX: 100, clientY: 100 });
@@ -138,6 +139,7 @@ test("a previous course error does not leak into a new completion or edit dialog
   expect(within(screen.getByRole("dialog")).queryByRole("alert")).not.toBeInTheDocument();
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
   fireEvent.click(within(row(4)).getByRole("button", { name: "Edit X" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Replace course" }));
   expect(within(screen.getByRole("dialog")).queryByRole("alert")).not.toBeInTheDocument();
 });
 
@@ -147,4 +149,33 @@ test("completed courses in future slots stay visible, marked, and unavailable fo
   expect(within(row(4)).getByText("COMPLETED")).toBeInTheDocument();
   fireEvent.click(within(row(2)).getByRole("button", { name: /Add Course/ }));
   expect(within(screen.getByRole("dialog")).queryByRole("button", { name: "X" })).not.toBeInTheDocument();
+});
+
+test("both left-click and right-click open action menu, allow selecting actions, and toggle closed on re-click", () => {
+  mount();
+  const course = within(row(2)).getByRole("button", { name: "Edit B" });
+
+  // 1. Left-click (or touch tap on phone) opens the action menu
+  fireEvent.click(course);
+  expect(screen.getByRole("menu", { name: "B actions" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Replace course" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Remove course" })).toBeInTheDocument();
+
+  // 2. Clicking the same course again toggles the menu closed
+  fireEvent.click(course);
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+  // 3. Right-click on PC also opens the action menu
+  fireEvent.contextMenu(course);
+  expect(screen.getByRole("menu", { name: "B actions" })).toBeInTheDocument();
+
+  // 4. User selects "Replace course" from the menu
+  fireEvent.click(screen.getByRole("menuitem", { name: "Replace course" }));
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(within(screen.getByRole("dialog")).getByText("Replace B")).toBeInTheDocument();
+
+  // Cancel dialog
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

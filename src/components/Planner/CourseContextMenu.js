@@ -12,7 +12,9 @@ export default function CourseContextMenu({ context, onClose, onRemove, onRename
     menu.querySelector("button").focus({ preventScroll: true });
 
     const outside = (event) => {
-      if (!menu.contains(event.target)) onClose();
+      if (!menu.contains(event.target) && !context.target?.contains(event.target)) {
+        onClose();
+      }
     };
     const dismiss = () => onClose();
     const keydown = (event) => {
