@@ -92,12 +92,7 @@ export default function PlannerSidebar({ open, onClose, stream, totalCourses, re
                           aria-controls={`stream-pdf-dept-${dept}`}
                           className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-xs font-semibold text-neutral-300 transition-colors hover:bg-neutral-800/70 hover:text-white focus-visible:outline focus-visible:outline-indigo-400"
                         >
-                          <span className="flex items-center gap-2">
-                            <span className="flex h-5 w-8 items-center justify-center rounded bg-indigo-500/10 text-[10px] font-bold text-indigo-400">
-                              {dept}
-                            </span>
-                            <span className="text-neutral-200">{dept}</span>
-                          </span>
+                          <span className="text-neutral-200">{dept}</span>
                           <svg
                             viewBox="0 0 24 24"
                             fill="none"
