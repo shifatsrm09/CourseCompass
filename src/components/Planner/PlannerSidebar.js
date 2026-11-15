@@ -1,7 +1,20 @@
 import React, { useState } from "react";
 import { STREAM_PDF_LINKS } from "../../data/streamPdfs";
 
-export default function PlannerSidebar({ open, onClose, stream, totalCourses, repeatCount, blocked, onBalance, onSyncGradesheet, onChangePlan, gradesheetPanel }) {
+export default function PlannerSidebar({
+  open,
+  onClose,
+  stream,
+  totalCourses,
+  repeatCount,
+  blocked,
+  onBalance,
+  onSyncGradesheet,
+  onChangePlan,
+  gradesheetPanel,
+  activeView = "planner",
+  onSwitchView,
+}) {
   const [streamPdfOpen, setStreamPdfOpen] = useState(false);
   const [openDepts, setOpenDepts] = useState({ CS: false, CSE: false });
 
@@ -30,6 +43,64 @@ export default function PlannerSidebar({ open, onClose, stream, totalCourses, re
         className={`fixed bottom-0 left-0 top-[57px] z-30 flex w-60 flex-col overflow-y-auto border-r border-neutral-800 bg-neutral-950 p-3 transition-transform duration-300 ease-in-out motion-reduce:transition-none sm:top-[73px] ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <nav aria-label="Planner actions" className="shrink-0 space-y-1">
+          <button
+            type="button"
+            onClick={() => onSwitchView?.("planner")}
+            aria-current={activeView === "planner" ? "page" : undefined}
+            className={`${actionClass} ${
+              activeView === "planner"
+                ? "bg-indigo-500/15 text-indigo-300 font-semibold ring-1 ring-inset ring-indigo-500/30"
+                : "text-neutral-300 hover:bg-neutral-800/70 hover:text-white"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4 shrink-0 text-indigo-400"
+              aria-hidden="true"
+            >
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+              <path d="M6 6h10" />
+              <path d="M6 10h10" />
+            </svg>
+            Course Planner
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onSwitchView?.("routine")}
+            aria-current={activeView === "routine" ? "page" : undefined}
+            className={`${actionClass} ${
+              activeView === "routine"
+                ? "bg-amber-500/15 text-amber-300 font-semibold ring-1 ring-inset ring-amber-500/30"
+                : "text-amber-300/90 hover:bg-amber-500/10 hover:text-amber-200"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4 shrink-0 text-amber-400"
+              aria-hidden="true"
+            >
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+              <line x1="16" x2="16" y1="2" y2="6" />
+              <line x1="8" x2="8" y1="2" y2="6" />
+              <line x1="3" x2="21" y1="10" y2="10" />
+              <path d="m9 16 2 2 4-4" />
+            </svg>
+            Routine Khichuri
+          </button>
+
+          <div className="my-2 border-t border-neutral-800/80" role="separator" />
+
           <button type="button" onClick={onBalance} disabled={blocked} className={`${actionClass} bg-indigo-500/10 text-indigo-300 disabled:cursor-default disabled:opacity-40`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true"><path d="M12 3v17M5 20h14M4 7h16M6 7l-4 7h8L6 7Zm12 0-4 7h8l-4-7Z" /></svg>
             Auto Balance

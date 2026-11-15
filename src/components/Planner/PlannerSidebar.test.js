@@ -103,4 +103,21 @@ describe("PlannerSidebar - Stream PDF dropdown", () => {
     const dropdown = document.getElementById("sidebar-stream-pdf");
     expect(dropdown).toHaveClass("grid-rows-[0fr]");
   });
+
+  test("renders Routine Khichuri and Course Planner navigation buttons and handles clicks", () => {
+    const onSwitchView = jest.fn();
+    render(<PlannerSidebar {...defaultProps} activeView="planner" onSwitchView={onSwitchView} />);
+
+    const routineBtn = screen.getByRole("button", { name: /routine khichuri/i });
+    const plannerBtn = screen.getByRole("button", { name: /course planner/i });
+
+    expect(routineBtn).toBeInTheDocument();
+    expect(plannerBtn).toBeInTheDocument();
+
+    expect(plannerBtn).toHaveAttribute("aria-current", "page");
+    expect(routineBtn).not.toHaveAttribute("aria-current");
+
+    fireEvent.click(routineBtn);
+    expect(onSwitchView).toHaveBeenCalledWith("routine");
+  });
 });

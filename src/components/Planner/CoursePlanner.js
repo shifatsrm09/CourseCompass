@@ -9,10 +9,12 @@ import ConfirmModal from "./ConfirmModal";
 import CourseEditModal from "./CourseEditModal";
 import SemesterList from "./SemesterList";
 import PlannerSidebar from "./PlannerSidebar";
+import RoutineKhichuri from "../RoutineKhichuri/RoutineKhichuri";
 
 export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, onCloseSidebar, onSyncGradesheet, onChangePlan, gradesheetPanel }) {
   const planner = usePlanner({ user, setUser, curriculum });
   const { state, dispatch, blocked, saveStatus } = planner;
+  const [activeView, setActiveView] = useState("planner");
   const [completionSemester, setCompletionSemester] = useState(null);
   const [modalContext, setModalContext] = useState(null);
 
@@ -156,104 +158,136 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
   const recoveryNeeded = ["error", "conflict", "pending"].includes(saveStatus.kind);
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
+  const currentSemesterIndex = Math.max(0, (state?.currentSemester || 1) - 1);
+  const currentSlot = slots[currentSemesterIndex];
+  const currentPlannedCourses = useMemo(() => {
+    if (!currentSlot) return [];
+    return currentSlot.courses
+      .map((c) => c.code)
+      .filter((code) => code && code !== "COD");
+  }, [currentSlot]);
+
   return (
     <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none lg:pb-0">
-      <PlannerSidebar open={sidebarOpen} onClose={onCloseSidebar} stream={user.stream} totalCourses={totalCourses} repeatCount={repeatCount} blocked={blocked} onBalance={() => dispatch({ type: "REBALANCE" })} onSyncGradesheet={onSyncGradesheet} onChangePlan={onChangePlan} gradesheetPanel={gradesheetPanel} />
+      <PlannerSidebar
+        open={sidebarOpen}
+        onClose={onCloseSidebar}
+        stream={user.stream}
+        totalCourses={totalCourses}
+        repeatCount={repeatCount}
+        blocked={blocked}
+        onBalance={() => dispatch({ type: "REBALANCE" })}
+        onSyncGradesheet={onSyncGradesheet}
+        onChangePlan={onChangePlan}
+        gradesheetPanel={gradesheetPanel}
+        activeView={activeView}
+        onSwitchView={setActiveView}
+      />
 
-      {planner.error && (
-        <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
-          {planner.error}
-        </p>
-      )}
-
-      {planner.warnings.length > 0 && (
-        <div role="status" className="mb-3 space-y-1 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
-          {planner.warnings.map((warning, index) => (
-            <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>
-          ))}
-        </div>
-      )}
-
-      <div
-        role={recoveryNeeded ? "alert" : "status"}
-        aria-live="polite"
-        className="mb-3 flex flex-wrap items-center gap-2.5 text-sm text-neutral-400"
-      >
-        {saveStatus.message && <span>{saveStatus.message}</span>}
-        {["error", "pending"].includes(saveStatus.kind) && (
-          <button
-            type="button"
-            onClick={planner.retrySave}
-            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700"
-          >
-            Retry save
-          </button>
-        )}
-        {(recoveryNeeded || (blocked && !planner.reloadBusy)) && (
-          <button
-            type="button"
-            onClick={planner.reloadSavedPlan}
-            disabled={planner.reloadBusy}
-            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-default disabled:opacity-50"
-          >
-            Load saved plan (discard unsaved changes)
-          </button>
-        )}
-        {planner.reloadBusy && <span>Loading saved plan…</span>}
-      </div>
-
-      {state?.unplaced?.length > 0 && (
-        <div role="status" className="mb-3 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
-          <p className="mb-2">Courses awaiting a valid semester. Use Auto Balance to place them.</p>
-          <div className="flex flex-wrap gap-2">
-            {state.unplaced.map((instance) => (
-              <span
-                key={instance.instanceId}
-                className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-neutral-100"
-              >
-                {curriculum.byId.get(instance.occurrenceId)?.code || instance.occurrenceId}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {state && (
-        <SemesterList
-          semesterSlots={slots}
-          getStatus={getStatus}
-          canEdit={canEdit}
-          blocked={blocked}
-          onComplete={(semesterId) => { planner.clearError(); setCompletionSemester(semesterId); }}
-          onUndoComplete={(semesterId) => dispatch({ type: "UNDO_COMPLETE_SEMESTER", semesterId })}
-          onAdd={openAdd}
-          onReplace={openReplace}
-          onRenameCod={renameCod}
-          onRemove={removeCourse}
-          onRemoveRepeat={removeRepeatCourse}
-          onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
+      {activeView === "routine" ? (
+        <RoutineKhichuri
+          onBackToPlanner={() => setActiveView("planner")}
+          suggestedCourses={currentPlannedCourses}
+          currentSemesterLabel={currentSlot?.termLabel || `Semester ${currentSemesterIndex + 1}`}
         />
-      )}
+      ) : (
+        <>
+          {planner.error && (
+            <p role="alert" className="mb-3 rounded-lg border border-red-900/60 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
+              {planner.error}
+            </p>
+          )}
 
-      <ConfirmModal
-        visible={Boolean(completionSemester)}
-        onConfirm={completeSemester}
-        onCancel={() => setCompletionSemester(null)}
-        semester={slots.findIndex((slot) => slot.id === completionSemester) + 1}
-        disabled={blocked}
-        error={planner.error}
-      />
-      <CourseEditModal
-        visible={Boolean(modalContext)}
-        onClose={closeEditModal}
-        onSelect={selectCourse}
-        onRemove={() => removeCourse(modalContext?.semesterId, modalContext?.instanceId)}
-        courses={modalCourses}
-        modalContext={modalContext}
-        disabled={blocked}
-        error={planner.error}
-        title={modalContext?.mode === "add" ? "Add a course" : `Replace ${modalContext?.code || "course"}`}
-      />
+          {planner.warnings.length > 0 && (
+            <div role="status" className="mb-3 space-y-1 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
+              {planner.warnings.map((warning, index) => (
+                <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>
+              ))}
+            </div>
+          )}
+
+          <div
+            role={recoveryNeeded ? "alert" : "status"}
+            aria-live="polite"
+            className="mb-3 flex flex-wrap items-center gap-2.5 text-sm text-neutral-400"
+          >
+            {saveStatus.message && <span>{saveStatus.message}</span>}
+            {["error", "pending"].includes(saveStatus.kind) && (
+              <button
+                type="button"
+                onClick={planner.retrySave}
+                className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700"
+              >
+                Retry save
+              </button>
+            )}
+            {(recoveryNeeded || (blocked && !planner.reloadBusy)) && (
+              <button
+                type="button"
+                onClick={planner.reloadSavedPlan}
+                disabled={planner.reloadBusy}
+                className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-default disabled:opacity-50"
+              >
+                Load saved plan (discard unsaved changes)
+              </button>
+            )}
+            {planner.reloadBusy && <span>Loading saved plan…</span>}
+          </div>
+
+          {state?.unplaced?.length > 0 && (
+            <div role="status" className="mb-3 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3.5 py-2.5 text-sm text-amber-200">
+              <p className="mb-2">Courses awaiting a valid semester. Use Auto Balance to place them.</p>
+              <div className="flex flex-wrap gap-2">
+                {state.unplaced.map((instance) => (
+                  <span
+                    key={instance.instanceId}
+                    className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-neutral-100"
+                  >
+                    {curriculum.byId.get(instance.occurrenceId)?.code || instance.occurrenceId}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {state && (
+            <SemesterList
+              semesterSlots={slots}
+              getStatus={getStatus}
+              canEdit={canEdit}
+              blocked={blocked}
+              onComplete={(semesterId) => { planner.clearError(); setCompletionSemester(semesterId); }}
+              onUndoComplete={(semesterId) => dispatch({ type: "UNDO_COMPLETE_SEMESTER", semesterId })}
+              onAdd={openAdd}
+              onReplace={openReplace}
+              onRenameCod={renameCod}
+              onRemove={removeCourse}
+              onRemoveRepeat={removeRepeatCourse}
+              onMoveTarc={(semesterId, toIndex) => dispatch({ type: "MOVE_TARC", semesterId, toIndex })}
+            />
+          )}
+
+          <ConfirmModal
+            visible={Boolean(completionSemester)}
+            onConfirm={completeSemester}
+            onCancel={() => setCompletionSemester(null)}
+            semester={slots.findIndex((slot) => slot.id === completionSemester) + 1}
+            disabled={blocked}
+            error={planner.error}
+          />
+          <CourseEditModal
+            visible={Boolean(modalContext)}
+            onClose={closeEditModal}
+            onSelect={selectCourse}
+            onRemove={() => removeCourse(modalContext?.semesterId, modalContext?.instanceId)}
+            courses={modalCourses}
+            modalContext={modalContext}
+            disabled={blocked}
+            error={planner.error}
+            title={modalContext?.mode === "add" ? "Add a course" : `Replace ${modalContext?.code || "course"}`}
+          />
+        </>
+      )}
     </div>
   );
 }
