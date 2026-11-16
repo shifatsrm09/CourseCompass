@@ -41,7 +41,7 @@ export default function PlannerSidebar({
         aria-label="Planner tools and statistics"
         aria-hidden={!open}
         inert={!open}
-        className={`fixed bottom-0 left-0 top-[57px] z-30 flex w-60 flex-col overflow-y-auto border-r border-neutral-800 bg-neutral-950 p-3 transition-transform duration-300 ease-in-out motion-reduce:transition-none sm:top-[73px] ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed bottom-0 left-0 top-[57px] z-30 flex w-60 flex-col overflow-y-auto border-r border-[#2b2a28] bg-[#171717] p-3 transition-transform duration-300 ease-in-out motion-reduce:transition-none sm:top-[73px] ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <nav aria-label="Planner actions" className="shrink-0 space-y-0.5">
           <button
