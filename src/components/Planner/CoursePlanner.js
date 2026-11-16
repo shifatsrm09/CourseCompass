@@ -159,14 +159,21 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
   const recoveryNeeded = ["error", "conflict", "pending"].includes(saveStatus.kind);
   const totalCourses = slots.reduce((sum, slot) => sum + slot.courses.length, 0) + (state?.unplaced?.length || 0);
 
-  const currentSemesterIndex = Math.max(0, (state?.currentSemester || 1) - 1);
-  const currentSlot = slots[currentSemesterIndex];
-  const currentPlannedCourses = useMemo(() => {
-    if (!currentSlot) return [];
-    return currentSlot.courses
+  const currentSemesterNum = state?.currentSemester || 1;
+  const nextSemesterIndex = currentSemesterNum < slots.length
+    ? currentSemesterNum
+    : Math.max(0, currentSemesterNum - 1);
+  const nextSlot = slots[nextSemesterIndex];
+  const nextPlannedCourses = useMemo(() => {
+    if (!nextSlot) return [];
+    const regularCodes = nextSlot.courses
       .map((c) => c.code)
       .filter((code) => code && code !== "COD");
-  }, [currentSlot]);
+    const repeatCodes = (nextSlot.repeats || [])
+      .map((r) => r.code)
+      .filter(Boolean);
+    return Array.from(new Set([...regularCodes, ...repeatCodes]));
+  }, [nextSlot]);
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl px-0 pb-10 sm:px-1 lg:max-w-none lg:pb-0">
@@ -189,8 +196,8 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
       {activeView === "routine" ? (
         <RoutineKhichuri
           onCatalogChange={setRoutineCatalog}
-          suggestedCourses={currentPlannedCourses}
-          currentSemesterLabel={currentSlot?.termLabel || `Semester ${currentSemesterIndex + 1}`}
+          suggestedCourses={nextPlannedCourses}
+          currentSemesterLabel={nextSlot?.termLabel || `Semester ${nextSemesterIndex + 1}`}
         />
       ) : (
         <>
