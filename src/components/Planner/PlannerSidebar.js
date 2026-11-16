@@ -14,6 +14,7 @@ export default function PlannerSidebar({
   gradesheetPanel,
   activeView = "planner",
   onSwitchView,
+  routineCatalog,
 }) {
   const [streamPdfOpen, setStreamPdfOpen] = useState(false);
   const [openDepts, setOpenDepts] = useState({ CS: false, CSE: false });
@@ -222,7 +223,21 @@ export default function PlannerSidebar({
           </div>
         </nav>
         <section aria-labelledby="sidebar-statistics" className="mt-auto shrink-0 px-3 pt-8 pb-2">
-          <h2 id="sidebar-statistics" className="mb-3 border-t border-neutral-800/70 pt-4 text-xs font-medium text-neutral-400">Your degree</h2>
+          <h2 id="sidebar-statistics" className="mb-3 border-t border-neutral-800/70 pt-4 text-xs font-medium text-neutral-400">{activeView === "routine" ? "Course catalog" : "Your degree"}</h2>
+          {activeView === "routine" ? (
+            <dl className="space-y-3 text-xs">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-neutral-400">Available courses</dt>
+                <dd className="font-medium tabular-nums text-neutral-200">{routineCatalog?.loading || !routineCatalog ? "Loading…" : routineCatalog.courseCount}</dd>
+              </div>
+              {[["Catalog updated", routineCatalog?.updatedAt], ["Last checked", routineCatalog?.checkedAt]].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-neutral-400">{label}</dt>
+                  <dd className="mt-1 tabular-nums text-neutral-200">{value && !Number.isNaN(new Date(value).getTime()) ? new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "Unavailable"}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
           <dl className="space-y-2 text-xs">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-neutral-400">Stream</dt>
@@ -237,6 +252,7 @@ export default function PlannerSidebar({
               <dd className={`font-semibold tabular-nums ${repeatCount > 0 ? "text-red-400" : "text-emerald-400"}`}>{repeatCount}</dd>
             </div>
           </dl>
+          )}
         </section>
       </aside>
     </>

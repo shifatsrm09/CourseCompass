@@ -15,6 +15,7 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
   const planner = usePlanner({ user, setUser, curriculum });
   const { state, dispatch, blocked, saveStatus } = planner;
   const [activeView, setActiveView] = useState("planner");
+  const [routineCatalog, setRoutineCatalog] = useState(null);
   const [completionSemester, setCompletionSemester] = useState(null);
   const [modalContext, setModalContext] = useState(null);
 
@@ -180,13 +181,14 @@ export default function CoursePlanner({ user, setUser, curriculum, sidebarOpen, 
         onSyncGradesheet={onSyncGradesheet}
         onChangePlan={onChangePlan}
         gradesheetPanel={gradesheetPanel}
+        routineCatalog={routineCatalog}
         activeView={activeView}
         onSwitchView={setActiveView}
       />
 
       {activeView === "routine" ? (
         <RoutineKhichuri
-          onBackToPlanner={() => setActiveView("planner")}
+          onCatalogChange={setRoutineCatalog}
           suggestedCourses={currentPlannedCourses}
           currentSemesterLabel={currentSlot?.termLabel || `Semester ${currentSemesterIndex + 1}`}
         />

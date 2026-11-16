@@ -1,5 +1,3 @@
-/* Routine Khichuri - Course Compass Theme */
-
 .routine-khichuri-app {
   font-family: "Inter", Arial, sans-serif;
   color: #e5e5e5;
@@ -12,7 +10,6 @@
   box-sizing: border-box;
 }
 
-/* App Shell */
 .routine-khichuri-app .app-shell {
   max-width: 1400px;
   margin: 0 auto;
@@ -20,30 +17,17 @@
   position: relative;
 }
 
-/* Hero Header */
 .routine-khichuri-app .hero-header {
-  margin-bottom: 18px;
-  border-radius: 14px;
-  padding: 22px 24px;
-  background: #141414;
-  border: 1px solid #282828;
-  color: #f5f5f5;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  margin-bottom: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid #303030;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  position: relative;
-  overflow: hidden;
+  gap: 16px;
 }
 
 .routine-khichuri-app .hero-header::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  content: none;
 }
 
 .routine-khichuri-app .hero-header-top {
@@ -66,7 +50,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .routine-khichuri-app .back-to-planner-btn:hover {
@@ -76,34 +60,19 @@
 }
 
 .routine-khichuri-app .hero-brand-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 5px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #818cf8;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-size: 12px;
+  color: #a3a3a3;
 }
 
 .routine-khichuri-app .hero-brand-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-  display: inline-block;
+  display: none;
 }
 
 .routine-khichuri-app .hero-header-main h1 {
   margin: 0;
   font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: normal;
   color: #f5f5f5;
   line-height: 1.2;
 }
@@ -118,19 +87,16 @@
 .routine-khichuri-app .hero-header-status {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #222222;
+  gap: 8px 24px;
 }
 
 .routine-khichuri-app .source-last-updated-text {
   font-size: 11px;
-  color: #737373;
+  color: #a3a3a3;
   margin: 0;
   font-family: monospace;
 }
 
-/* Setup Grid */
 .routine-khichuri-app .setup-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
@@ -144,14 +110,13 @@
   }
 }
 
-/* Panel Cards */
 .routine-khichuri-app .panel {
   background: #141414;
   border: 1px solid #282828;
   border-radius: 14px;
   padding: 20px;
   margin-bottom: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -164,16 +129,12 @@
   font-size: 16px;
   font-weight: 600;
   color: #f5f5f5;
-  letter-spacing: -0.01em;
+  letter-spacing: normal;
 }
 
-/* Sub Panels */
 .routine-khichuri-app .sub-panel {
-  background: #0d0d0d;
-  border: 1px solid #222222;
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 12px;
+  padding: 0;
+  margin-bottom: 24px;
 }
 
 .routine-khichuri-app .sub-panel h3 {
@@ -181,11 +142,10 @@
   font-size: 13px;
   font-weight: 600;
   color: #d4d4d4;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
-/* Search Area */
 .routine-khichuri-app .course-search-area {
   display: flex;
   gap: 8px;
@@ -194,6 +154,7 @@
 
 .routine-khichuri-app .course-search-area input {
   flex: 1;
+  min-width: 0;
   background: #090909;
   border: 1px solid #2e2e2e;
   color: #f0f0f0;
@@ -206,8 +167,8 @@
 
 .routine-khichuri-app .course-search-area input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  border-color: #888888;
+  box-shadow: none;
 }
 
 .routine-khichuri-app .course-search-area button {
@@ -228,7 +189,6 @@
   border-color: #4a4a4a;
 }
 
-/* Suggestions */
 .routine-khichuri-app .suggestion-row {
   display: flex;
   flex-wrap: wrap;
@@ -245,7 +205,7 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .routine-khichuri-app .suggestion-pill:hover {
@@ -254,7 +214,6 @@
   color: #ffffff;
 }
 
-/* Course Chips */
 .routine-khichuri-app .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -263,13 +222,13 @@
 }
 
 .routine-khichuri-app .code-chip {
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  color: #c7d2fe;
+  background: #303030;
+  border: 1px solid #555555;
+  color: #f5f5f5;
   border-radius: 8px;
   padding: 6px 12px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -278,10 +237,10 @@
 .routine-khichuri-app .code-chip button {
   background: none;
   border: none;
-  color: #a5b4fc;
+  color: #d4d4d4;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0;
   line-height: 1;
   transition: color 0.15s;
@@ -291,7 +250,6 @@
   color: #f87171;
 }
 
-/* Tabs */
 .routine-khichuri-app .preference-tab-wrap {
   margin-top: 14px;
 }
@@ -302,7 +260,7 @@
   border: 1px solid #262626;
   border-radius: 8px;
   padding: 3px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   gap: 3px;
 }
 
@@ -317,7 +275,7 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .routine-khichuri-app .preference-tab-btn:hover {
@@ -327,28 +285,22 @@
 .routine-khichuri-app .preference-tab-btn.is-active {
   background: #242424;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
-/* Grids for preferences */
 .routine-khichuri-app .course-pref-grid {
   display: grid;
   grid-template-columns: 80px 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
   align-items: start;
 }
 
 .routine-khichuri-app .course-pref-head {
-  background: #0d0d0d;
-  color: #888888;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #222222;
-  text-align: center;
+  color: #a3a3a3;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 8px 0;
+  border-bottom: 1px solid #303030;
 }
 
 .routine-khichuri-app .course-pref-code {
@@ -357,7 +309,7 @@
   color: #f0f0f0;
   border-radius: 6px;
   padding: 8px;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 12px;
   text-align: center;
 }
@@ -380,7 +332,7 @@
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .routine-khichuri-app .faculty-option-item:hover {
@@ -389,7 +341,11 @@
 }
 
 .routine-khichuri-app .faculty-option-item input {
-  display: none;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  accent-color: #e5e5e5;
+  flex-shrink: 0;
 }
 
 .routine-khichuri-app .faculty-option-item.is-preferred {
@@ -405,15 +361,14 @@
 }
 
 .routine-khichuri-app .faculty-option-item.is-tba {
-  font-style: italic;
+  font-style: normal;
   opacity: 0.85;
 }
 
-/* Section Options */
 .routine-khichuri-app .section-pref-grid {
   display: grid;
   grid-template-columns: 80px 1fr;
-  gap: 10px;
+  gap: 8px;
   align-items: start;
 }
 
@@ -437,7 +392,7 @@
   font-size: 11px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .routine-khichuri-app .section-option-chip:hover {
@@ -446,26 +401,25 @@
 }
 
 .routine-khichuri-app .section-option-chip.is-selected {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: #6366f1;
-  color: #e0e7ff;
+  background: #303030;
+  border-color: #777777;
+  color: #f5f5f5;
 }
 
 .routine-khichuri-app .section-chip-title {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 11px;
 }
 
 .routine-khichuri-app .section-chip-meta {
-  font-size: 10px;
+  font-size: 11px;
   color: #888888;
 }
 
 .routine-khichuri-app .section-option-chip.is-selected .section-chip-meta {
-  color: #a5b4fc;
+  color: #d4d4d4;
 }
 
-/* Tooltip */
 .routine-khichuri-app .section-tooltip {
   display: none;
   position: absolute;
@@ -478,19 +432,20 @@
   color: #e5e5e5;
   border-radius: 8px;
   padding: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  box-shadow: none;
   z-index: 50;
   pointer-events: none;
 }
 
-.routine-khichuri-app .section-option-chip:hover .section-tooltip {
+.routine-khichuri-app .section-option-chip:hover .section-tooltip,
+.routine-khichuri-app .section-option-chip:focus .section-tooltip {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
 .routine-khichuri-app .section-tooltip-title {
-  font-weight: 700;
+  font-weight: 500;
   color: #ffffff;
   font-size: 12px;
   border-bottom: 1px solid #222222;
@@ -499,21 +454,20 @@
 }
 
 .routine-khichuri-app .section-tooltip-subtitle {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  color: #818cf8;
+  text-transform: none;
+  color: #d4d4d4;
   margin-top: 4px;
 }
 
 .routine-khichuri-app .section-empty {
   font-size: 12px;
-  color: #666;
-  font-style: italic;
+  color: #a3a3a3;
+  font-style: normal;
   padding: 6px 0;
 }
 
-/* Day Selector */
 .routine-khichuri-app .day-toggle-bar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -527,10 +481,10 @@
   border-radius: 6px;
   padding: 8px 4px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   text-align: center;
 }
 
@@ -540,18 +494,17 @@
 }
 
 .routine-khichuri-app .day-toggle.is-selected {
-  background: #4f46e5;
-  border-color: #6366f1;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  background: #303030;
+  border-color: #777777;
+  color: #f5f5f5;
+  box-shadow: none;
 }
 
-/* Settings Grid */
 .routine-khichuri-app .settings-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .routine-khichuri-app .settings-grid label {
@@ -577,10 +530,9 @@
 
 .routine-khichuri-app .settings-grid select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #888888;
 }
 
-/* Ignored Slot Grid */
 .routine-khichuri-app .ignored-slot-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -593,11 +545,11 @@
   color: #888888;
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   text-align: center;
 }
 
@@ -612,11 +564,10 @@
   color: #fde68a;
 }
 
-/* Checkbox Labels */
 .routine-khichuri-app .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 13px;
   color: #d4d4d4;
   cursor: pointer;
@@ -632,12 +583,12 @@
   border: 1px solid #333333;
   cursor: pointer;
   position: relative;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .routine-khichuri-app .checkbox-label input[type="checkbox"]:checked {
   background: #4f46e5;
-  border-color: #6366f1;
+  border-color: #888888;
 }
 
 .routine-khichuri-app .checkbox-label input[type="checkbox"]:checked::after {
@@ -648,37 +599,33 @@
   transform: translate(-50%, -50%);
   color: #ffffff;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .routine-khichuri-app .hint-text {
   font-size: 11px;
-  color: #666666;
+  color: #a3a3a3;
   margin: 6px 0 0;
-  font-style: italic;
+  font-style: normal;
 }
 
-/* Generate Button */
 .routine-khichuri-app .generate-button {
   width: 100%;
-  background: #4f46e5;
-  border: none;
-  color: #ffffff;
-  border-radius: 10px;
-  padding: 13px 20px;
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
+  min-height: 44px;
+  background: #ededeb;
+  border: 1px solid #ededeb;
+  color: #171717;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font: inherit;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
-  transition: all 0.2s ease;
+  transition: background-color 150ms ease;
   margin-top: 8px;
 }
 
 .routine-khichuri-app .generate-button:hover:not(:disabled) {
-  background: #4338ca;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
-  transform: translateY(-1px);
+  background: #ffffff;
 }
 
 .routine-khichuri-app .generate-button:disabled {
@@ -688,7 +635,6 @@
   box-shadow: none;
 }
 
-/* Error Banner */
 .routine-khichuri-app .error-banner {
   background: rgba(225, 29, 72, 0.12);
   border: 1px solid rgba(225, 29, 72, 0.4);
@@ -700,7 +646,6 @@
   font-weight: 500;
 }
 
-/* Results Panel */
 .routine-khichuri-app .results-panel {
   margin-top: 20px;
 }
@@ -713,14 +658,13 @@
   gap: 8px;
   font-size: 13px;
   color: #a3a3a3;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .routine-khichuri-app .results-summary strong {
   color: #f5f5f5;
 }
 
-/* Pagination */
 .routine-khichuri-app .results-pagination {
   display: flex;
   align-items: center;
@@ -740,7 +684,7 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .routine-khichuri-app .page-btn:hover:not(:disabled) {
@@ -755,12 +699,11 @@
 }
 
 .routine-khichuri-app .page-btn.is-active {
-  background: #4f46e5;
-  border-color: #6366f1;
-  color: #ffffff;
+  background: #303030;
+  border-color: #777777;
+  color: #f5f5f5;
 }
 
-/* Result Cards */
 .routine-khichuri-app .results-stack {
   display: flex;
   flex-direction: column;
@@ -772,7 +715,7 @@
   border: 1px solid #282828;
   border-radius: 14px;
   padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
   transition: border-color 0.2s ease;
 }
 
@@ -794,7 +737,7 @@
 .routine-khichuri-app .result-header h3 {
   margin: 0;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 500;
   color: #f5f5f5;
 }
 
@@ -818,7 +761,7 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .routine-khichuri-app .download-routine-button:hover:not(:disabled) {
@@ -832,7 +775,6 @@
   cursor: wait;
 }
 
-/* Weekly Calendar Grid */
 .routine-khichuri-app .calendar-wrapper {
   margin-top: 10px;
 }
@@ -842,12 +784,8 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 12px;
-  padding: 10px 14px;
-  background: #0a0a0a;
-  border: 1px solid #222222;
-  border-radius: 8px;
 }
 
 .routine-khichuri-app .legend-types {
@@ -856,17 +794,17 @@
 }
 
 .routine-khichuri-app .type-pill {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
   padding: 3px 8px;
   border-radius: 4px;
 }
 
 .routine-khichuri-app .type-pill.theory {
   background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
+  color: #d4d4d4;
   border: 1px solid rgba(99, 102, 241, 0.4);
 }
 
@@ -879,7 +817,7 @@
 .routine-khichuri-app .legend-courses {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .routine-khichuri-app .course-legend-item {
@@ -916,9 +854,9 @@
   border: 1px solid #222222;
   color: #a3a3a3;
   font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
   padding: 10px 8px;
   text-align: center;
 }
@@ -926,7 +864,7 @@
 .routine-khichuri-app .slot-label {
   background: #080808;
   border: 1px solid #222222;
-  color: #737373;
+  color: #a3a3a3;
   font-size: 11px;
   font-family: monospace;
   font-weight: 600;
@@ -949,10 +887,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  height: 100%;
+  height: auto;
 }
 
-/* Event Cards inside Calendar Slots */
 .routine-khichuri-app .slot-event-card {
   border-radius: 6px;
   padding: 6px 8px;
@@ -965,22 +902,22 @@
 }
 
 .routine-khichuri-app .slot-event-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+  box-shadow: none;
 }
 
 .routine-khichuri-app .slot-event-title {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--event-title, #ffffff);
-  letter-spacing: -0.01em;
+  letter-spacing: normal;
 }
 
 .routine-khichuri-app .slot-event-type {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
   margin: 2px 0;
   display: inline-block;
   padding: 1px 4px;
@@ -989,7 +926,7 @@
 
 .routine-khichuri-app .slot-event-card.is-theory .slot-event-type {
   background: rgba(99, 102, 241, 0.25);
-  color: #a5b4fc;
+  color: #d4d4d4;
 }
 
 .routine-khichuri-app .slot-event-card.is-lab .slot-event-type {
@@ -998,13 +935,13 @@
 }
 
 .routine-khichuri-app .slot-event-meta {
-  font-size: 10.5px;
+  font-size: 11px;
   color: #d4d4d4;
   font-weight: 500;
 }
 
 .routine-khichuri-app .slot-event-seats {
-  font-size: 9.5px;
+  font-size: 11px;
   color: #888888;
   margin-top: 2px;
 }
@@ -1012,19 +949,18 @@
 .routine-khichuri-app .calendar-empty {
   padding: 24px;
   text-align: center;
-  color: #737373;
+  color: #a3a3a3;
   font-size: 13px;
   background: #090909;
   border-radius: 8px;
   border: 1px dashed #222222;
 }
 
-/* Exam Schedule & Clashes */
 .routine-khichuri-app .routine-exams-section {
   margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .routine-khichuri-app .exam-clashes-warning {
@@ -1038,7 +974,7 @@
 .routine-khichuri-app .exam-clashes-warning h4 {
   margin: 0 0 8px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .routine-khichuri-app .clashes-list {
@@ -1056,7 +992,7 @@
 
 .routine-khichuri-app .clash-vs {
   color: #f87171;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .routine-khichuri-app .clash-none {
@@ -1096,14 +1032,14 @@
 }
 
 .routine-khichuri-app .expand-icon {
-  font-size: 10px;
+  font-size: 11px;
   color: #888888;
 }
 
 .routine-khichuri-app .exams-count {
   margin-left: auto;
   font-size: 11px;
-  color: #737373;
+  color: #a3a3a3;
 }
 
 .routine-khichuri-app .exams-list {
@@ -1132,9 +1068,9 @@
 
 .routine-khichuri-app .exam-type-header {
   font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
   color: #a3a3a3;
   margin-bottom: 8px;
   padding-bottom: 4px;
@@ -1159,7 +1095,7 @@
 }
 
 .routine-khichuri-app .exam-course {
-  font-weight: 700;
+  font-weight: 500;
   color: #ffffff;
 }
 
@@ -1168,66 +1104,24 @@
 }
 
 .routine-khichuri-app .exam-time {
-  color: #818cf8;
+  color: #d4d4d4;
   font-family: monospace;
 }
 
 .routine-khichuri-app .exam-type-empty {
   font-size: 11px;
-  color: #666;
-  font-style: italic;
+  color: #a3a3a3;
+  font-style: normal;
   padding: 6px;
 }
 
-/* Footer */
-.routine-khichuri-app .app-footer {
-  margin-top: 32px;
-  padding-top: 20px;
-  border-top: 1px solid #222222;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-}
 
-.routine-khichuri-app .footer-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
 
-.routine-khichuri-app .footer-credit {
-  margin: 0;
-  font-size: 12px;
-  color: #737373;
-}
 
-.routine-khichuri-app .footer-links {
-  display: flex;
-  gap: 12px;
-}
 
-.routine-khichuri-app .footer-links a {
-  color: #737373;
-  font-size: 12px;
-  text-decoration: none;
-  transition: color 0.15s;
-}
 
-.routine-khichuri-app .footer-links a:hover {
-  color: #d4d4d4;
-}
 
-.routine-khichuri-app .footer-quote {
-  margin: 0;
-  font-size: 12px;
-  color: #737373;
-  font-style: italic;
-}
 
-/* Exporting mode for clean PNG download */
 .routine-export-root {
   position: absolute;
   left: -9999px;
@@ -1241,4 +1135,164 @@
   border: 1px solid #282828;
   color: #f5f5f5;
   width: 960px;
+}
+
+.routine-khichuri-app .header-navigation,
+.routine-khichuri-app .panel-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.routine-khichuri-app .panel-heading {
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.routine-khichuri-app .panel-heading h2 { margin: 0; }
+
+.routine-khichuri-app .selection-count,
+.routine-khichuri-app .catalog-count {
+  color: #a3a3a3;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-khichuri-app .import-plan-button {
+  padding: 8px 12px;
+  border: 1px solid #404040;
+  border-radius: 6px;
+  background: transparent;
+  color: #e5e5e5;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.routine-khichuri-app .import-plan-button:hover { background: #262626; }
+
+.routine-khichuri-app .field-description {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  color: #a3a3a3;
+}
+
+.routine-khichuri-app :is(button, input, select):focus-visible {
+  outline: 2px solid #d4d4d4;
+  outline-offset: 3px;
+}
+
+.routine-khichuri-app .faculty-option-item:focus-within { border-color: #a3a3a3; }
+.routine-khichuri-app .setup-grid > .panel { min-width: 0; }
+.routine-khichuri-app .settings-grid select { width: 100%; min-width: 0; }
+.routine-khichuri-app .settings-grid label { min-width: 0; }
+.routine-khichuri-app .code-chip button { min-width: 24px; min-height: 24px; }
+.routine-khichuri-app .faculty-option-item { min-height: 32px; }
+.routine-khichuri-app .day-toggle { min-height: 36px; }
+.routine-khichuri-app .ignored-slot-toggle { min-height: 36px; }
+.routine-khichuri-app .slot-label { color: #a3a3a3; }
+.routine-khichuri-app .slot-event-seats { color: #b5b5b5; }
+.routine-khichuri-app .exam-item { flex-wrap: wrap; gap: 8px; }
+.routine-khichuri-app .results-panel { scroll-margin-top: 24px; }
+.routine-khichuri-app .results-panel > .hint-text { padding: 16px 0; }
+
+@media (max-width: 640px) {
+  .routine-khichuri-app .hero-header { padding: 8px 0 16px; }
+  .routine-khichuri-app .hero-header-main h1 { font-size: 24px; }
+  .routine-khichuri-app .panel { padding: 16px; border-radius: 12px; }
+  .routine-khichuri-app .result-card { padding: 12px; }
+  .routine-khichuri-app .course-pref-grid { grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .routine-khichuri-app .section-pref-grid { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+  .routine-khichuri-app .course-pref-code { padding: 8px 0; font-size: 11px; }
+  .routine-khichuri-app .faculty-option-item { padding: 4px; gap: 4px; }
+  .routine-khichuri-app .section-tooltip { width: 184px; left: 0; transform: none; }
+  .routine-khichuri-app .section-option-list { flex-direction: column; align-items: stretch; }
+  .routine-khichuri-app .section-option-chip { min-height: 44px; }
+  .routine-khichuri-app .settings-grid { grid-template-columns: 1fr; }
+  .routine-khichuri-app .course-search-area input { font-size: 16px; }
+  }
+
+@media (prefers-reduced-motion: reduce) {
+  .routine-khichuri-app *, .routine-khichuri-app *::after { transition: none; }
+}
+
+.routine-khichuri-app .panel.results-panel { margin-top: 24px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.routine-khichuri-app .result-header { display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; }
+.routine-khichuri-app .routine-metrics { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 0; font-variant-numeric: tabular-nums; }
+.routine-khichuri-app .routine-metrics dt { font-size: 12px; color: #a3a3a3; margin-bottom: 4px; }
+.routine-khichuri-app .routine-metrics dd { margin: 0; font-size: 14px; color: #ededed; }
+.routine-khichuri-app .result-header .download-routine-button { grid-column: 2; grid-row: 1; min-height: 36px; }
+.routine-khichuri-app .calendar-heading { font-size: 13px; color: #d4d4d4; }
+.routine-khichuri-app .calendar-scroll:focus-visible { outline: 2px solid #a3a3a3; outline-offset: 3px; }
+.routine-khichuri-app .slot-table { min-width: 1040px; table-layout: fixed; }
+.routine-khichuri-app .slot-table th { background: #191919; border: 1px solid #303030; color: #d4d4d4; font-size: 12px; font-weight: 500; padding: 12px 8px; text-align: left; }
+.routine-khichuri-app .slot-table th:first-child { width: 96px; position: sticky; left: 0; z-index: 1; }
+.routine-khichuri-app .slot-table .slot-label { vertical-align: top; font-family: inherit; font-variant-numeric: tabular-nums; }
+.routine-khichuri-app .slot-label span { display: block; line-height: 1.6; }
+.routine-khichuri-app .slot-label span + span { color: #a3a3a3; font-weight: 400; }
+.routine-khichuri-app .slot-cell { width: auto; height: 64px; background: #111111; border-color: #282828; }
+.routine-khichuri-app .slot-event-card { border: 0; border-left: 2px solid var(--event-border); border-radius: 4px; padding: 8px; overflow-wrap: anywhere; transition: none; }
+.routine-khichuri-app .slot-event-type { padding: 0; margin: 4px 0; }
+.routine-khichuri-app .slot-event-card.is-theory .slot-event-type,
+.routine-khichuri-app .slot-event-card.is-lab .slot-event-type { background: transparent; color: #b5b5b5; }
+.routine-khichuri-app .exam-type-box { min-width: 0; padding: 0; background: transparent; border: 0; }
+.routine-khichuri-app .exam-item { display: grid; grid-template-columns: 72px 1fr; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid #282828; border-radius: 0; background: transparent; font-size: 12px; }
+.routine-khichuri-app .exam-time { grid-column: 2; font-family: inherit; font-variant-numeric: tabular-nums; }
+.routine-khichuri-app .exam-course { grid-row: 1 / 3; }
+.routine-khichuri-app .expand-icon { flex-shrink: 0; transition: transform 150ms ease; }
+.routine-khichuri-app .exam-type-grid { gap: 24px; }
+.routine-khichuri-app .exam-type-header { font-size: 12px; color: #d4d4d4; margin: 0; padding: 0 0 8px; }
+.routine-khichuri-app .results-pagination { justify-content: flex-end; margin: 16px 0; }
+.routine-khichuri-app .page-btn { min-height: 36px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .routine-khichuri-app .result-header { gap: 12px; }
+  .routine-khichuri-app .result-header h3 { font-size: 16px; }
+  .routine-khichuri-app .routine-metrics { gap: 12px 20px; }
+  .routine-khichuri-app .routine-metrics dd { font-size: 13px; }
+  .routine-khichuri-app .calendar-legend { align-items: flex-start; flex-direction: column; }
+  .routine-khichuri-app .results-pagination { justify-content: flex-start; }
+}
+
+.routine-export-root .result-card.is-export-clone { width: 1200px; padding: 24px; }
+.routine-export-root .is-export-clone .calendar-scroll { overflow: visible; }
+.routine-export-root .is-export-clone .slot-table th:first-child { position: static; }
+.routine-export-root .is-export-clone .exam-type-grid { grid-template-columns: 1fr 1fr; }
+@media (prefers-reduced-motion: reduce) {
+  .routine-khichuri-app .expand-icon { transition: none; }
+}
+
+.routine-khichuri-app .slot-table tbody tr { height: 112px; }
+.routine-khichuri-app .slot-table .slot-cell { height: auto; padding: 6px; }
+.routine-khichuri-app .slot-events { height: auto; gap: 8px; }
+.routine-khichuri-app .slot-event-card { padding: 8px; min-width: 0; flex-shrink: 0; }
+.routine-khichuri-app .slot-event-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
+.routine-khichuri-app .slot-event-heading .slot-event-type { margin: 0; font-size: 11px; }
+.routine-khichuri-app .slot-event-time { margin-top: 8px; font-size: 11px; color: #e0e0e0; font-variant-numeric: tabular-nums; }
+.routine-khichuri-app .slot-event-meta { margin-top: 4px; font-size: 11px; line-height: 1.5; color: #b5b5b5; }
+.routine-khichuri-app .slot-event-seats { margin-top: 4px; font-size: 11px; line-height: 1.5; color: #b5b5b5; }
+.routine-khichuri-app .slot-event-title { font-size: 13px; font-weight: 600; }
+.routine-khichuri-app .slot-table { min-width: 1180px; }
+.routine-export-root .result-card.is-export-clone { width: 1280px; }
+
+.routine-khichuri-app .course-pref-grid { row-gap: 0; }
+.routine-khichuri-app .faculty-course-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: inherit;
+  column-gap: inherit;
+  align-items: start;
+  padding: 20px 0;
+  border-bottom: 1px solid #383838;
+}
+.routine-khichuri-app .faculty-course-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.routine-khichuri-app .faculty-course-row .faculty-option-list { gap: 8px; }
+.routine-khichuri-app .course-pref-head.avoid-heading { color: #fda4af; }
+.routine-khichuri-app .avoid-options .faculty-option-item { color: #e7a0a8; }
+.routine-khichuri-app .avoid-options .faculty-option-item input { accent-color: #e57383; }
+.routine-khichuri-app .avoid-options .faculty-option-item.is-avoided { color: #fecdd3; border-color: #c05a6b; background: #382027; }
+@media (max-width: 640px) {
+  .routine-khichuri-app .faculty-course-row { padding: 16px 0; }
+  .routine-khichuri-app .faculty-course-row .faculty-option-list { gap: 6px; }
 }

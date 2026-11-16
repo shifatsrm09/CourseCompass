@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./RoutineKhichuri.css";
 
 const API_BASE_URL = "https://routiner-khichuri-backend.onrender.com";
@@ -13,35 +13,6 @@ const TIME_SLOTS = [
   { label: "05:00 PM-06:20 PM", startTime: "17:00:00", endTime: "18:20:00" },
 ];
 
-const QUOTES = [
-  "It's dangerous to go alone, take this semester seriously.",
-  "Finish the fight.",
-  "Hard work is the real power-up.",
-  "Every season is exam season. Prepare accordingly.",
-  "You were born to be the very best, like no one ever was.",
-  "Failure doesn't mean defeat, just a checkpoint.",
-  "The cake may be a lie, but your potential isn't.",
-  "The only choice you have is how good you WILL do in your test. We always have a choice. Make the right choice.",
-  "Even the smallest person can change the course of CGPA.",
-  "Believe in the me that believes in you!",
-  "You have the power to rewrite your story.",
-  "Study. Rest. Sir ek mark dile grade bare. Repeat.",
-  "No matter the odds, you keep going. That's your superpower.",
-  "Academic success is forged in fire and coffee.",
-  "The Force will be with you, always.",
-  "You can do this all day.",
-  "Not all those who wander are lost, some are just changing majors.",
-  "Push the payload. Pass the semester.",
-  "A hero is someone who gets up, even when CGPA says no.",
-  "Nothing is true, everything is permitted, except plag.",
-  "You don't need a Senzu bean. You just need a plan.",
-  "When life gives you fetch quests, turn them into achievements.",
-  "FUS RO PASS!",
-  "You are more than your save files.",
-  "This semester... we ride.",
-  "SHINZOU WO SASAGEYO",
-  "Tatakae.",
-];
 
 function toMinutes(value) {
   if (!value) return 0;
@@ -99,14 +70,14 @@ function normalizeMeetingsFromSections(sections) {
 }
 
 const COURSE_PALETTE = [
-  { bg: "rgba(99, 102, 241, 0.16)", border: "#6366f1", text: "#e0e7ff", title: "#a5b4fc" },   // Indigo
-  { bg: "rgba(16, 185, 129, 0.16)", border: "#10b981", text: "#d1fae5", title: "#6ee7b7" },   // Emerald
-  { bg: "rgba(14, 165, 233, 0.16)", border: "#0ea5e9", text: "#e0f2fe", title: "#7dd3fc" },   // Sky
-  { bg: "rgba(244, 63, 94, 0.16)", border: "#f43f5e", text: "#ffe4e6", title: "#fda4af" },    // Rose
-  { bg: "rgba(168, 85, 247, 0.16)", border: "#a855f7", text: "#f3e8ff", title: "#d8b4fe" },   // Purple
-  { bg: "rgba(245, 158, 11, 0.16)", border: "#f59e0b", text: "#fef3c7", title: "#fde68a" },   // Amber
-  { bg: "rgba(20, 184, 166, 0.16)", border: "#14b8a6", text: "#ccfbf1", title: "#5eead4" },   // Teal
-  { bg: "rgba(249, 115, 22, 0.16)", border: "#f97316", text: "#ffedd5", title: "#fdba74" },   // Orange
+  { bg: "rgba(99, 102, 241, 0.16)", border: "#6366f1", text: "#e0e7ff", title: "#a5b4fc" },
+  { bg: "rgba(16, 185, 129, 0.16)", border: "#10b981", text: "#d1fae5", title: "#6ee7b7" },
+  { bg: "rgba(14, 165, 233, 0.16)", border: "#0ea5e9", text: "#e0f2fe", title: "#7dd3fc" },
+  { bg: "rgba(244, 63, 94, 0.16)", border: "#f43f5e", text: "#ffe4e6", title: "#fda4af" },
+  { bg: "rgba(168, 85, 247, 0.16)", border: "#a855f7", text: "#f3e8ff", title: "#d8b4fe" },
+  { bg: "rgba(245, 158, 11, 0.16)", border: "#f59e0b", text: "#fef3c7", title: "#fde68a" },
+  { bg: "rgba(20, 184, 166, 0.16)", border: "#14b8a6", text: "#ccfbf1", title: "#5eead4" },
+  { bg: "rgba(249, 115, 22, 0.16)", border: "#f97316", text: "#ffedd5", title: "#fdba74" },
 ];
 
 function buildCourseColorMap(sections) {
@@ -175,17 +146,34 @@ function WeeklyCalendar({ sections }) {
     const map = new Map();
 
     DAY_ORDER.forEach((day) => {
-      const dayMeetings = meetings.filter((meeting) => meeting.day === day);
-
-      TIME_SLOTS.forEach((slot, slotIndex) => {
-        const slotStart = toMinutes(slot.startTime);
-        const slotEnd = toMinutes(slot.endTime);
-
-        const matchedMeetings = dayMeetings.filter((meeting) =>
-          overlaps(meeting.startMinutes, meeting.endMinutes, slotStart, slotEnd),
+      const uniqueMeetings = new Map();
+      meetings.filter((meeting) => meeting.day === day).forEach((meeting) => {
+        const key = [meeting.courseCode, meeting.sectionName, meeting.meetingType, meeting.startTime, meeting.endTime].join("|");
+        uniqueMeetings.set(key, meeting);
+      });
+      const ranges = [...uniqueMeetings.values()].map((meeting) => {
+        const slots = TIME_SLOTS.flatMap((slot, index) =>
+          overlaps(meeting.startMinutes, meeting.endMinutes, toMinutes(slot.startTime), toMinutes(slot.endTime)) ? [index] : [],
         );
+        return { meeting, start: slots[0], end: slots[slots.length - 1] };
+      }).filter((range) => range.start !== undefined)
+        .sort((a, b) => a.start - b.start || a.meeting.startMinutes - b.meeting.startMinutes);
 
-        map.set(`${day}-${slotIndex}`, matchedMeetings);
+      const groups = [];
+      ranges.forEach((range) => {
+        const previous = groups[groups.length - 1];
+        if (previous && range.start <= previous.end) {
+          previous.end = Math.max(previous.end, range.end);
+          previous.items.push(range.meeting);
+        } else {
+          groups.push({ start: range.start, end: range.end, items: [range.meeting] });
+        }
+      });
+      groups.forEach((group) => {
+        map.set(`${day}-${group.start}`, { items: group.items, rowSpan: group.end - group.start + 1 });
+        for (let index = group.start + 1; index <= group.end; index += 1) {
+          map.set(`${day}-${index}`, null);
+        }
       });
     });
 
@@ -199,10 +187,7 @@ function WeeklyCalendar({ sections }) {
   return (
     <div className="calendar-wrapper">
       <div className="calendar-legend">
-        <div className="legend-types">
-          <span className="type-pill theory">Theory</span>
-          <span className="type-pill lab">Lab</span>
-        </div>
+        <span className="calendar-heading">Weekly timetable</span>
         <div className="legend-courses">
           {[...courseColorMap.entries()].map(([courseCode, color]) => (
             <div key={courseCode} className="course-legend-item">
@@ -219,24 +204,26 @@ function WeeklyCalendar({ sections }) {
         </div>
       </div>
 
-      <div className="calendar-scroll">
+      <div className="calendar-scroll" tabIndex={0} role="region" aria-label="Weekly timetable, scroll horizontally to see all days">
         <table className="slot-table">
           <thead>
             <tr>
-              <th>Time/Day</th>
+              <th scope="col">Time</th>
               {DAY_ORDER.map((day) => (
-                <th key={day}>{day.charAt(0) + day.slice(1).toLowerCase()}</th>
+                <th scope="col" key={day}>{day.charAt(0) + day.slice(1).toLowerCase()}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {TIME_SLOTS.map((slot, slotIndex) => (
               <tr key={slot.label}>
-                <td className="slot-label">{slot.label}</td>
+                <th scope="row" className="slot-label"><span>{formatTime12Hour(slot.startTime)}</span><span>{formatTime12Hour(slot.endTime)}</span></th>
                 {DAY_ORDER.map((day) => {
-                  const items = slotMap.get(`${day}-${slotIndex}`) || [];
+                  const cell = slotMap.get(`${day}-${slotIndex}`);
+                  if (cell === null) return null;
+                  const items = cell?.items || [];
                   return (
-                    <td key={`${day}-${slot.label}`} className="slot-cell">
+                    <td key={`${day}-${slot.label}`} className="slot-cell" rowSpan={cell?.rowSpan || 1}>
                       <div className="slot-events">
                         {items.map((meeting) => (
                           <div
@@ -249,13 +236,16 @@ function WeeklyCalendar({ sections }) {
                               "--event-title": courseColorMap.get(meeting.courseCode)?.title || "#a5b4fc",
                             }}
                           >
-                            <div className="slot-event-title">{meeting.courseCode}</div>
-                            <div className="slot-event-type">{meeting.meetingType}</div>
+                            <div className="slot-event-heading">
+                              <span className="slot-event-title">{meeting.courseCode}</span>
+                              <span className="slot-event-type">{meeting.meetingType === "LAB" ? "Lab" : "Theory"}</span>
+                            </div>
+                            <div className="slot-event-time">{formatTime12Hour(meeting.startTime)}–{formatTime12Hour(meeting.endTime)}</div>
                             <div className="slot-event-meta">
-                              {meeting.sectionName} | {meeting.faculty}
+                              Section {meeting.sectionName || "TBA"} · {meeting.faculty || "TBA"}
                             </div>
                             <div className="slot-event-seats">
-                              Remaining seats: {meeting.remainingSeats == null ? "N/A" : meeting.remainingSeats}
+                              {meeting.remainingSeats == null ? "Seats unavailable" : `${meeting.remainingSeats} seats left`}
                             </div>
                           </div>
                         ))}
@@ -317,10 +307,11 @@ function ExamSchedule({ exams, defaultExpanded = false, forceExpanded = false })
       <button
         type="button"
         className="exams-expand-btn"
+        aria-expanded={effectiveExpanded}
         onClick={() => setIsExpanded((previous) => !previous)}
       >
-        <span className="expand-icon" aria-hidden="true">{effectiveExpanded ? "▼" : "▶"}</span>
-        <span className="exams-title">Exam Schedule</span>
+        <svg className="expand-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" style={{ transform: effectiveExpanded ? "rotate(90deg)" : "none" }}><path d="m9 5 7 7-7 7" /></svg>
+        <span className="exams-title">Exam schedule</span>
         <span className="exams-count">{exams.length} exams</span>
       </button>
 
@@ -328,14 +319,14 @@ function ExamSchedule({ exams, defaultExpanded = false, forceExpanded = false })
         <div className="exams-list">
           <div className="exam-type-grid">
             <section className="exam-type-box mid-box">
-              <div className="exam-type-header">MID Exams</div>
+              <div className="exam-type-header">Midterm exams</div>
               <div className="exams-for-type">
                 {renderExamRows(midExams, "No mid exams in this routine.")}
               </div>
             </section>
 
             <section className="exam-type-box final-box">
-              <div className="exam-type-header">Final Exams</div>
+              <div className="exam-type-header">Final exams</div>
               <div className="exams-for-type">
                 {renderExamRows(finalExams, "No final exams in this routine.")}
               </div>
@@ -349,12 +340,12 @@ function ExamSchedule({ exams, defaultExpanded = false, forceExpanded = false })
 
 function ExamClashWarning({ clashes }) {
   if (!clashes || clashes.length === 0) {
-    return <div className="clash-none">✅ No exam clashes detected!</div>;
+    return <div className="clash-none">No exam clashes</div>;
   }
 
   return (
     <div className="exam-clashes-warning">
-      <h4>⚠️ Exam Clashes Detected!</h4>
+      <h4>Exam clashes</h4>
       <div className="clashes-list">
         {clashes.map((clash, idx) => (
           <div key={`clash-${idx}`} className="clash-item">
@@ -374,7 +365,7 @@ function ExamClashWarning({ clashes }) {
 }
 
 export default function RoutineKhichuri({
-  onBackToPlanner,
+  onCatalogChange,
   suggestedCourses = [],
   currentSemesterLabel = "Current Semester",
 }) {
@@ -404,15 +395,22 @@ export default function RoutineKhichuri({
   const [routineStats, setRoutineStats] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState("");
-  const [quoteIndex, setQuoteIndex] = useState(0);
   const [sourceLastUpdated, setSourceLastUpdated] = useState(null);
   const [backendLastCheckedAt, setBackendLastCheckedAt] = useState(null);
   const [downloadingRoutineKey, setDownloadingRoutineKey] = useState("");
   const [exportRoutineKey, setExportRoutineKey] = useState("");
+  useEffect(() => {
+    onCatalogChange?.({
+      courseCount: allCodes.length,
+      loading: loadingCodes,
+      updatedAt: sourceLastUpdated,
+      checkedAt: backendLastCheckedAt,
+    });
+  }, [onCatalogChange, allCodes.length, loadingCodes, sourceLastUpdated, backendLastCheckedAt]);
+
   const routineCardRefs = useRef({});
   const resultsPanelRef = useRef(null);
   const shouldScrollAfterPageChangeRef = useRef(false);
-  const lastQuoteBackendCheckRef = useRef(null);
 
   useEffect(() => {
     async function fetchCourseCodes() {
@@ -439,23 +437,7 @@ export default function RoutineKhichuri({
     };
   }, []);
 
-  useEffect(() => {
-    if (!backendLastCheckedAt) {
-      return;
-    }
 
-    if (!lastQuoteBackendCheckRef.current) {
-      lastQuoteBackendCheckRef.current = backendLastCheckedAt;
-      return;
-    }
-
-    if (lastQuoteBackendCheckRef.current === backendLastCheckedAt) {
-      return;
-    }
-
-    lastQuoteBackendCheckRef.current = backendLastCheckedAt;
-    setQuoteIndex((previous) => (previous + 1) % QUOTES.length);
-  }, [backendLastCheckedAt]);
 
   useEffect(() => {
     const VISIBLE_INTERVAL_MS = 15000;
@@ -712,7 +694,7 @@ export default function RoutineKhichuri({
 
       const sourceNode = routineCardRefs.current[routineKey] || cardNode;
       const exportRoot = document.createElement("div");
-      exportRoot.className = "routine-export-root";
+      exportRoot.className = "routine-khichuri-app routine-export-root";
       document.body.appendChild(exportRoot);
 
       const exportNode = sourceNode.cloneNode(true);
@@ -950,7 +932,7 @@ export default function RoutineKhichuri({
   const pageStartIndex = (currentPage - 1) * ROUTINES_PER_PAGE;
   const pageRoutines = routines.slice(pageStartIndex, pageStartIndex + ROUTINES_PER_PAGE);
 
-  function scrollToResultsTop() {
+  const scrollToResultsTop = useCallback(() => {
     if (!resultsPanelRef.current) {
       return;
     }
@@ -962,13 +944,13 @@ export default function RoutineKhichuri({
       }
     } catch {
     }
-  }
+  }, []);
 
-  function queueResultsScroll() {
+  const queueResultsScroll = useCallback(() => {
     requestAnimationFrame(() => {
       scrollToResultsTop();
     });
-  }
+  }, [scrollToResultsTop]);
 
   function changePage(nextPage) {
     if (nextPage === currentPage) {
@@ -986,8 +968,7 @@ export default function RoutineKhichuri({
 
     shouldScrollAfterPageChangeRef.current = false;
     queueResultsScroll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, [currentPage, queueResultsScroll]);
 
   function renderPaginationControls(positionClassName) {
     if (routines.length <= ROUTINES_PER_PAGE) {
@@ -1011,6 +992,7 @@ export default function RoutineKhichuri({
           <button
             key={page}
             type="button"
+            aria-current={page === currentPage ? "page" : undefined}
             className={`page-btn page-number ${page === currentPage ? "is-active" : ""}`}
             onClick={() => {
               changePage(page);
@@ -1048,65 +1030,17 @@ export default function RoutineKhichuri({
   return (
     <div className="routine-khichuri-app">
       <div className="app-shell">
-        <header className="hero-header">
-          <div className="hero-header-top">
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {onBackToPlanner && (
-                <button
-                  type="button"
-                  onClick={onBackToPlanner}
-                  className="back-to-planner-btn"
-                >
-                  ← Back to Planner
-                </button>
-              )}
-              <span className="hero-brand-pill">
-                <span className="hero-brand-dot" />
-                Live USIS Catalog
-              </span>
-            </div>
-            <span style={{ fontSize: "12px", color: "#737373", fontFamily: "monospace" }}>
-              {allCodes.length > 0 ? `${allCodes.length} Courses Available` : "Connecting..."}
-            </span>
-          </div>
 
-          <div className="hero-header-main">
-            <h1>ROUTINER KHICHURI</h1>
-            <p>Aj prochur routine banabo.</p>
-          </div>
-
-          <div className="hero-header-status">
-            <p className="source-last-updated-text">
-              Source last updated at: {sourceLastUpdated ? new Date(sourceLastUpdated).toLocaleString() : "Unavailable"}
-            </p>
-            <p className="source-last-updated-text">
-              Source last checked at: {backendLastCheckedAt ? new Date(backendLastCheckedAt).toLocaleString() : "Unavailable"}
-            </p>
-          </div>
-        </header>
 
       <div className="setup-grid">
         <section className="panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-            <h2 style={{ margin: 0 }}>Course Selection</h2>
+          <div className="panel-heading">
+            <h2>Courses <span className="selection-count">{selectedCodes.length || ""}</span></h2>
             {suggestedCourses.length > 0 && unaddedSuggestedCourses.length > 0 && (
               <button
                 type="button"
                 onClick={importPlanCourses}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "5px 10px",
-                  borderRadius: "6px",
-                  background: "#4338ca",
-                  border: "none",
-                  color: "#ffffff",
-                  fontSize: "11px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "background 0.2s"
-                }}
+                className="import-plan-button"
               >
                 + Import from {currentSemesterLabel} ({unaddedSuggestedCourses.length})
               </button>
@@ -1116,7 +1050,11 @@ export default function RoutineKhichuri({
             <input
               value={codeQuery}
               onChange={(event) => setCodeQuery(event.target.value)}
-              placeholder="Search course code (e.g., CSE111)"
+              placeholder="Search course code"
+              aria-label="Search course code"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") addCourseCode(codeQuery);
+              }}
             />
             <button type="button" onClick={() => addCourseCode(codeQuery)}>
               Add
@@ -1139,7 +1077,7 @@ export default function RoutineKhichuri({
             {selectedCodes.map((code) => (
               <span key={code} className="code-chip">
                 {code}
-                <button type="button" onClick={() => removeCourseCode(code)}>
+                <button type="button" aria-label={`Remove ${code}`} onClick={() => removeCourseCode(code)}>
                   x
                 </button>
               </span>
@@ -1152,27 +1090,29 @@ export default function RoutineKhichuri({
                 <button
                   type="button"
                   className={`preference-tab-btn ${activePreferenceTab === "FACULTY" ? "is-active" : ""}`}
+                  aria-pressed={activePreferenceTab === "FACULTY"}
                   onClick={() => setActivePreferenceTab("FACULTY")}
                 >
-                  Faculty Preferences
+                  Faculty preferences
                 </button>
                 <button
                   type="button"
                   className={`preference-tab-btn ${activePreferenceTab === "SECTION" ? "is-active" : ""}`}
+                  aria-pressed={activePreferenceTab === "SECTION"}
                   onClick={() => setActivePreferenceTab("SECTION")}
                 >
-                  Preferred Sections
+                  Preferred sections
                 </button>
               </div>
 
               {activePreferenceTab === "FACULTY" ? (
                 <div className="course-pref-grid">
                   <div className="course-pref-head">Course</div>
-                  <div className="course-pref-head">Preferred Faculties</div>
-                  <div className="course-pref-head">Faculties To Avoid</div>
+                  <div className="course-pref-head">Prefer</div>
+                  <div className="course-pref-head avoid-heading">Avoid</div>
 
                   {selectedCodes.map((code) => (
-                    <Fragment key={code}>
+                    <div className="faculty-course-row" key={code} role="group" aria-label={`${code} faculty preferences`}>
                       <div className="course-pref-code">{code}</div>
 
                       <div className="faculty-option-list">
@@ -1191,7 +1131,7 @@ export default function RoutineKhichuri({
                         ))}
                       </div>
 
-                      <div className="faculty-option-list">
+                      <div className="faculty-option-list avoid-options">
                         {getOrderedFacultyOptions(code).map((faculty) => (
                           <label
                             key={`${code}-avoid-${faculty}`}
@@ -1206,13 +1146,13 @@ export default function RoutineKhichuri({
                           </label>
                         ))}
                       </div>
-                    </Fragment>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <div className="section-pref-grid">
                   <div className="course-pref-head">Course</div>
-                  <div className="course-pref-head">Valid Sections (hover for timings)</div>
+                  <div className="course-pref-head">Sections · focus or hover for times</div>
 
                   {selectedCodes.map((code) => (
                     <Fragment key={`${code}-section-row`}>
@@ -1231,6 +1171,7 @@ export default function RoutineKhichuri({
                               <button
                                 key={`${code}-${section.sectionId || sectionName}`}
                                 type="button"
+                                aria-pressed={isSelected}
                                 className={`section-option-chip ${isSelected ? "is-selected" : ""}`}
                                 onClick={() => togglePreferredSection(code, sectionName)}
                               >
@@ -1276,9 +1217,9 @@ export default function RoutineKhichuri({
         </section>
 
         <section className="panel">
-          <h2>Scheduling Settings</h2>
+          <h2>Schedule preferences</h2>
           <div className="sub-panel day-selector-panel">
-            <h3>Preferred Class Days</h3>
+            <h3>Available days</h3>
             <div className="day-toggle-bar">
               {DAY_ORDER.map((day) => {
                 const enabled = allowedDays.includes(day);
@@ -1286,10 +1227,11 @@ export default function RoutineKhichuri({
                   <button
                     key={day}
                     type="button"
+                    aria-pressed={enabled}
                     className={`day-toggle ${enabled ? "is-selected" : ""}`}
                     onClick={() => toggleAllowedDay(day)}
                   >
-                    {day.slice(0, 3)}
+                    {day.charAt(0) + day.slice(1, 3).toLowerCase()}
                   </button>
                 );
               })}
@@ -1298,7 +1240,7 @@ export default function RoutineKhichuri({
 
           <div className="settings-grid">
             <label>
-              Max Days Per Week (1-6)
+              Maximum days per week
               <select value={maxDaysPerWeek} onChange={(event) => setMaxDaysPerWeek(Number(event.target.value))}>
                 {[1, 2, 3, 4, 5, 6].map((value) => (
                   <option key={value} value={value}>
@@ -1311,14 +1253,15 @@ export default function RoutineKhichuri({
             <label>
               Priority
               <select value={priority} onChange={(event) => setPriority(event.target.value)}>
-                <option value="MIN_DAYS">Minimum Days</option>
-                <option value="MIN_DAILY_HOURS">Minimum Daily Hours</option>
+                <option value="MIN_DAYS">Fewest days on campus</option>
+                <option value="MIN_DAILY_HOURS">Shortest class days</option>
               </select>
             </label>
           </div>
 
           <div className="sub-panel">
-            <h3>Ignored Time Slots</h3>
+            <h3>Times to avoid</h3>
+            <p className="field-description">Select any times you cannot attend</p>
             <div className="ignored-slot-grid">
               {TIME_SLOTS.map((slot) => {
                 const isSelected = ignoredSlotLabels.includes(slot.label);
@@ -1326,6 +1269,7 @@ export default function RoutineKhichuri({
                   <button
                     key={slot.label}
                     type="button"
+                    aria-pressed={isSelected}
                     className={`ignored-slot-toggle ${isSelected ? "is-selected" : ""}`}
                     onClick={() => toggleIgnoredSlot(slot.label)}
                   >
@@ -1338,7 +1282,7 @@ export default function RoutineKhichuri({
           </div>
 
           <div className="sub-panel">
-            <h3>Section Availability</h3>
+            <h3>Seat availability</h3>
             <label className="checkbox-label">
               <input
                 type="checkbox"
@@ -1350,25 +1294,26 @@ export default function RoutineKhichuri({
           </div>
 
           <div className="sub-panel">
-            <h3>Break Preference</h3>
+            <h3>Breaks</h3>
             <label className="checkbox-label">
               <input type="checkbox" checked={preferBreaks} onChange={(event) => setPreferBreaks(event.target.checked)} />
               Prefer routines with breaks between consecutive classes
             </label>
-            <p className="hint-text">Quiz er age pora lage bhai.</p>
+            <p className="hint-text">Leave time between classes when possible</p>
           </div>
 
           <button className="generate-button" type="button" disabled={selectedCodes.length === 0 || isGenerating} onClick={generateRoutine}>
-            {isGenerating ? "Generating..." : "Generate Routine"}
+            {isGenerating ? "Generating..." : "Generate routines"}
           </button>
         </section>
       </div>
 
-      {errorMessage && <div className="error-banner">{errorMessage}</div>}
+      {errorMessage && <div className="error-banner" role="alert">{errorMessage}</div>}
 
-      <section className="panel results-panel" ref={resultsPanelRef}>
-        <h2>Results</h2>
-        {routines.length === 0 && !errorMessage && <p className="hint-text">Generate a routine to view schedules.</p>}
+      <section className="panel results-panel" ref={resultsPanelRef} aria-busy={isGenerating}>
+        <h2>Routines</h2>
+        {isGenerating && <p className="hint-text" role="status">Finding routines that match your preferences…</p>}
+        {routines.length === 0 && !errorMessage && !isGenerating && <p className="hint-text">Generate a routine to view schedules.</p>}
 
         {routines.length > 0 && (
           <div className="results-summary">
@@ -1396,16 +1341,18 @@ export default function RoutineKhichuri({
               >
                 <div className="result-header">
                   <h3>Routine #{pageStartIndex + index + 1}</h3>
-                  <p>
-                    Score: <strong>{Math.round(routine.metrics.score || 0)}</strong> | Days: <strong>{routine.metrics.totalDays}</strong> | Avg Daily: <strong>{formatHoursAsHourMinute(routine.metrics.avgDailyHours)}</strong>
-                  </p>
+                  <dl className="routine-metrics">
+                    <div><dt>Days on campus</dt><dd>{routine.metrics.totalDays}</dd></div>
+                    <div><dt>Average class day</dt><dd>{formatHoursAsHourMinute(routine.metrics.avgDailyHours)}</dd></div>
+                    <div><dt>Score</dt><dd>{Math.round(routine.metrics.score || 0)}</dd></div>
+                  </dl>
                   <button
                     type="button"
                     className="download-routine-button"
                     disabled={downloadingRoutineKey === routineKey}
                     onClick={() => downloadRoutineImage(routineKey, pageStartIndex + index + 1)}
                   >
-                    {downloadingRoutineKey === routineKey ? "Preparing download..." : "Download Routine"}
+                    {downloadingRoutineKey === routineKey ? "Preparing download..." : "Download PNG"}
                   </button>
                 </div>
 
@@ -1427,35 +1374,7 @@ export default function RoutineKhichuri({
         {renderPaginationControls("results-pagination-bottom")}
       </section>
 
-      <footer className="app-footer">
-        <div className="footer-left">
-          <p className="footer-credit">Built by Dihan Islam Dhrubo</p>
 
-          <div className="footer-links">
-            <a href="https://github.com/xDhruboVai/Routiner-Khichuri" target="_blank" rel="noreferrer">
-              GitHub Repo
-            </a>
-            <a href="https://www.linkedin.com/in/dihan-islam-dhrubo-79a904249/" target="_blank" rel="noreferrer">
-              LinkedIn
-            </a>
-            <a href="https://www.facebook.com/dihanislam.dhrubo.5/" target="_blank" rel="noreferrer">
-              Facebook
-            </a>
-          </div>
-
-          <div className="footer-links footer-secondary-links">
-            <a
-              href="https://forms.gle/Bm9jtdD3FR3MctZi7"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Suggest / Report 
-            </a>
-          </div>
-        </div>
-
-        <p className="footer-quote">"{QUOTES[quoteIndex]}"</p>
-      </footer>
       </div>
     </div>
   );
