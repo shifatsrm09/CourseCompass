@@ -99,14 +99,14 @@ function normalizeMeetingsFromSections(sections) {
 }
 
 const COURSE_PALETTE = [
-  { bg: "#fdf3d5", border: "#d09f1f", text: "#4f3500" },
-  { bg: "#def8e8", border: "#329e62", text: "#0e4929" },
-  { bg: "#dff1ff", border: "#2f83c6", text: "#0d3960" },
-  { bg: "#fbe6e3", border: "#cc604f", text: "#5d1f16" },
-  { bg: "#ece8ff", border: "#7267ce", text: "#2f286f" },
-  { bg: "#ffe6f6", border: "#bb4c9a", text: "#5b1d48" },
-  { bg: "#e7f6f2", border: "#2d9f93", text: "#0f4f48" },
-  { bg: "#fff1e2", border: "#ce7f2d", text: "#613605" },
+  { bg: "rgba(99, 102, 241, 0.16)", border: "#6366f1", text: "#e0e7ff", title: "#a5b4fc" },   // Indigo
+  { bg: "rgba(16, 185, 129, 0.16)", border: "#10b981", text: "#d1fae5", title: "#6ee7b7" },   // Emerald
+  { bg: "rgba(14, 165, 233, 0.16)", border: "#0ea5e9", text: "#e0f2fe", title: "#7dd3fc" },   // Sky
+  { bg: "rgba(244, 63, 94, 0.16)", border: "#f43f5e", text: "#ffe4e6", title: "#fda4af" },    // Rose
+  { bg: "rgba(168, 85, 247, 0.16)", border: "#a855f7", text: "#f3e8ff", title: "#d8b4fe" },   // Purple
+  { bg: "rgba(245, 158, 11, 0.16)", border: "#f59e0b", text: "#fef3c7", title: "#fde68a" },   // Amber
+  { bg: "rgba(20, 184, 166, 0.16)", border: "#14b8a6", text: "#ccfbf1", title: "#5eead4" },   // Teal
+  { bg: "rgba(249, 115, 22, 0.16)", border: "#f97316", text: "#ffedd5", title: "#fdba74" },   // Orange
 ];
 
 function buildCourseColorMap(sections) {
@@ -243,9 +243,10 @@ function WeeklyCalendar({ sections }) {
                             key={`${meeting.courseCode}-${meeting.day}-${meeting.startTime}-${meeting.sectionName}-${meeting.meetingType}`}
                             className={`slot-event-card ${meeting.meetingType === "LAB" ? "is-lab" : "is-theory"}`}
                             style={{
-                              "--event-bg": courseColorMap.get(meeting.courseCode)?.bg || "#e7f6f2",
-                              "--event-border": courseColorMap.get(meeting.courseCode)?.border || "#2d9f93",
-                              "--event-text": courseColorMap.get(meeting.courseCode)?.text || "#0f4f48",
+                              "--event-bg": courseColorMap.get(meeting.courseCode)?.bg || "rgba(99, 102, 241, 0.16)",
+                              "--event-border": courseColorMap.get(meeting.courseCode)?.border || "#6366f1",
+                              "--event-text": courseColorMap.get(meeting.courseCode)?.text || "#e0e7ff",
+                              "--event-title": courseColorMap.get(meeting.courseCode)?.title || "#a5b4fc",
                             }}
                           >
                             <div className="slot-event-title">{meeting.courseCode}</div>
@@ -733,7 +734,7 @@ export default function RoutineKhichuri({
           ? await toBlob(exportNode, {
             cacheBust: true,
             pixelRatio: 2,
-            backgroundColor: "#ffffff",
+            backgroundColor: "#111111",
             filter: (node) => {
               if (node instanceof HTMLElement && node.classList.contains("download-routine-button")) {
                 return false;
@@ -757,7 +758,7 @@ export default function RoutineKhichuri({
         const dataUrl = await toPng(exportNode, {
           cacheBust: true,
           pixelRatio: 2,
-          backgroundColor: "#ffffff",
+          backgroundColor: "#111111",
           filter: (node) => {
             if (node instanceof HTMLElement && node.classList.contains("download-routine-button")) {
               return false;
@@ -1047,53 +1048,42 @@ export default function RoutineKhichuri({
   return (
     <div className="routine-khichuri-app">
       <div className="app-shell">
-      <div className="ambient-bg" aria-hidden="true">
-        <div className="wave wave-a" />
-        <div className="wave wave-b" />
-        <div className="wave wave-c" />
-      </div>
-
-      <header className="hero-header">
-        <div className="hero-header-main">
-          <div className="hero-header-top" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-            {onBackToPlanner && (
-              <button
-                type="button"
-                onClick={onBackToPlanner}
-                className="back-to-planner-btn"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  border: "1px solid rgba(255, 255, 255, 0.3)",
-                  color: "#ffffff",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  backdropFilter: "blur(4px)",
-                  transition: "background 0.2s ease"
-                }}
-              >
-                ← Back to Planner
-              </button>
-            )}
-            <span className="hero-brand-pill">Course Compass Integration</span>
+        <header className="hero-header">
+          <div className="hero-header-top">
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {onBackToPlanner && (
+                <button
+                  type="button"
+                  onClick={onBackToPlanner}
+                  className="back-to-planner-btn"
+                >
+                  ← Back to Planner
+                </button>
+              )}
+              <span className="hero-brand-pill">
+                <span className="hero-brand-dot" />
+                Live USIS Catalog
+              </span>
+            </div>
+            <span style={{ fontSize: "12px", color: "#737373", fontFamily: "monospace" }}>
+              {allCodes.length > 0 ? `${allCodes.length} Courses Available` : "Connecting..."}
+            </span>
           </div>
-          <h1>ROUTINER KHICHURI</h1>
-          <p>Aj prochur routine banabo.</p>
-        </div>
-        <div className="hero-header-status">
-          <p className="source-last-updated-text">
-            Source last updated at: {sourceLastUpdated ? new Date(sourceLastUpdated).toLocaleString() : "Unavailable"}
-          </p>
-          <p className="source-last-updated-text">
-            Source last checked at: {backendLastCheckedAt ? new Date(backendLastCheckedAt).toLocaleString() : "Unavailable"}
-          </p>
-        </div>
-      </header>
+
+          <div className="hero-header-main">
+            <h1>ROUTINER KHICHURI</h1>
+            <p>Aj prochur routine banabo.</p>
+          </div>
+
+          <div className="hero-header-status">
+            <p className="source-last-updated-text">
+              Source last updated at: {sourceLastUpdated ? new Date(sourceLastUpdated).toLocaleString() : "Unavailable"}
+            </p>
+            <p className="source-last-updated-text">
+              Source last checked at: {backendLastCheckedAt ? new Date(backendLastCheckedAt).toLocaleString() : "Unavailable"}
+            </p>
+          </div>
+        </header>
 
       <div className="setup-grid">
         <section className="panel">
