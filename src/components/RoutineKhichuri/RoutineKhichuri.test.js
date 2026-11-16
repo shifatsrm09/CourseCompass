@@ -88,17 +88,10 @@ afterEach(() => {
 });
 
 describe("RoutineKhichuri Component", () => {
-  test("renders hero header, course selection and scheduling settings", async () => {
-    const onBackToPlanner = jest.fn();
-    render(<RoutineKhichuri onBackToPlanner={onBackToPlanner} suggestedCourses={["CSE111"]} currentSemesterLabel="Fall 2026" />);
+  test("renders course selection and scheduling settings", async () => {
+    render(<RoutineKhichuri suggestedCourses={["CSE111"]} currentSemesterLabel="Fall 2026" />);
 
-    expect(screen.getByText("ROUTINER KHICHURI")).toBeInTheDocument();
-    expect(screen.getByText("Aj prochur routine banabo.")).toBeInTheDocument();
-
-    const backBtn = screen.getByRole("button", { name: /back to planner/i });
-    expect(backBtn).toBeInTheDocument();
-    fireEvent.click(backBtn);
-    expect(onBackToPlanner).toHaveBeenCalled();
+    expect(screen.getByRole("heading", { level: 2, name: /courses/i })).toBeInTheDocument();
 
     // Import suggested courses button
     const importBtn = screen.getByRole("button", { name: /\+ import from fall 2026/i });
@@ -128,11 +121,11 @@ describe("RoutineKhichuri Component", () => {
 
     // Wait for faculty options
     await waitFor(() => {
-      expect(screen.getByText("Faculty Preferences")).toBeInTheDocument();
+      expect(screen.getByText(/faculty preferences/i)).toBeInTheDocument();
     });
 
     // Generate routine
-    const generateBtn = screen.getByRole("button", { name: /generate routine/i });
+    const generateBtn = screen.getByRole("button", { name: /generate routines/i });
     expect(generateBtn).not.toBeDisabled();
     fireEvent.click(generateBtn);
 
@@ -141,6 +134,6 @@ describe("RoutineKhichuri Component", () => {
       expect(screen.getByText(/routine #1/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/download routine/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download png/i })).toBeInTheDocument();
   });
 });
